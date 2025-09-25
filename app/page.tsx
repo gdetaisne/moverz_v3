@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import BackOffice from "@/components/BackOffice";
+import { getBuildInfo } from "@/lib/buildInfo";
 
 interface ProcessingFile {
   file: File;
@@ -447,6 +448,15 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gray-50">
+      {/* Version info - discrète en haut */}
+      <div className="bg-gray-100 border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 py-1">
+          <div className="text-xs text-gray-500 text-center">
+            v {getBuildInfo()}
+          </div>
+        </div>
+      </div>
+      
       {/* Navigation par onglets */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 lg:px-6">
