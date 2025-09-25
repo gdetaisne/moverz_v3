@@ -12,7 +12,9 @@ export async function optimizeImageForAI(inputBuffer: Buffer): Promise<Optimized
   const originalSize = inputBuffer.length;
   
   // Optimiser l'image pour l'IA : 1024x1024 max, qualité 85%
+  // + Correction automatique de l'orientation EXIF
   const optimizedBuffer = await sharp(inputBuffer)
+    .rotate() // Correction automatique de l'orientation selon EXIF
     .resize(1024, 1024, { 
       fit: 'inside', 
       withoutEnlargement: true,
