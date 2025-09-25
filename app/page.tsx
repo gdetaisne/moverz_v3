@@ -19,6 +19,7 @@ interface RoomData {
     analysis?: any;
     status: 'pending' | 'processing' | 'completed' | 'error';
     error?: string;
+    selectedItems?: Set<number>; // Indices des objets sélectionnés
   }[];
 }
 
@@ -104,14 +105,61 @@ export default function Home() {
 
     currentRoom.photos.forEach(photo => {
       if (photo.status === 'completed' && photo.analysis?.items) {
-        photo.analysis.items.forEach((item: any) => {
-          totalVolume += (item.volume_m3 || 0) * (item.quantity || 1);
-          totalItems += item.quantity || 1;
+        photo.analysis.items.forEach((item: any, itemIndex: number) => {
+          // Vérifier si l'objet est sélectionné (par défaut tous sélectionnés)
+          const isSelected = !photo.selectedItems || photo.selectedItems.has(itemIndex);
+          if (isSelected) {
+            totalVolume += (item.volume_m3 || 0) * (item.quantity || 1);
+            totalItems += item.quantity || 1;
+          }
         });
       }
     });
 
     return { totalVolume: Number(totalVolume.toFixed(3)), totalItems };
+  };
+
+  const toggleItemSelection = (photoIndex: number, itemIndex: number) => {
+    setCurrentRoom(prev => ({
+      ...prev,
+      photos: prev.photos.map((photo, idx) => {
+        if (idx === photoIndex) {
+          const selectedItems = new Set(photo.selectedItems || []);
+          if (selectedItems.has(itemIndex)) {
+            selectedItems.delete(itemIndex);
+          } else {
+            selectedItems.add(itemIndex);
+          }
+          return { ...photo, selectedItems };
+        }
+        return photo;
+      })
+    }));
+  };
+
+  const selectAllItems = (photoIndex: number) => {
+    setCurrentRoom(prev => ({
+      ...prev,
+      photos: prev.photos.map((photo, idx) => {
+        if (idx === photoIndex && photo.analysis?.items) {
+          const selectedItems = new Set(Array.from({ length: photo.analysis.items.length }, (_, i) => i));
+          return { ...photo, selectedItems };
+        }
+        return photo;
+      })
+    }));
+  };
+
+  const deselectAllItems = (photoIndex: number) => {
+    setCurrentRoom(prev => ({
+      ...prev,
+      photos: prev.photos.map((photo, idx) => {
+        if (idx === photoIndex) {
+          return { ...photo, selectedItems: new Set() };
+        }
+        return photo;
+      })
+    }));
   };
 
   const getStatusIcon = (status: string) => {
@@ -209,14 +257,14 @@ export default function Home() {
           <div className="mb-6 p-4 lg:p-6 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl text-white shadow-lg">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
               <div className="flex-1">
-                <h3 className="text-xl lg:text-2xl font-bold mb-2">📦 Volume Total Détecté</h3>
-                <p className="text-blue-100 text-sm lg:text-base">Somme des volumes de tous les objets détectés</p>
+                <h3 className="text-xl lg:text-2xl font-bold mb-2">📦 Volume Total Sélectionné</h3>
+                <p className="text-blue-100 text-sm lg:text-base">Somme des volumes des objets sélectionnés</p>
               </div>
               <div className="text-left lg:text-right">
                 <div className="text-3xl lg:text-4xl font-bold mb-1">{getTotalVolumeSelected().totalVolume}</div>
                 <div className="text-base lg:text-lg font-semibold text-blue-200">m³</div>
                 <div className="text-sm text-blue-100 mt-1">
-                  {getTotalVolumeSelected().totalItems} objet(s) détecté(s)
+                  {getTotalVolumeSelected().totalItems} objet(s) sélectionné(s)
                 </div>
               </div>
             </div>
@@ -256,7 +304,21 @@ export default function Home() {
                 <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm">
                   <h3 className="text-xl font-bold text-gray-800">Objets détectés</h3>
                   {photo.status === 'completed' && (
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => selectAllItems(photoIndex)}
+                          className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 transition-colors"
+                        >
+                          Tout sélectionner
+                        </button>
+                        <button
+                          onClick={() => deselectAllItems(photoIndex)}
+                          className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200 transition-colors"
+                        >
+                          Tout désélectionner
+                        </button>
+                      </div>
                       <span className="text-base font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
                         {photo.analysis?.items?.length || 0} objet(s) détecté(s)
                       </span>
@@ -271,6 +333,7 @@ export default function Home() {
                       <table className="min-w-full text-base border-collapse bg-white rounded-lg shadow-sm">
                         <thead>
                           <tr className="border-b-2 border-gray-200 bg-gray-50">
+                            <th className="text-center p-3 font-semibold text-gray-700 w-16">Sélectionner</th>
                             <th className="text-left p-3 font-semibold text-gray-700 w-24">Type</th>
                             <th className="text-left p-3 font-semibold text-gray-700 min-w-40">Description</th>
                             <th className="text-left p-3 font-semibold text-gray-700 w-32">Mesures</th>
@@ -287,8 +350,19 @@ export default function Home() {
                               notes = notes ? `${notes} | Fragile !` : 'Fragile !';
                             }
                             
+                            // Vérifier si l'objet est sélectionné (par défaut tous sélectionnés)
+                            const isSelected = !photo.selectedItems || photo.selectedItems.has(itemIndex);
+                            
                             return (
-                              <tr key={itemIndex} className="border-b border-gray-100 hover:bg-blue-50 transition-colors">
+                              <tr key={itemIndex} className={`border-b border-gray-100 hover:bg-blue-50 transition-colors ${!isSelected ? 'opacity-50 bg-gray-50' : ''}`}>
+                                <td className="p-3 text-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => toggleItemSelection(photoIndex, itemIndex)}
+                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                                  />
+                                </td>
                                 <td className="p-3">
                                   <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                                     item.category === 'furniture' ? 'bg-blue-100 text-blue-800' :
@@ -345,12 +419,22 @@ export default function Home() {
                           notes = notes ? `${notes} | Fragile !` : 'Fragile !';
                         }
                         
+                        // Vérifier si l'objet est sélectionné (par défaut tous sélectionnés)
+                        const isSelected = !photo.selectedItems || photo.selectedItems.has(itemIndex);
+                        
                         return (
-                          <div key={itemIndex} className="bg-white p-4 rounded-lg border shadow-sm">
+                          <div key={itemIndex} className={`bg-white p-4 rounded-lg border shadow-sm ${!isSelected ? 'opacity-50 bg-gray-50' : ''}`}>
                             <div className="flex items-start justify-between mb-3">
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-2 mb-2">
-                                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              <div className="flex items-start space-x-3 flex-1">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleItemSelection(photoIndex, itemIndex)}
+                                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 mt-1"
+                                />
+                                <div className="flex-1">
+                                  <div className="flex items-center space-x-2 mb-2">
+                                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                                     item.category === 'furniture' ? 'bg-blue-100 text-blue-800' :
                                     item.category === 'appliance' ? 'bg-green-100 text-green-800' :
                                     item.category === 'fragile' ? 'bg-red-100 text-red-800' :
@@ -359,19 +443,20 @@ export default function Home() {
                                   }`}>
                                     {translateCategory(item.category)}
                                   </span>
-                                  <span className="text-sm font-bold text-blue-600">{item.volume_m3 || 0} m³</span>
+                                    <span className="text-sm font-bold text-blue-600">{item.volume_m3 || 0} m³</span>
+                                  </div>
+                                  <h4 className="font-semibold text-gray-900 text-base mb-1">{enrichDescription(item)}</h4>
+                                  {item.dimensions_cm && (
+                                    <p className="text-sm text-gray-600 font-mono mb-2">
+                                      {[item.dimensions_cm.length, item.dimensions_cm.width, item.dimensions_cm.height]
+                                        .filter(Boolean)
+                                        .join(' × ')} cm
+                                    </p>
+                                  )}
+                                  {notes && (
+                                    <p className="text-sm text-gray-600 mb-2">{notes}</p>
+                                  )}
                                 </div>
-                                <h4 className="font-semibold text-gray-900 text-base mb-1">{enrichDescription(item)}</h4>
-                                {item.dimensions_cm && (
-                                  <p className="text-sm text-gray-600 font-mono mb-2">
-                                    {[item.dimensions_cm.length, item.dimensions_cm.width, item.dimensions_cm.height]
-                                      .filter(Boolean)
-                                      .join(' × ')} cm
-                                  </p>
-                                )}
-                                {notes && (
-                                  <p className="text-sm text-gray-600 mb-2">{notes}</p>
-                                )}
                               </div>
                             </div>
                             <div className="flex items-center space-x-2">
