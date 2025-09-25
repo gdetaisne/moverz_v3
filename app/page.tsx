@@ -1,14 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import BackOffice from "@/components/BackOffice";
 import { getBuildInfo } from "@/lib/buildInfo";
-
-interface ProcessingFile {
-  file: File;
-  status: 'pending' | 'processing' | 'completed' | 'error';
-  result?: any;
-  error?: string;
-}
+import { TInventoryItem } from "@/lib/schemas";
 
 interface RoomData {
   id: string;
@@ -17,9 +11,11 @@ interface RoomData {
     file: File;
     fileUrl?: string; // URL du fichier uploadé
     analysis?: any;
-    status: 'pending' | 'processing' | 'completed' | 'error';
+    status: 'uploaded' | 'processing' | 'completed' | 'error';
     error?: string;
-    selectedItems?: Set<number>; // Indices des objets sélectionnés
+    selectedItems: Set<number>; // Indices des objets sélectionnés (toujours défini)
+    photoId?: string; // ID unique pour le traitement asynchrone
+    progress?: number; // Pourcentage de progression (0-100)
   }[];
 }
 
@@ -33,81 +29,124 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'tests' | 'backoffice'>('tests');
 
+  // Fonction pour générer un ID unique
+  const generatePhotoId = () => {
+    return `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  };
+
+  // Fonction de traitement asynchrone d'une photo
+  const processPhotoAsync = async (photoIndex: number, file: File, photoId: string) => {
+    try {
+      // Marquer comme en cours de traitement
+      setCurrentRoom(prev => ({
+        ...prev,
+        photos: prev.photos.map((photo, idx) => 
+          idx === photoIndex ? { 
+            ...photo, 
+            status: 'processing',
+            progress: 10
+          } : photo
+        )
+      }));
+
+      // Simuler progression
+      const progressInterval = setInterval(() => {
+        setCurrentRoom(prev => ({
+          ...prev,
+          photos: prev.photos.map((photo, idx) => 
+            idx === photoIndex ? { 
+              ...photo, 
+              progress: Math.min((photo.progress || 10) + Math.random() * 15, 90)
+            } : photo
+          )
+        }));
+      }, 1000);
+
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/photos/analyze", { method: "POST", body: fd });
+      const result = await res.json();
+      
+      clearInterval(progressInterval);
+
+      if (res.ok) {
+        // Marquer comme terminé avec le résultat et l'URL Base64
+        setCurrentRoom(prev => ({
+          ...prev,
+          photos: prev.photos.map((photo, idx) => 
+            idx === photoIndex ? { 
+              ...photo, 
+              status: 'completed', 
+              analysis: result,
+              fileUrl: result.file_url,
+              progress: 100
+            } : photo
+          )
+        }));
+      } else {
+        throw new Error(result.error || 'Erreur inconnue');
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Erreur inconnue';
+      setCurrentRoom(prev => ({
+        ...prev,
+        photos: prev.photos.map((photo, idx) => 
+          idx === photoIndex ? { 
+            ...photo, 
+            status: 'error', 
+            error: errorMsg,
+            progress: 0
+          } : photo
+        )
+      }));
+    }
+  };
+
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     setLoading(true);
     
-    // Initialiser les photos pour la pièce actuelle
-    const newPhotos = files.map(file => ({
-      file,
-      status: 'pending' as const
-    }));
+    // Initialiser les photos avec statut 'uploaded' immédiatement
+    const newPhotos = files.map(file => {
+      const photoId = generatePhotoId();
+      return {
+        file,
+        status: 'uploaded' as const,
+        selectedItems: new Set<number>(),
+        photoId,
+        progress: 0
+      };
+    });
     
     setCurrentRoom(prev => ({
       ...prev,
       photos: [...prev.photos, ...newPhotos]
     }));
     
-    // Traiter chaque photo
+    // Traiter chaque photo en arrière-plan
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const photoIndex = currentRoom.photos.length + i;
+      const photoId = newPhotos[i].photoId!;
       
-      // Marquer comme en cours de traitement
-      setCurrentRoom(prev => ({
-        ...prev,
-        photos: prev.photos.map((photo, idx) => 
-          idx === photoIndex ? { ...photo, status: 'processing' } : photo
-        )
-      }));
-      
-      try {
-        const fd = new FormData();
-        fd.append("file", file);
-        const res = await fetch("/api/photos/analyze", { method: "POST", body: fd });
-        const result = await res.json();
-        
-        if (res.ok) {
-            // Marquer comme terminé avec le résultat et l'URL Base64
-            setCurrentRoom(prev => ({
-              ...prev,
-              photos: prev.photos.map((photo, idx) => 
-                idx === photoIndex ? { 
-                  ...photo, 
-                  status: 'completed', 
-                  analysis: result,
-                  fileUrl: result.file_url // URL Base64 directement
-                } : photo
-              )
-            }));
-
-        } else {
-          throw new Error(result.error || 'Erreur inconnue');
-        }
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : 'Erreur inconnue';
-        setCurrentRoom(prev => ({
-          ...prev,
-          photos: prev.photos.map((photo, idx) => 
-            idx === photoIndex ? { ...photo, status: 'error', error: errorMsg } : photo
-          )
-        }));
-      }
+      // Lancer le traitement asynchrone (ne pas attendre)
+      processPhotoAsync(photoIndex, file, photoId);
     }
     
     setLoading(false);
   }
 
 
-  const getTotalVolumeSelected = () => {
+  const totalVolumeSelected = useMemo(() => {
     let totalVolume = 0;
     let totalItems = 0;
 
     currentRoom.photos.forEach(photo => {
       if (photo.status === 'completed' && photo.analysis?.items) {
-        photo.analysis.items.forEach((item: any, itemIndex: number) => {
-          // Vérifier si l'objet est sélectionné (par défaut tous sélectionnés)
-          const isSelected = !photo.selectedItems || photo.selectedItems.has(itemIndex);
+        photo.analysis.items.forEach((item: TInventoryItem, itemIndex: number) => {
+          // Vérifier si l'objet est sélectionné
+          // Par défaut, si le Set est vide, tous les objets sont sélectionnés
+          const isSelected = photo.selectedItems.size === 0 || photo.selectedItems.has(itemIndex);
           if (isSelected) {
             totalVolume += (item.volume_m3 || 0) * (item.quantity || 1);
             totalItems += item.quantity || 1;
@@ -117,14 +156,14 @@ export default function Home() {
     });
 
     return { totalVolume: Number(totalVolume.toFixed(3)), totalItems };
-  };
+  }, [currentRoom.photos]);
 
   const toggleItemSelection = (photoIndex: number, itemIndex: number) => {
     setCurrentRoom(prev => ({
       ...prev,
       photos: prev.photos.map((photo, idx) => {
         if (idx === photoIndex) {
-          const selectedItems = new Set(photo.selectedItems || []);
+          const selectedItems = new Set(photo.selectedItems);
           if (selectedItems.has(itemIndex)) {
             selectedItems.delete(itemIndex);
           } else {
@@ -164,7 +203,7 @@ export default function Home() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'pending': return '⏳';
+      case 'uploaded': return '📤';
       case 'processing': return '🔄';
       case 'completed': return '✅';
       case 'error': return '❌';
@@ -174,7 +213,7 @@ export default function Home() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'text-gray-500';
+      case 'uploaded': return 'text-blue-500';
       case 'processing': return 'text-blue-600';
       case 'completed': return 'text-green-600';
       case 'error': return 'text-red-600';
@@ -193,7 +232,21 @@ export default function Home() {
     }
   };
 
-  const enrichDescription = (item: any) => {
+  // Fonction utilitaire pour vérifier si un objet est sélectionné
+  const isItemSelected = (photo: RoomData['photos'][0], itemIndex: number): boolean => {
+    return photo.selectedItems.size === 0 || photo.selectedItems.has(itemIndex);
+  };
+
+  // Fonction utilitaire pour générer les notes enrichies
+  const getEnrichedNotes = (item: TInventoryItem): string => {
+    let notes = item.notes || '';
+    if (item.fragile && !notes.toLowerCase().includes('fragile')) {
+      notes = notes ? `${notes} | Fragile !` : 'Fragile !';
+    }
+    return notes;
+  };
+
+  const enrichDescription = (item: TInventoryItem) => {
     let description = item.label;
     
     // Ajouter des détails selon la catégorie
@@ -238,14 +291,17 @@ export default function Home() {
           </div>
         </div>
 
-      {loading && (
+      {currentRoom.photos.some(p => p.status === 'processing') && (
         <div className="mb-6 p-6 bg-blue-50 rounded-lg border border-blue-200">
           <div className="flex items-center space-x-3">
             <div className="animate-spin text-blue-600 text-xl">🔄</div>
             <div>
-              <h4 className="text-lg font-semibold text-blue-800">Analyse en cours...</h4>
+              <h4 className="text-lg font-semibold text-blue-800">Traitement en cours...</h4>
               <p className="text-base text-blue-600">
                 {currentRoom.photos.filter(p => p.status === 'completed').length}/{currentRoom.photos.length} photo(s) analysée(s)
+              </p>
+              <p className="text-sm text-blue-500 mt-1">
+                {currentRoom.photos.filter(p => p.status === 'processing').length} photo(s) en cours d'analyse
               </p>
             </div>
           </div>
@@ -261,10 +317,10 @@ export default function Home() {
                 <p className="text-blue-100 text-sm lg:text-base">Somme des volumes des objets sélectionnés</p>
               </div>
               <div className="text-left lg:text-right">
-                <div className="text-3xl lg:text-4xl font-bold mb-1">{getTotalVolumeSelected().totalVolume}</div>
+                <div className="text-3xl lg:text-4xl font-bold mb-1">{totalVolumeSelected.totalVolume}</div>
                 <div className="text-base lg:text-lg font-semibold text-blue-200">m³</div>
                 <div className="text-sm text-blue-100 mt-1">
-                  {getTotalVolumeSelected().totalItems} objet(s) sélectionné(s)
+                  {totalVolumeSelected.totalItems} objet(s) sélectionné(s)
                 </div>
               </div>
             </div>
@@ -289,11 +345,28 @@ export default function Home() {
                   ) : (
                     <div className="text-center text-gray-400">
                       <div className="text-4xl mb-2">{getStatusIcon(photo.status)}</div>
-                      <div className="text-sm text-gray-600">
-                        {photo.status === 'pending' && 'En attente...'}
+                      <div className="text-sm text-gray-600 mb-3">
+                        {photo.status === 'uploaded' && 'Photo uploadée'}
                         {photo.status === 'processing' && 'Analyse en cours...'}
                         {photo.status === 'error' && photo.error}
                       </div>
+                      
+                      {/* Barre de progression pour le statut processing */}
+                      {photo.status === 'processing' && (
+                        <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-500 ease-out" 
+                            style={{ width: `${photo.progress || 0}%` }}
+                          ></div>
+                        </div>
+                      )}
+                      
+                      {/* Texte de progression */}
+                      {photo.status === 'processing' && (
+                        <div className="text-xs text-blue-600 font-medium">
+                          {Math.round(photo.progress || 0)}% terminé
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -343,15 +416,12 @@ export default function Home() {
                           </tr>
                         </thead>
                         <tbody>
-                          {photo.analysis.items?.map((item: any, itemIndex: number) => {
+                          {photo.analysis.items?.map((item: TInventoryItem, itemIndex: number) => {
                             // Générer les notes avec fragile si applicable
-                            let notes = item.notes || '';
-                            if (item.fragile && !notes.toLowerCase().includes('fragile')) {
-                              notes = notes ? `${notes} | Fragile !` : 'Fragile !';
-                            }
+                            const notes = getEnrichedNotes(item);
                             
-                            // Vérifier si l'objet est sélectionné (par défaut tous sélectionnés)
-                            const isSelected = !photo.selectedItems || photo.selectedItems.has(itemIndex);
+                            // Vérifier si l'objet est sélectionné
+                            const isSelected = isItemSelected(photo, itemIndex);
                             
                             return (
                               <tr key={itemIndex} className={`border-b border-gray-100 hover:bg-blue-50 transition-colors ${!isSelected ? 'opacity-50 bg-gray-50' : ''}`}>
@@ -412,15 +482,12 @@ export default function Home() {
 
                     {/* Version mobile - Cards */}
                     <div className="lg:hidden space-y-4">
-                      {photo.analysis.items?.map((item: any, itemIndex: number) => {
+                      {photo.analysis.items?.map((item: TInventoryItem, itemIndex: number) => {
                         // Générer les notes avec fragile si applicable
-                        let notes = item.notes || '';
-                        if (item.fragile && !notes.toLowerCase().includes('fragile')) {
-                          notes = notes ? `${notes} | Fragile !` : 'Fragile !';
-                        }
+                        const notes = getEnrichedNotes(item);
                         
-                        // Vérifier si l'objet est sélectionné (par défaut tous sélectionnés)
-                        const isSelected = !photo.selectedItems || photo.selectedItems.has(itemIndex);
+                        // Vérifier si l'objet est sélectionné
+                        const isSelected = isItemSelected(photo, itemIndex);
                         
                         return (
                           <div key={itemIndex} className={`bg-white p-4 rounded-lg border shadow-sm ${!isSelected ? 'opacity-50 bg-gray-50' : ''}`}>
@@ -507,10 +574,14 @@ export default function Home() {
                       <span className="text-4xl">{getStatusIcon(photo.status)}</span>
                       <div>
                         <h4 className="text-lg font-semibold text-gray-700">
-                          {photo.status === 'pending' ? 'En attente d\'analyse...' : 'Analyse en cours...'}
+                          {photo.status === 'uploaded' ? 'Photo uploadée' : 
+                           photo.status === 'processing' ? 'Analyse en cours...' : 
+                           'En attente d\'analyse...'}
                         </h4>
                         <p className="text-base text-gray-600 mt-1">
-                          {photo.status === 'pending' ? 'L\'image sera analysée automatiquement' : 'L\'IA détecte les objets...'}
+                          {photo.status === 'uploaded' ? 'L\'image sera analysée automatiquement' :
+                           photo.status === 'processing' ? 'L\'IA détecte les objets...' :
+                           'L\'image sera analysée automatiquement'}
                         </p>
                       </div>
                     </div>
@@ -530,7 +601,7 @@ export default function Home() {
               <div className="bg-white p-4 rounded-lg border">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-green-600 mb-1">
-                    {getTotalVolumeSelected().totalItems}
+                    {totalVolumeSelected.totalItems}
                   </div>
                   <div className="text-sm text-green-700">Quantité totale</div>
                 </div>
@@ -538,7 +609,7 @@ export default function Home() {
               <div className="bg-white p-4 rounded-lg border">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-purple-600 mb-1">
-                    {getTotalVolumeSelected().totalVolume}
+                    {totalVolumeSelected.totalVolume}
                   </div>
                   <div className="text-sm text-purple-700">Volume total (m³)</div>
                 </div>
