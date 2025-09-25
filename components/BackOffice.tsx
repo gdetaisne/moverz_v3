@@ -29,17 +29,17 @@ export default function BackOffice() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">🔧 Back-office IA</h1>
-        <p className="text-lg text-gray-600">Configuration des paramètres d'analyse IA</p>
+    <div className="max-w-6xl mx-auto p-4 lg:p-6">
+      <div className="mb-6 lg:mb-8">
+        <h1 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-2">🔧 Back-office IA</h1>
+        <p className="text-base lg:text-lg text-gray-600">Configuration des paramètres d'analyse IA</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         
         {/* Configuration générale */}
-        <div className="space-y-6">
-          <div className="bg-white p-6 rounded-xl shadow-sm border">
+        <div className="space-y-4 lg:space-y-6">
+          <div className="bg-white p-4 lg:p-6 rounded-xl shadow-sm border">
             <h2 className="text-xl font-bold text-gray-800 mb-4">⚙️ Configuration générale</h2>
             
             <div className="space-y-4">
@@ -95,7 +95,7 @@ export default function BackOffice() {
           </div>
 
           {/* Actions */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border">
+          <div className="bg-white p-4 lg:p-6 rounded-xl shadow-sm border">
             <h2 className="text-xl font-bold text-gray-800 mb-4">💾 Actions</h2>
             <div className="flex space-x-4">
               <button

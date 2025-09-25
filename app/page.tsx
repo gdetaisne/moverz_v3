@@ -161,25 +161,27 @@ export default function Home() {
 
   const renderTestsInterface = () => (
     <>
-      <div className="flex justify-between items-center mb-8 p-6 bg-white rounded-xl shadow-sm border">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Analyse IA — Inventaire Déménagement</h1>
-          <p className="text-lg text-gray-600">Détection automatique des objets pour votre déménagement</p>
-        </div>
-        <div className="flex items-center space-x-6">
-          <div className="text-right">
-            <div className="text-xl font-bold text-blue-600">{currentRoom.name}</div>
-            <div className="text-sm text-gray-700">{currentRoom.photos.length} photo(s) ajoutée(s)</div>
+        <div className="mb-8 p-4 lg:p-6 bg-white rounded-xl shadow-sm border">
+          <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0">
+            <div className="flex-1">
+              <h1 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-2">Analyse IA — Inventaire Déménagement</h1>
+              <p className="text-base lg:text-lg text-gray-600">Détection automatique des objets pour votre déménagement</p>
+            </div>
+            <div className="flex flex-col lg:flex-row lg:items-center space-y-4 lg:space-y-0 lg:space-x-6">
+              <div className="text-left lg:text-right">
+                <div className="text-lg lg:text-xl font-bold text-blue-600">{currentRoom.name}</div>
+                <div className="text-sm text-gray-700">{currentRoom.photos.length} photo(s) ajoutée(s)</div>
+              </div>
+              <input 
+                type="file" 
+                multiple 
+                accept="image/*" 
+                onChange={onUpload}
+                className="block text-sm lg:text-base text-gray-500 file:mr-4 file:py-2 lg:file:py-3 file:px-4 lg:file:px-6 file:rounded-full file:border-0 file:text-sm lg:file:text-base file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 transition-colors"
+              />
+            </div>
           </div>
-          <input 
-            type="file" 
-            multiple 
-            accept="image/*" 
-            onChange={onUpload}
-            className="block text-base text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-full file:border-0 file:text-base file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 transition-colors"
-          />
         </div>
-      </div>
 
       {loading && (
         <div className="mb-6 p-6 bg-blue-50 rounded-lg border border-blue-200">
@@ -197,15 +199,15 @@ export default function Home() {
 
         {/* Volume total de tous les objets */}
         {currentRoom.photos.some(p => p.status === 'completed') && (
-          <div className="mb-6 p-6 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl text-white shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-2xl font-bold mb-2">📦 Volume Total Détecté</h3>
-                <p className="text-blue-100">Somme des volumes de tous les objets détectés</p>
+          <div className="mb-6 p-4 lg:p-6 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl text-white shadow-lg">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+              <div className="flex-1">
+                <h3 className="text-xl lg:text-2xl font-bold mb-2">📦 Volume Total Détecté</h3>
+                <p className="text-blue-100 text-sm lg:text-base">Somme des volumes de tous les objets détectés</p>
               </div>
-              <div className="text-right">
-                <div className="text-4xl font-bold mb-1">{getTotalVolumeSelected().totalVolume}</div>
-                <div className="text-lg font-semibold text-blue-200">m³</div>
+              <div className="text-left lg:text-right">
+                <div className="text-3xl lg:text-4xl font-bold mb-1">{getTotalVolumeSelected().totalVolume}</div>
+                <div className="text-base lg:text-lg font-semibold text-blue-200">m³</div>
                 <div className="text-sm text-blue-100 mt-1">
                   {getTotalVolumeSelected().totalItems} objet(s) détecté(s)
                 </div>
@@ -218,10 +220,10 @@ export default function Home() {
       <div className="space-y-8">
         {currentRoom.photos.map((photo, photoIndex) => (
           <div key={photoIndex} className="border rounded-xl p-6 bg-white shadow-sm">
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-              
-              {/* Côté gauche - Image */}
-              <div className="xl:col-span-1 space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                {/* Côté gauche - Image */}
+                <div className="lg:col-span-1 space-y-4">
                 <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
                   {photo.status === 'completed' ? (
                     <img 
@@ -243,7 +245,7 @@ export default function Home() {
               </div>
 
               {/* Côté droit - Tableau de données */}
-              <div className="xl:col-span-2 space-y-6">
+              <div className="lg:col-span-2 space-y-6">
                 <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm">
                   <h3 className="text-xl font-bold text-gray-800">Objets détectés</h3>
                   {photo.status === 'completed' && (
@@ -256,74 +258,129 @@ export default function Home() {
                 </div>
 
                 {photo.status === 'completed' && photo.analysis ? (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full text-base border-collapse bg-white rounded-lg shadow-sm">
-                      <thead>
-                        <tr className="border-b-2 border-gray-200 bg-gray-50">
-                          <th className="text-left p-3 font-semibold text-gray-700 w-24">Type</th>
-                          <th className="text-left p-3 font-semibold text-gray-700 min-w-40">Description</th>
-                          <th className="text-left p-3 font-semibold text-gray-700 w-32">Mesures</th>
-                          <th className="text-left p-3 font-semibold text-gray-700 w-20">m³</th>
-                          <th className="text-left p-3 font-semibold text-gray-700 w-32">Notes</th>
-                          <th className="text-left p-3 font-semibold text-gray-700 w-24">Confiance</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {photo.analysis.items?.map((item: any, itemIndex: number) => {
-                          // Générer les notes avec fragile si applicable
-                          let notes = item.notes || '';
-                          if (item.fragile && !notes.toLowerCase().includes('fragile')) {
-                            notes = notes ? `${notes} | Fragile !` : 'Fragile !';
-                          }
-                          
-                          return (
-                            <tr key={itemIndex} className="border-b border-gray-100 hover:bg-blue-50 transition-colors">
-                              <td className="p-3">
-                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                  item.category === 'furniture' ? 'bg-blue-100 text-blue-800' :
-                                  item.category === 'appliance' ? 'bg-green-100 text-green-800' :
-                                  item.category === 'fragile' ? 'bg-red-100 text-red-800' :
-                                  item.category === 'box' ? 'bg-yellow-100 text-yellow-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {translateCategory(item.category)}
-                                </span>
-                              </td>
-                              <td className="p-3">
-                                <span className="font-semibold text-gray-900 text-sm">{enrichDescription(item)}</span>
-                              </td>
-                              <td className="p-3">
+                  <>
+                    {/* Version desktop - Tableau */}
+                    <div className="hidden lg:block overflow-x-auto">
+                      <table className="min-w-full text-base border-collapse bg-white rounded-lg shadow-sm">
+                        <thead>
+                          <tr className="border-b-2 border-gray-200 bg-gray-50">
+                            <th className="text-left p-3 font-semibold text-gray-700 w-24">Type</th>
+                            <th className="text-left p-3 font-semibold text-gray-700 min-w-40">Description</th>
+                            <th className="text-left p-3 font-semibold text-gray-700 w-32">Mesures</th>
+                            <th className="text-left p-3 font-semibold text-gray-700 w-20">m³</th>
+                            <th className="text-left p-3 font-semibold text-gray-700 w-32">Notes</th>
+                            <th className="text-left p-3 font-semibold text-gray-700 w-24">Confiance</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {photo.analysis.items?.map((item: any, itemIndex: number) => {
+                            // Générer les notes avec fragile si applicable
+                            let notes = item.notes || '';
+                            if (item.fragile && !notes.toLowerCase().includes('fragile')) {
+                              notes = notes ? `${notes} | Fragile !` : 'Fragile !';
+                            }
+                            
+                            return (
+                              <tr key={itemIndex} className="border-b border-gray-100 hover:bg-blue-50 transition-colors">
+                                <td className="p-3">
+                                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                    item.category === 'furniture' ? 'bg-blue-100 text-blue-800' :
+                                    item.category === 'appliance' ? 'bg-green-100 text-green-800' :
+                                    item.category === 'fragile' ? 'bg-red-100 text-red-800' :
+                                    item.category === 'box' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {translateCategory(item.category)}
+                                  </span>
+                                </td>
+                                <td className="p-3">
+                                  <span className="font-semibold text-gray-900 text-sm">{enrichDescription(item)}</span>
+                                </td>
+                                <td className="p-3">
+                                  {item.dimensions_cm && (
+                                    <span className="text-xs text-gray-700 font-mono">
+                                      {[item.dimensions_cm.length, item.dimensions_cm.width, item.dimensions_cm.height]
+                                        .filter(Boolean)
+                                        .join(' × ')} cm
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="p-3">
+                                  <span className="text-sm font-bold text-blue-600">{item.volume_m3 || 0}</span>
+                                </td>
+                                <td className="p-3">
+                                  <span className="text-xs text-gray-600">{notes || '-'}</span>
+                                </td>
+                                <td className="p-3">
+                                  <div className="flex items-center space-x-2">
+                                    <div className="w-16 bg-gray-200 rounded-full h-2">
+                                      <div 
+                                        className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                                        style={{ width: `${(item.confidence || 0) * 100}%` }}
+                                      ></div>
+                                    </div>
+                                    <span className="text-xs font-semibold text-gray-700">{Math.round((item.confidence || 0) * 100)}%</span>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Version mobile - Cards */}
+                    <div className="lg:hidden space-y-4">
+                      {photo.analysis.items?.map((item: any, itemIndex: number) => {
+                        // Générer les notes avec fragile si applicable
+                        let notes = item.notes || '';
+                        if (item.fragile && !notes.toLowerCase().includes('fragile')) {
+                          notes = notes ? `${notes} | Fragile !` : 'Fragile !';
+                        }
+                        
+                        return (
+                          <div key={itemIndex} className="bg-white p-4 rounded-lg border shadow-sm">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                    item.category === 'furniture' ? 'bg-blue-100 text-blue-800' :
+                                    item.category === 'appliance' ? 'bg-green-100 text-green-800' :
+                                    item.category === 'fragile' ? 'bg-red-100 text-red-800' :
+                                    item.category === 'box' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {translateCategory(item.category)}
+                                  </span>
+                                  <span className="text-sm font-bold text-blue-600">{item.volume_m3 || 0} m³</span>
+                                </div>
+                                <h4 className="font-semibold text-gray-900 text-base mb-1">{enrichDescription(item)}</h4>
                                 {item.dimensions_cm && (
-                                  <span className="text-xs text-gray-700 font-mono">
+                                  <p className="text-sm text-gray-600 font-mono mb-2">
                                     {[item.dimensions_cm.length, item.dimensions_cm.width, item.dimensions_cm.height]
                                       .filter(Boolean)
                                       .join(' × ')} cm
-                                  </span>
+                                  </p>
                                 )}
-                              </td>
-                              <td className="p-3">
-                                <span className="text-sm font-bold text-blue-600">{item.volume_m3 || 0}</span>
-                              </td>
-                              <td className="p-3">
-                                <span className="text-xs text-gray-600">{notes || '-'}</span>
-                              </td>
-                              <td className="p-3">
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-16 bg-gray-200 rounded-full h-2">
-                                    <div 
-                                      className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                                      style={{ width: `${(item.confidence || 0) * 100}%` }}
-                                    ></div>
-                                  </div>
-                                  <span className="text-xs font-semibold text-gray-700">{Math.round((item.confidence || 0) * 100)}%</span>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                                {notes && (
+                                  <p className="text-sm text-gray-600 mb-2">{notes}</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                                  style={{ width: `${(item.confidence || 0) * 100}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-xs font-semibold text-gray-700">{Math.round((item.confidence || 0) * 100)}%</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
                 ) : photo.status === 'error' ? (
                   <div className="p-6 bg-red-50 rounded-lg border border-red-200">
                     <div className="flex items-center space-x-3">
@@ -386,11 +443,11 @@ export default function Home() {
     <main className="min-h-screen bg-gray-50">
       {/* Navigation par onglets */}
       <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex space-x-8">
+        <div className="max-w-7xl mx-auto px-4 lg:px-6">
+          <div className="flex space-x-4 lg:space-x-8">
             <button
               onClick={() => setActiveTab('tests')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+              className={`py-3 lg:py-4 px-2 lg:px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'tests'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -400,7 +457,7 @@ export default function Home() {
             </button>
             <button
               onClick={() => setActiveTab('backoffice')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+              className={`py-3 lg:py-4 px-2 lg:px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'backoffice'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
