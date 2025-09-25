@@ -3,6 +3,7 @@ import { useState, useMemo } from "react";
 import BackOffice from "@/components/BackOffice";
 import { getBuildInfo } from "@/lib/buildInfo";
 import { TInventoryItem } from "@/lib/schemas";
+import { clearCache } from "@/lib/cache";
 
 interface RoomData {
   id: string;
@@ -28,6 +29,11 @@ export default function Home() {
   });
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'tests' | 'backoffice'>('tests');
+
+  // Fonction utilitaire pour arrondir les m³ à 2 chiffres avec arrondi supérieur
+  const roundUpVolume = (volume: number): number => {
+    return Math.ceil(volume * 100) / 100;
+  };
 
   // Fonction pour générer un ID unique
   const generatePhotoId = () => {
@@ -143,6 +149,7 @@ export default function Home() {
 
     currentRoom.photos.forEach(photo => {
       if (photo.status === 'completed' && photo.analysis?.items) {
+        // Objets normaux
         photo.analysis.items.forEach((item: TInventoryItem, itemIndex: number) => {
           // Vérifier si l'objet est sélectionné
           // Par défaut, si le Set est vide, tous les objets sont sélectionnés
@@ -152,10 +159,16 @@ export default function Home() {
             totalItems += item.quantity || 1;
           }
         });
+        
+        // Autres objets (toujours sélectionnés par défaut)
+        if (photo.analysis.special_rules?.autres_objets?.present) {
+          totalVolume += photo.analysis.special_rules.autres_objets.volume_m3 || 0;
+          totalItems += photo.analysis.special_rules.autres_objets.listed_items?.length || 0;
+        }
       }
     });
 
-    return { totalVolume: Number(totalVolume.toFixed(3)), totalItems };
+    return { totalVolume: roundUpVolume(totalVolume), totalItems };
   }, [currentRoom.photos]);
 
   const toggleItemSelection = (photoIndex: number, itemIndex: number) => {
@@ -199,6 +212,11 @@ export default function Home() {
         return photo;
       })
     }));
+  };
+
+  const clearAnalysisCache = () => {
+    clearCache();
+    alert('Cache vidé ! Les prochaines analyses seront refaites.');
   };
 
   const getStatusIcon = (status: string) => {
@@ -275,18 +293,26 @@ export default function Home() {
               <h1 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-2">Analyse IA — Inventaire Déménagement</h1>
               <p className="text-base lg:text-lg text-gray-600">Détection automatique des objets pour votre déménagement</p>
             </div>
-            <div className="flex flex-col lg:flex-row lg:items-center space-y-4 lg:space-y-0 lg:space-x-6">
+              <div className="flex flex-col lg:flex-row lg:items-center space-y-4 lg:space-y-0 lg:space-x-6">
               <div className="text-left lg:text-right">
                 <div className="text-lg lg:text-xl font-bold text-blue-600">{currentRoom.name}</div>
                 <div className="text-sm text-gray-700">{currentRoom.photos.length} photo(s) ajoutée(s)</div>
               </div>
-              <input 
-                type="file" 
-                multiple 
-                accept="image/*" 
-                onChange={onUpload}
-                className="block text-sm lg:text-base text-gray-500 file:mr-4 file:py-2 lg:file:py-3 file:px-4 lg:file:px-6 file:rounded-full file:border-0 file:text-sm lg:file:text-base file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 transition-colors"
-              />
+              <div className="flex flex-col lg:flex-row space-y-2 lg:space-y-0 lg:space-x-4">
+                <button
+                  onClick={clearAnalysisCache}
+                  className="text-xs bg-orange-100 text-orange-700 px-3 py-2 rounded-lg hover:bg-orange-200 transition-colors"
+                >
+                  🗑️ Vider le cache IA
+                </button>
+                <input 
+                  type="file" 
+                  multiple 
+                  accept="image/*" 
+                  onChange={onUpload}
+                  className="block text-sm lg:text-base text-gray-500 file:mr-4 file:py-2 lg:file:py-3 file:px-4 lg:file:px-6 file:rounded-full file:border-0 file:text-sm lg:file:text-base file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 transition-colors"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -457,7 +483,7 @@ export default function Home() {
                                   )}
                                 </td>
                                 <td className="p-3">
-                                  <span className="text-sm font-bold text-blue-600">{item.volume_m3 || 0}</span>
+                                  <span className="text-sm font-bold text-blue-600">{roundUpVolume(item.volume_m3 || 0)}</span>
                                 </td>
                                 <td className="p-3">
                                   <span className="text-xs text-gray-600">{notes || '-'}</span>
@@ -476,6 +502,55 @@ export default function Home() {
                               </tr>
                             );
                           })}
+                          
+                          {/* Ligne pour "autres objets" s'ils existent */}
+                          {photo.analysis.special_rules?.autres_objets?.present && (
+                            <tr className="border-b border-gray-100 hover:bg-orange-50 transition-colors bg-orange-50">
+                              <td className="p-3 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={true} // Par défaut sélectionné
+                                  onChange={() => {}} // Pas de toggle pour l'instant
+                                  className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
+                                />
+                              </td>
+                              <td className="p-3">
+                                <span className="px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">
+                                  Divers
+                                </span>
+                              </td>
+                              <td className="p-3">
+                                <span className="font-semibold text-gray-900 text-sm">
+                                  Autres objets ({photo.analysis.special_rules.autres_objets.listed_items?.length || 0} items)
+                                </span>
+                                <div className="text-xs text-orange-600 mt-1">
+                                  {photo.analysis.special_rules.autres_objets.listed_items?.join(', ') || 'Aucun objet listé'}
+                                </div>
+                              </td>
+                              <td className="p-3">
+                                <span className="text-xs text-gray-700 font-mono">
+                                  Regroupés
+                                </span>
+                              </td>
+                              <td className="p-3">
+                                <span className="text-sm font-bold text-orange-600">{roundUpVolume(photo.analysis.special_rules.autres_objets.volume_m3 || 0)}</span>
+                              </td>
+                              <td className="p-3">
+                                <span className="text-xs text-orange-600">Objets petits regroupés</span>
+                              </td>
+                              <td className="p-3">
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-16 bg-gray-200 rounded-full h-2">
+                                    <div 
+                                      className="bg-orange-600 h-2 rounded-full transition-all duration-300" 
+                                      style={{ width: '85%' }}
+                                    ></div>
+                                  </div>
+                                  <span className="text-xs font-semibold text-gray-700">85%</span>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
                         </tbody>
                       </table>
                     </div>
@@ -510,7 +585,7 @@ export default function Home() {
                                   }`}>
                                     {translateCategory(item.category)}
                                   </span>
-                                    <span className="text-sm font-bold text-blue-600">{item.volume_m3 || 0} m³</span>
+                                    <span className="text-sm font-bold text-blue-600">{roundUpVolume(item.volume_m3 || 0)} m³</span>
                                   </div>
                                   <h4 className="font-semibold text-gray-900 text-base mb-1">{enrichDescription(item)}</h4>
                                   {item.dimensions_cm && (
@@ -538,25 +613,48 @@ export default function Home() {
                           </div>
                         );
                       })}
-                    </div>
-
-                    {/* Affichage des "autres objets" s'ils existent */}
-                    {photo.analysis.special_rules?.autres_objets?.present && (
-                      <div className="mt-6 p-4 bg-orange-50 rounded-lg border border-orange-200">
-                        <h4 className="text-lg font-semibold text-orange-800 mb-3">📦 Autres objets détectés</h4>
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-orange-700">Objets regroupés :</span>
-                            <span className="text-sm font-bold text-orange-600">
-                              {photo.analysis.special_rules.autres_objets.volume_m3} m³
-                            </span>
+                      
+                      {/* Card pour "autres objets" s'ils existent */}
+                      {photo.analysis.special_rules?.autres_objets?.present && (
+                        <div className="bg-orange-50 p-4 rounded-lg border border-orange-200 shadow-sm">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-start space-x-3 flex-1">
+                              <input
+                                type="checkbox"
+                                checked={true} // Par défaut sélectionné
+                                onChange={() => {}} // Pas de toggle pour l'instant
+                                className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2 mt-1"
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">
+                                    Divers
+                                  </span>
+                                  <span className="text-sm font-bold text-orange-600">{roundUpVolume(photo.analysis.special_rules.autres_objets.volume_m3 || 0)} m³</span>
+                                </div>
+                                <h4 className="font-semibold text-gray-900 text-base mb-1">
+                                  Autres objets ({photo.analysis.special_rules.autres_objets.listed_items?.length || 0} items)
+                                </h4>
+                                <p className="text-sm text-orange-600 mb-2">
+                                  {photo.analysis.special_rules.autres_objets.listed_items?.join(', ') || 'Aucun objet listé'}
+                                </p>
+                                <p className="text-xs text-orange-500">Objets petits regroupés</p>
+                              </div>
+                            </div>
                           </div>
-                          <div className="text-sm text-orange-600">
-                            <strong>Liste :</strong> {photo.analysis.special_rules.autres_objets.listed_items?.join(', ') || 'Aucun objet listé'}
+                          <div className="flex items-center space-x-2">
+                            <div className="flex-1 bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-orange-600 h-2 rounded-full transition-all duration-300" 
+                                style={{ width: '85%' }}
+                              ></div>
+                            </div>
+                            <span className="text-xs font-semibold text-gray-700">85%</span>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
+
                   </>
                 ) : photo.status === 'error' ? (
                   <div className="p-6 bg-red-50 rounded-lg border border-red-200">

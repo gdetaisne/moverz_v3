@@ -8,7 +8,7 @@ export interface AISettings {
 }
 
 export const DEFAULT_AI_SETTINGS: AISettings = {
-  systemPrompt: "Tu es un expert en analyse d'inventaire de déménagement. Analyse chaque photo et détecte tous les éléments pertinents. Utilise uniquement des labels en français. Chaque objet visible doit être listé séparément. Sortie STRICTEMENT au format JSON défini, sans texte supplémentaire.",
+  systemPrompt: "Tu es un expert en analyse d'inventaire de déménagement. Analyse chaque photo et détecte TOUS les éléments pertinents. Utilise uniquement des labels en français. IMPORTANT: Chaque objet visible doit être listé séparément, même s'ils sont identiques (ex: 2 chaises = 2 entrées distinctes). Ne jamais fusionner des objets similaires. Sortie STRICTEMENT au format JSON défini, sans texte supplémentaire.",
   userPrompt: `JSON schema:
 {
  "items":[
@@ -54,7 +54,7 @@ Inclure systématiquement :
 
 Règles :
 - Utiliser uniquement des labels en français.
-- Chaque objet visible doit être listé séparément, même si plusieurs sont identiques (ex. deux fauteuils distincts = deux entrées différentes).
+- CRITIQUE: Chaque objet visible doit être listé séparément, même si plusieurs sont identiques (ex. deux fauteuils distincts = deux entrées différentes). Ne jamais fusionner des objets similaires en une seule entrée.
 - Toujours estimer les dimensions et le volume (m³). Indiquer "estimated" comme source si non mesurable précisément.
 - Pour les tapis : estimer comme un cylindre roulé (longueur = largeur du tapis, diamètre approximatif une fois roulé).
 - Catégoriser correctement : furniture, appliance, fragile, box, misc.
@@ -62,7 +62,7 @@ Règles :
 - Ne jamais fusionner plusieurs objets différents en un seul.
 - Si plusieurs petits objets ne sont pas listés individuellement, ajouter une entrée "autres objets" avec la liste et un volume total estimé.
 - La sortie doit être STRICTEMENT au format JSON défini, sans texte supplémentaire.`,
-  temperature: 0.3, // Plus déterministe = plus rapide
+  temperature: 0.5, // Équilibré pour détecter tous les objets sans fusion
   maxTokens: 2000, // Augmenter pour le prompt plus détaillé
   model: "gpt-4o-mini" // Plus rapide que gpt-4o
 };
