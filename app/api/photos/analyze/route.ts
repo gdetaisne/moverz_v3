@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { analyzePhotoWithVision } from "@/services/openaiVision";
-import { saveLocalFile } from "@/lib/storage";
+import { saveAsBase64 } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
@@ -10,13 +10,19 @@ export async function POST(req: NextRequest) {
     const file = form.get("file");
     if (!(file instanceof File)) return NextResponse.json({ error: "file required" }, { status: 400 });
 
-    const saved = await saveLocalFile(file);
-    const fullUrl = `${req.nextUrl.origin}${saved.url}`;
-    const analysis = await analyzePhotoWithVision({ photoId: saved.id, imageUrl: fullUrl });
+    // Convertir en Base64
+    const saved = await saveAsBase64(file);
+    
+    // Analyser avec l'URL data Base64
+    const analysis = await analyzePhotoWithVision({ 
+      photoId: saved.id, 
+      imageUrl: saved.dataUrl 
+    });
 
     return NextResponse.json({
       ...analysis,
-      file_url: `/api${saved.url}` // Utiliser directement l'URL de l'API
+      file_url: saved.dataUrl, // URL Base64 directement
+      file_size: saved.size
     });
   } catch (e:any) {
     console.error(e);

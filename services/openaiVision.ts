@@ -22,11 +22,29 @@ export async function analyzePhotoWithVision(opts: {
   // Récupérer les paramètres IA configurables
   const aiSettings = getAISettings();
 
-  // Optimiser l'image et vérifier le cache
+  // Traitement de l'image et vérification du cache
   let imageContent;
   let imageHash: string;
   
-  if (opts.imageUrl.startsWith('http://localhost') || opts.imageUrl.startsWith('/uploads/')) {
+  if (opts.imageUrl.startsWith('data:')) {
+    // Image Base64 directement
+    imageContent = { type: "image_url" as const, image_url: { url: opts.imageUrl } };
+    
+    // Créer un hash simple pour le cache (premiers caractères du Base64)
+    const base64Data = opts.imageUrl.split(',')[1] || '';
+    imageHash = `base64_${Buffer.from(base64Data.substring(0, 100)).toString('hex').substring(0, 16)}`;
+    
+    // Vérifier le cache
+    const cached = getCachedAnalysis(imageHash);
+    if (cached) {
+      console.log(`Cache hit for Base64 image ${imageHash.substring(0, 8)}...`);
+      return { ...cached, photo_id: opts.photoId };
+    }
+    
+    console.log(`Processing Base64 image: ${base64Data.length} characters`);
+    
+  } else if (opts.imageUrl.startsWith('http://localhost') || opts.imageUrl.startsWith('/uploads/')) {
+    // Ancien système de fichiers (pour compatibilité)
     const fs = await import('fs');
     const path = await import('path');
     const filePath = opts.imageUrl.startsWith('/uploads/') 

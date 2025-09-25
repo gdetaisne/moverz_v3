@@ -1,16 +1,27 @@
-import fs from "fs";
-import path from "path";
 import { randomUUID } from "crypto";
 
-const ROOT = path.resolve(process.cwd(), "uploads");
-export function ensureRoot(){ if(!fs.existsSync(ROOT)) fs.mkdirSync(ROOT, { recursive: true }); }
-
-export async function saveLocalFile(file: File){
-  ensureRoot();
+// Stockage Base64 - plus simple et fiable
+export async function saveAsBase64(file: File){
   const id = randomUUID();
   const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-  const p = path.join(ROOT, `${id}.${ext}`);
-  const buf = Buffer.from(await file.arrayBuffer());
-  await fs.promises.writeFile(p, buf);
-  return { id, path: p, url: `/uploads/${id}.${ext}` };
+  
+  // Convertir en Base64
+  const arrayBuffer = await file.arrayBuffer();
+  const base64 = Buffer.from(arrayBuffer).toString('base64');
+  
+  // Déterminer le MIME type
+  let mimeType = "image/jpeg";
+  if (ext === "png") mimeType = "image/png";
+  if (ext === "webp") mimeType = "image/webp";
+  
+  // Créer l'URL data
+  const dataUrl = `data:${mimeType};base64,${base64}`;
+  
+  return { 
+    id, 
+    base64, 
+    dataUrl,
+    mimeType,
+    size: arrayBuffer.byteLength 
+  };
 }

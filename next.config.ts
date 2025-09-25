@@ -8,15 +8,6 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  
-  async rewrites() {
-    return [
-      {
-        source: '/uploads/(.*)',
-        destination: '/api/uploads/$1',
-      },
-    ];
-  },
 };
 
 export default nextConfig;
