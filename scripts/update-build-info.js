@@ -7,9 +7,8 @@ const path = require('path');
 const now = new Date();
 const timestamp = now.toISOString();
 
-// Convertir en heure de Bangkok (UTC+7)
-const bangkokTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
-const date = bangkokTime.toLocaleString('fr-FR', {
+// Utiliser directement la timezone Bangkok (pas de calcul manuel)
+const date = now.toLocaleString('fr-FR', {
   timeZone: 'Asia/Bangkok',
   year: 'numeric',
   month: '2-digit',
