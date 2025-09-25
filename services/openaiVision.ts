@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { PhotoAnalysis, TPhotoAnalysis } from "@/lib/schemas";
 import { mapToCatalog, volumeFromDims } from "@/lib/normalize";
 import { getCachedAnalysis, setCachedAnalysis } from "@/lib/cache";
+import { optimizeImageForAI } from "@/lib/imageOptimization";
 import { getAISettings } from "@/lib/settings";
 
 // Client OpenAI initialisé dans la fonction pour éviter les problèmes de build
@@ -33,20 +34,22 @@ export async function analyzePhotoWithVision(opts: {
     // Convertir en Buffer pour optimisation
     const imageBuffer = Buffer.from(base64Data, 'base64');
     
-    // Utiliser directement l'image Base64 (sans optimisation)
-    imageHash = `base64_${Buffer.from(base64Data.substring(0, 100)).toString('hex').substring(0, 16)}`;
+    // Optimiser l'image pour l'IA
+    const optimized = await optimizeImageForAI(imageBuffer);
+    imageHash = optimized.hash;
     
     // Vérifier le cache
     const cached = getCachedAnalysis(imageHash);
     if (cached) {
-      console.log(`Cache hit for Base64 image ${imageHash.substring(0, 8)}...`);
+      console.log(`Cache hit for optimized Base64 image ${imageHash.substring(0, 8)}... (${optimized.originalSize}→${optimized.optimizedSize} bytes)`);
       return { ...cached, photo_id: opts.photoId };
     }
     
-    // Utiliser directement l'URL Base64
-    imageContent = { type: "image_url" as const, image_url: { url: opts.imageUrl } };
+    // Créer la nouvelle URL Base64 optimisée
+    const optimizedBase64 = optimized.buffer.toString('base64');
+    imageContent = { type: "image_url" as const, image_url: { url: `data:${mimeType};base64,${optimizedBase64}` } };
     
-    console.log(`Processing Base64 image: ${base64Data.length} characters`);
+    console.log(`Processing optimized Base64 image: ${optimized.originalSize}→${optimized.optimizedSize} bytes (${Math.round((1 - optimized.optimizedSize/optimized.originalSize) * 100)}% reduction)`);
     
   } else if (opts.imageUrl.startsWith('http://localhost') || opts.imageUrl.startsWith('/uploads/')) {
     // Ancien système de fichiers (pour compatibilité)
@@ -58,23 +61,23 @@ export async function analyzePhotoWithVision(opts: {
     
     const imageBuffer = fs.readFileSync(filePath);
     
-    // Utiliser directement l'image (sans optimisation)
-    const crypto = await import('crypto');
-    imageHash = crypto.createHash('md5').update(imageBuffer).digest('hex').substring(0, 16);
+    // Optimiser l'image
+    const optimized = await optimizeImageForAI(imageBuffer);
+    imageHash = optimized.hash;
     
     // Vérifier le cache
     const cached = getCachedAnalysis(imageHash);
     if (cached) {
-      console.log(`Cache hit for ${imageHash.substring(0, 8)}...`);
+      console.log(`Cache hit for ${imageHash.substring(0, 8)}... (${optimized.originalSize}→${optimized.optimizedSize} bytes)`);
       return { ...cached, photo_id: opts.photoId };
     }
     
     const ext = path.extname(filePath).toLowerCase();
     const mimeType = ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 
                      ext === '.png' ? 'image/png' : 'image/webp';
-    imageContent = { type: "image_url" as const, image_url: { url: `data:${mimeType};base64,${imageBuffer.toString('base64')}` } };
+    imageContent = { type: "image_url" as const, image_url: { url: `data:${mimeType};base64,${optimized.buffer.toString('base64')}` } };
     
-    console.log(`Processing image: ${imageBuffer.length} bytes`);
+    console.log(`Processing optimized image: ${optimized.originalSize}→${optimized.optimizedSize} bytes (${Math.round((1 - optimized.optimizedSize/optimized.originalSize) * 100)}% reduction)`);
   } else {
     // Pour les URLs externes, pas d'optimisation ni de cache
     imageContent = { type: "image_url" as const, image_url: { url: opts.imageUrl } };
