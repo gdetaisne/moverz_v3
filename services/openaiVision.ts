@@ -27,21 +27,29 @@ export async function analyzePhotoWithVision(opts: {
   let imageHash: string;
   
   if (opts.imageUrl.startsWith('data:')) {
-    // Image Base64 directement
-    imageContent = { type: "image_url" as const, image_url: { url: opts.imageUrl } };
-    
-    // Créer un hash simple pour le cache (premiers caractères du Base64)
+    // Extraire les données Base64
     const base64Data = opts.imageUrl.split(',')[1] || '';
-    imageHash = `base64_${Buffer.from(base64Data.substring(0, 100)).toString('hex').substring(0, 16)}`;
+    const mimeType = opts.imageUrl.split(',')[0].split(':')[1].split(';')[0];
+    
+    // Convertir en Buffer pour optimisation
+    const imageBuffer = Buffer.from(base64Data, 'base64');
+    
+    // Optimiser l'image pour l'IA
+    const optimized = await optimizeImageForAI(imageBuffer);
+    imageHash = optimized.hash;
     
     // Vérifier le cache
     const cached = getCachedAnalysis(imageHash);
     if (cached) {
-      console.log(`Cache hit for Base64 image ${imageHash.substring(0, 8)}...`);
+      console.log(`Cache hit for optimized Base64 image ${imageHash.substring(0, 8)}... (${optimized.originalSize}→${optimized.optimizedSize} bytes)`);
       return { ...cached, photo_id: opts.photoId };
     }
     
-    console.log(`Processing Base64 image: ${base64Data.length} characters`);
+    // Créer la nouvelle URL Base64 optimisée
+    const optimizedBase64 = optimized.buffer.toString('base64');
+    imageContent = { type: "image_url" as const, image_url: { url: `data:${mimeType};base64,${optimizedBase64}` } };
+    
+    console.log(`Processing optimized Base64 image: ${optimized.originalSize}→${optimized.optimizedSize} bytes (${Math.round((1 - optimized.optimizedSize/optimized.originalSize) * 100)}% reduction)`);
     
   } else if (opts.imageUrl.startsWith('http://localhost') || opts.imageUrl.startsWith('/uploads/')) {
     // Ancien système de fichiers (pour compatibilité)
