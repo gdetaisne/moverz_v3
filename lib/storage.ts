@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { optimizeImageForAI } from "@/lib/imageOptimization";
 
 // Stockage Base64 optimisé - plus simple et fiable
-export async function saveAsBase64(file: File){
+export async function saveAsBase64(file: any){
   const id = randomUUID();
   const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
   

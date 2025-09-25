@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   try {
     const form = await req.formData();
     const file = form.get("file");
-    if (!(file instanceof File)) return NextResponse.json({ error: "file required" }, { status: 400 });
+    if (!file) return NextResponse.json({ error: "file required" }, { status: 400 });
 
     console.log("Processing file:", file.name, file.size, "bytes");
     
