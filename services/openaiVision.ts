@@ -5,13 +5,19 @@ import { getCachedAnalysis, setCachedAnalysis } from "@/lib/cache";
 import { optimizeImageForAI } from "@/lib/imageOptimization";
 import { getAISettings } from "@/lib/settings";
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+// Client OpenAI initialisé dans la fonction pour éviter les problèmes de build
+function getOpenAIClient() {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY missing");
+  }
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 export async function analyzePhotoWithVision(opts: {
   photoId: string;
   imageUrl: string; // local file served or presigned URL
 }): Promise<TPhotoAnalysis> {
-  if (!process.env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY missing");
+  const client = getOpenAIClient();
 
   // Récupérer les paramètres IA configurables
   const aiSettings = getAISettings();

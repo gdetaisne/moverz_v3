@@ -18,6 +18,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Build the application
+# Note: OPENAI_API_KEY n'est pas requis pour le build, seulement pour le runtime
+ENV NEXT_TELEMETRY_DISABLED 1
 RUN npm run build
 
 # Production image, copy all the files and run next
