@@ -14,6 +14,7 @@ interface RoomData {
   name: string;
   photos: {
     file: File;
+    fileUrl?: string; // URL du fichier uploadé
     analysis?: any;
     status: 'pending' | 'processing' | 'completed' | 'error';
     error?: string;
@@ -65,11 +66,16 @@ export default function Home() {
         const result = await res.json();
         
         if (res.ok) {
-          // Marquer comme terminé avec le résultat
+          // Marquer comme terminé avec le résultat et l'URL du fichier
           setCurrentRoom(prev => ({
             ...prev,
             photos: prev.photos.map((photo, idx) => 
-              idx === photoIndex ? { ...photo, status: 'completed', analysis: result } : photo
+              idx === photoIndex ? { 
+                ...photo, 
+                status: 'completed', 
+                analysis: result,
+                fileUrl: result.file_url || (result.photo_id ? `/uploads/${result.photo_id}.jpg` : undefined)
+              } : photo
             )
           }));
 
@@ -227,7 +233,7 @@ export default function Home() {
                 <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
                   {photo.status === 'completed' ? (
                     <img 
-                      src={URL.createObjectURL(photo.file)} 
+                      src={photo.fileUrl || URL.createObjectURL(photo.file)} 
                       alt={`Photo ${photoIndex + 1}`}
                       className="w-full h-full object-cover"
                     />

@@ -14,7 +14,10 @@ export async function POST(req: NextRequest) {
     const fullUrl = `${req.nextUrl.origin}${saved.url}`;
     const analysis = await analyzePhotoWithVision({ photoId: saved.id, imageUrl: fullUrl });
 
-    return NextResponse.json(analysis);
+    return NextResponse.json({
+      ...analysis,
+      file_url: saved.url // Ajouter l'URL du fichier dans la réponse
+    });
   } catch (e:any) {
     console.error(e);
     return NextResponse.json({ error: e.message ?? "internal_error" }, { status: 500 });
