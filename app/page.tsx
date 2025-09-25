@@ -67,18 +67,18 @@ export default function Home() {
         const result = await res.json();
         
         if (res.ok) {
-          // Marquer comme terminé avec le résultat et l'URL du fichier
-          setCurrentRoom(prev => ({
-            ...prev,
-            photos: prev.photos.map((photo, idx) => 
-              idx === photoIndex ? { 
-                ...photo, 
-                status: 'completed', 
-                analysis: result,
-                fileUrl: result.file_url || (result.photo_id ? `/uploads/${result.photo_id}.jpg` : undefined)
-              } : photo
-            )
-          }));
+            // Marquer comme terminé avec le résultat et l'URL du fichier
+            setCurrentRoom(prev => ({
+              ...prev,
+              photos: prev.photos.map((photo, idx) => 
+                idx === photoIndex ? { 
+                  ...photo, 
+                  status: 'completed', 
+                  analysis: result,
+                  fileUrl: result.file_url || (result.photo_id ? `/api/uploads/${result.photo_id}.jpg` : undefined)
+                } : photo
+              )
+            }));
 
         } else {
           throw new Error(result.error || 'Erreur inconnue');

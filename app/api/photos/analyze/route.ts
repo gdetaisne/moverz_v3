@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       ...analysis,
-      file_url: saved.url // Ajouter l'URL du fichier dans la réponse
+      file_url: `/api${saved.url}` // Utiliser directement l'URL de l'API
     });
   } catch (e:any) {
     console.error(e);
