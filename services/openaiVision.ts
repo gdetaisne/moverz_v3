@@ -137,6 +137,14 @@ export async function analyzePhotoWithVision(opts: {
     count_items: items.reduce((s:number,i:any)=> s + (i.quantity ?? 1), 0),
     volume_m3: Number(items.reduce((s:number,i:any)=> s + (i.volume_m3 ?? 0)*(i.quantity ?? 1), 0).toFixed(3)),
   };
+  
+  // Gérer les special_rules pour "autres objets"
+  if (parsed.special_rules?.autres_objets?.present) {
+    // Ajouter le volume des autres objets au total
+    parsed.totals.volume_m3 = Number((parsed.totals.volume_m3 + (parsed.special_rules.autres_objets.volume_m3 || 0)).toFixed(3));
+    parsed.totals.count_items += parsed.special_rules.autres_objets.listed_items?.length || 0;
+  }
+  
   parsed.warnings ??= [];
   parsed.errors ??= [];
 

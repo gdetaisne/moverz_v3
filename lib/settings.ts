@@ -10,7 +10,34 @@ export interface AISettings {
 export const DEFAULT_AI_SETTINGS: AISettings = {
   systemPrompt: "Tu es un expert en analyse d'inventaire de déménagement. Analyse chaque photo et détecte tous les éléments pertinents. Utilise uniquement des labels en français. Chaque objet visible doit être listé séparément. Sortie STRICTEMENT au format JSON défini, sans texte supplémentaire.",
   userPrompt: `JSON schema:
-{"items":[{"label":"string","category":"furniture|appliance|fragile|box|misc","confidence":0-1,"quantity":1,"dimensions_cm":{"length":null|cm,"width":null|cm,"height":null|cm,"source":"estimated"},"volume_m3":0+,"fragile":true|false,"stackable":true|false,"notes":"string"}],"totals":{"count_items":0+,"volume_m3":0+}}
+{
+ "items":[
+   {
+     "label":"string",                 // nom de l'objet (en français, ex: "chaise", "lampe sur pied", "autres objets")
+     "category":"furniture|appliance|fragile|box|misc",
+     "confidence":0-1,                 // niveau de certitude
+     "quantity":1,
+     "dimensions_cm":{
+       "length":null,"width":null,"height":null,"source":"estimated"
+     },
+     "volume_m3":0,
+     "fragile":true|false,             // préciser si fragile
+     "stackable":true|false,           // peut être empilé ou non
+     "notes":"string|null"             // précisions utiles (ex: "miroir mural", "carton marqué fragile")
+   }
+ ],
+ "totals":{
+   "count_items":0,
+   "volume_m3":0
+ },
+ "special_rules":{
+   "autres_objets":{
+     "present":true|false,             // si un regroupement a été créé
+     "listed_items":["string","string"], // liste textuelle des petits objets regroupés
+     "volume_m3":0                      // volume global estimé pour ce regroupement
+   }
+ }
+}
 
 Analyse chaque photo et détecte tous les éléments pertinents pour un inventaire de déménagement.
 

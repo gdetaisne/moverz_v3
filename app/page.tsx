@@ -213,10 +213,10 @@ export default function Home() {
                 <p className="text-blue-100 text-sm lg:text-base">Somme des volumes de tous les objets détectés</p>
               </div>
               <div className="text-left lg:text-right">
-                <div className="text-3xl lg:text-4xl font-bold mb-1">{getTotalVolumeSelected().totalVolume}</div>
+                <div className="text-3xl lg:text-4xl font-bold mb-1">{getTotalVolumeDetected().totalVolume}</div>
                 <div className="text-base lg:text-lg font-semibold text-blue-200">m³</div>
                 <div className="text-sm text-blue-100 mt-1">
-                  {getTotalVolumeSelected().totalItems} objet(s) détecté(s)
+                  {getTotalVolumeDetected().totalItems} objet(s) détecté(s)
                 </div>
               </div>
             </div>
@@ -387,6 +387,24 @@ export default function Home() {
                         );
                       })}
                     </div>
+
+                    {/* Affichage des "autres objets" s'ils existent */}
+                    {photo.analysis.special_rules?.autres_objets?.present && (
+                      <div className="mt-6 p-4 bg-orange-50 rounded-lg border border-orange-200">
+                        <h4 className="text-lg font-semibold text-orange-800 mb-3">📦 Autres objets détectés</h4>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-orange-700">Objets regroupés :</span>
+                            <span className="text-sm font-bold text-orange-600">
+                              {photo.analysis.special_rules.autres_objets.volume_m3} m³
+                            </span>
+                          </div>
+                          <div className="text-sm text-orange-600">
+                            <strong>Liste :</strong> {photo.analysis.special_rules.autres_objets.listed_items?.join(', ') || 'Aucun objet listé'}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </>
                 ) : photo.status === 'error' ? (
                   <div className="p-6 bg-red-50 rounded-lg border border-red-200">

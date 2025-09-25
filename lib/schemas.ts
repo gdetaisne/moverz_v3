@@ -27,6 +27,14 @@ export const InventoryItem = z.object({
   bounding_boxes: z.array(BoundingBox).optional(),
 });
 
+export const SpecialRules = z.object({
+  autres_objets: z.object({
+    present: z.boolean().default(false),
+    listed_items: z.array(z.string()).default([]),
+    volume_m3: z.number().nonnegative().default(0),
+  }),
+});
+
 export const PhotoAnalysis = z.object({
   version: z.literal("1.0.0"),
   photo_id: z.string(),
@@ -35,6 +43,7 @@ export const PhotoAnalysis = z.object({
     count_items: z.number().int().nonnegative(),
     volume_m3: z.number().nonnegative(),
   }),
+  special_rules: SpecialRules.optional(),
   warnings: z.array(z.string()).default([]),
   errors: z.array(z.string()).default([]),
 });
