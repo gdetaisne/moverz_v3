@@ -213,10 +213,10 @@ export default function Home() {
                 <p className="text-blue-100 text-sm lg:text-base">Somme des volumes de tous les objets détectés</p>
               </div>
               <div className="text-left lg:text-right">
-                <div className="text-3xl lg:text-4xl font-bold mb-1">{getTotalVolumeDetected().totalVolume}</div>
+                <div className="text-3xl lg:text-4xl font-bold mb-1">{getTotalVolumeSelected().totalVolume}</div>
                 <div className="text-base lg:text-lg font-semibold text-blue-200">m³</div>
                 <div className="text-sm text-blue-100 mt-1">
-                  {getTotalVolumeDetected().totalItems} objet(s) détecté(s)
+                  {getTotalVolumeSelected().totalItems} objet(s) détecté(s)
                 </div>
               </div>
             </div>
