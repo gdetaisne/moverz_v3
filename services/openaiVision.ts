@@ -43,12 +43,12 @@ export async function analyzePhotoWithVision(opts: {
     const ext = path.extname(filePath).toLowerCase();
     const mimeType = ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 
                      ext === '.png' ? 'image/png' : 'image/webp';
-    imageContent = { type: "image_url", image_url: { url: `data:${mimeType};base64,${optimized.buffer.toString('base64')}` } };
+    imageContent = { type: "image_url" as const, image_url: { url: `data:${mimeType};base64,${optimized.buffer.toString('base64')}` } };
     
     console.log(`Processing optimized image: ${optimized.originalSize}→${optimized.optimizedSize} bytes (${Math.round((1 - optimized.optimizedSize/optimized.originalSize) * 100)}% reduction)`);
   } else {
     // Pour les URLs externes, pas d'optimisation ni de cache
-    imageContent = { type: "image_url", image_url: { url: opts.imageUrl } };
+    imageContent = { type: "image_url" as const, image_url: { url: opts.imageUrl } };
     imageHash = 'external';
   }
 

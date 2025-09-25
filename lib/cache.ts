@@ -12,7 +12,9 @@ export function setCachedAnalysis(imageHash: string, analysis: TPhotoAnalysis): 
   // Limiter la taille du cache à 100 entrées max
   if (analysisCache.size >= 100) {
     const firstKey = analysisCache.keys().next().value;
-    analysisCache.delete(firstKey);
+    if (firstKey) {
+      analysisCache.delete(firstKey);
+    }
   }
   analysisCache.set(imageHash, analysis);
 }
