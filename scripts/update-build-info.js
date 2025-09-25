@@ -3,10 +3,14 @@
 const fs = require('fs');
 const path = require('path');
 
-// Générer la date/heure actuelle
+// Générer la date/heure actuelle en heure de Bangkok (UTC+7)
 const now = new Date();
 const timestamp = now.toISOString();
-const date = now.toLocaleString('fr-FR', {
+
+// Convertir en heure de Bangkok (UTC+7)
+const bangkokTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+const date = bangkokTime.toLocaleString('fr-FR', {
+  timeZone: 'Asia/Bangkok',
   year: 'numeric',
   month: '2-digit',
   day: '2-digit',
