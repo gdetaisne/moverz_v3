@@ -1,13 +1,28 @@
 import { randomUUID } from "crypto";
+import { File } from "node:buffer";
 import { optimizeImageForAI } from "@/lib/imageOptimization";
 
-// Stockage Base64 optimisé - plus simple et fiable
+// Stockage Base64 optimisé - compatible local + production
 export async function saveAsBase64(file: any){
   const id = randomUUID();
-  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  
+  // Normaliser l'objet file pour compatibilité local/production
+  let normalizedFile: File;
+  
+  if (file instanceof File) {
+    // Cas navigateur (local)
+    normalizedFile = file;
+  } else {
+    // Cas FormData (production CapRover)
+    const name = file.name || 'image.jpg';
+    const type = file.type || 'image/jpeg';
+    normalizedFile = new File([file], name, { type });
+  }
+  
+  const ext = (normalizedFile.name.split(".").pop() || "jpg").toLowerCase();
   
   // Convertir en Buffer
-  const arrayBuffer = await file.arrayBuffer();
+  const arrayBuffer = await normalizedFile.arrayBuffer();
   const originalBuffer = Buffer.from(arrayBuffer);
   
   // Optimiser l'image pour l'IA (réduction de taille significative)

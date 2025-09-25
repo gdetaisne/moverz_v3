@@ -23,7 +23,7 @@ export const InventoryItem = z.object({
   volume_m3: z.number().nonnegative().default(0),
   fragile: z.boolean().default(false),
   stackable: z.boolean().default(true),
-  notes: z.string().optional(),
+  notes: z.string().nullable().optional(),
   bounding_boxes: z.array(BoundingBox).optional(),
 });
 
