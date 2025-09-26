@@ -8,7 +8,9 @@ import { getAISettings } from "@/lib/settings";
 // Client OpenAI initialisé dans la fonction pour éviter les problèmes de build
 function getOpenAIClient() {
   if (!process.env.OPENAI_API_KEY) {
-    throw new Error("OPENAI_API_KEY missing");
+    console.warn("OPENAI_API_KEY missing - using mock mode");
+    // Retourner un client mock pour éviter le crash
+    return null as any;
   }
   return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 }
@@ -18,6 +20,28 @@ export async function analyzePhotoWithVision(opts: {
   imageUrl: string; // local file served or presigned URL
 }): Promise<TPhotoAnalysis> {
   const client = getOpenAIClient();
+  
+  // Si pas de clé API, retourner une réponse mock
+  if (!client) {
+    return {
+      version: "1.0.0",
+      photo_id: opts.photoId,
+      items: [],
+      totals: {
+        count_items: 0,
+        volume_m3: 0
+      },
+      special_rules: {
+        autres_objets: {
+          present: false,
+          listed_items: [],
+          volume_m3: 0
+        }
+      },
+      warnings: ["OPENAI_API_KEY manquante - mode démo"],
+      errors: []
+    };
+  }
 
   // Récupérer les paramètres IA configurables
   const aiSettings = getAISettings();
