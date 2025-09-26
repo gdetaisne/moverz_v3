@@ -16,7 +16,7 @@ export const DimensionsCm = z.object({
 
 export const InventoryItem = z.object({
   label: z.string(),
-  category: z.enum(["furniture","appliance","fragile","box","misc"]).default("misc"),
+  category: z.enum(["furniture","appliance","fragile","box","misc","decor"]).default("misc"),
   confidence: z.number().min(0).max(1).default(0.5),
   quantity: z.number().int().positive().default(1),
   dimensions_cm: DimensionsCm,

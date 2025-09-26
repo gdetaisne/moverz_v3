@@ -17,11 +17,11 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'X-Frame-Options',
-            value: 'SAMEORIGIN',
+            value: 'ALLOWALL',
           },
           {
             key: 'Content-Security-Policy',
-            value: "frame-ancestors 'self' https://*.moverz.fr https://moverz.fr",
+            value: "frame-ancestors *",
           },
         ],
       },

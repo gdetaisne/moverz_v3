@@ -259,6 +259,7 @@ export default function Home() {
       case 'appliance': return 'Électroménager';
       case 'fragile': return 'Fragile';
       case 'box': return 'Carton';
+      case 'decor': return 'Déco';
       case 'misc': return 'Divers';
       default: return category;
     }
@@ -479,6 +480,7 @@ export default function Home() {
                                     item.category === 'appliance' ? 'bg-green-100 text-green-800' :
                                     item.category === 'fragile' ? 'bg-red-100 text-red-800' :
                                     item.category === 'box' ? 'bg-yellow-100 text-yellow-800' :
+                                    item.category === 'decor' ? 'bg-purple-100 text-purple-800' :
                                     'bg-gray-100 text-gray-800'
                                   }`}>
                                     {translateCategory(item.category)}
@@ -517,156 +519,39 @@ export default function Home() {
                             );
                           })}
                           
-                          {/* Ligne pour "autres objets" s'ils existent */}
-                          {photo.analysis.special_rules?.autres_objets?.present && (
-                            <tr className="border-b border-gray-100 hover:bg-orange-50 transition-colors bg-orange-50">
-                              <td className="p-3 text-center">
-                                <input
-                                  type="checkbox"
-                                  checked={true} // Par défaut sélectionné
-                                  onChange={() => {}} // Pas de toggle pour l'instant
-                                  className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
-                                />
-                              </td>
-                              <td className="p-3">
-                                <span className="px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">
-                                  Divers
-                                </span>
-                              </td>
-                              <td className="p-3">
-                                <span className="font-semibold text-gray-900 text-sm">
-                                  Autres objets ({photo.analysis.special_rules.autres_objets.listed_items?.length || 0} items)
-                                </span>
-                                <div className="text-xs text-orange-600 mt-1">
-                                  {photo.analysis.special_rules.autres_objets.listed_items?.join(', ') || 'Aucun objet listé'}
-                                </div>
-                              </td>
-                              <td className="p-3">
-                                <span className="text-xs text-gray-700 font-mono">
-                                  Regroupés
-                                </span>
-                              </td>
-                              <td className="p-3">
-                                <span className="text-sm font-bold text-orange-600">{roundUpVolume(photo.analysis.special_rules.autres_objets.volume_m3 || 0)}</span>
-                              </td>
-                              <td className="p-3">
-                                <span className="text-xs text-orange-600">Objets petits regroupés</span>
-                              </td>
-                              <td className="p-3">
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-16 bg-gray-200 rounded-full h-2">
-                                    <div 
-                                      className="bg-orange-600 h-2 rounded-full transition-all duration-300" 
-                                      style={{ width: '85%' }}
-                                    ></div>
-                                  </div>
-                                  <span className="text-xs font-semibold text-gray-700">85%</span>
-                                </div>
-                              </td>
-                            </tr>
-                          )}
                         </tbody>
                       </table>
                     </div>
 
-                    {/* Version mobile - Cards */}
-                    <div className="lg:hidden space-y-4">
+                    {/* Version mobile - Cards optimisées pour une ligne */}
+                    <div className="lg:hidden space-y-2">
                       {photo.analysis.items?.map((item: TInventoryItem, itemIndex: number) => {
-                        // Générer les notes avec fragile si applicable
-                        const notes = getEnrichedNotes(item);
-                        
                         // Vérifier si l'objet est sélectionné
                         const isSelected = isItemSelected(photo, itemIndex);
                         
                         return (
-                          <div key={itemIndex} className={`bg-white p-4 rounded-lg border shadow-sm ${!isSelected ? 'opacity-50 bg-gray-50' : ''}`}>
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex items-start space-x-3 flex-1">
+                          <div key={itemIndex} className={`bg-white p-3 rounded-lg border shadow-sm ${!isSelected ? 'opacity-50 bg-gray-50' : ''}`}>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3 flex-1">
                                 <input
                                   type="checkbox"
                                   checked={isSelected}
                                   onChange={() => toggleItemSelection(photoIndex, itemIndex)}
-                                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 mt-1"
+                                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                                 />
                                 <div className="flex-1">
-                                  <div className="flex items-center space-x-2 mb-2">
-                                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                    item.category === 'furniture' ? 'bg-blue-100 text-blue-800' :
-                                    item.category === 'appliance' ? 'bg-green-100 text-green-800' :
-                                    item.category === 'fragile' ? 'bg-red-100 text-red-800' :
-                                    item.category === 'box' ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-gray-100 text-gray-800'
-                                  }`}>
-                                    {translateCategory(item.category)}
-                                  </span>
-                                    <span className="text-sm font-bold text-blue-600">{roundUpVolume(item.volume_m3 || 0)} m³</span>
-                                  </div>
-                                  <h4 className="font-semibold text-gray-900 text-base mb-1">{enrichDescription(item)}</h4>
-                                  {item.dimensions_cm && (
-                                    <p className="text-sm text-gray-600 font-mono mb-2">
-                                      {[item.dimensions_cm.length, item.dimensions_cm.width, item.dimensions_cm.height]
-                                        .filter(Boolean)
-                                        .join(' × ')} cm
-                                    </p>
-                                  )}
-                                  {notes && (
-                                    <p className="text-sm text-gray-600 mb-2">{notes}</p>
-                                  )}
+                                  <h4 className="font-semibold text-gray-900 text-sm">{enrichDescription(item)}</h4>
                                 </div>
                               </div>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <div className="flex-1 bg-gray-200 rounded-full h-2">
-                                <div 
-                                  className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                                  style={{ width: `${(item.confidence || 0) * 100}%` }}
-                                ></div>
+                              <div className="flex items-center space-x-2">
+                                <span className="text-sm font-bold text-blue-600">{roundUpVolume(item.volume_m3 || 0)} m³</span>
+                                <span className="text-xs font-semibold text-gray-700">{Math.round((item.confidence || 0) * 100)}%</span>
                               </div>
-                              <span className="text-xs font-semibold text-gray-700">{Math.round((item.confidence || 0) * 100)}%</span>
                             </div>
                           </div>
                         );
                       })}
                       
-                      {/* Card pour "autres objets" s'ils existent */}
-                      {photo.analysis.special_rules?.autres_objets?.present && (
-                        <div className="bg-orange-50 p-4 rounded-lg border border-orange-200 shadow-sm">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex items-start space-x-3 flex-1">
-                              <input
-                                type="checkbox"
-                                checked={true} // Par défaut sélectionné
-                                onChange={() => {}} // Pas de toggle pour l'instant
-                                className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2 mt-1"
-                              />
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-2 mb-2">
-                                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">
-                                    Divers
-                                  </span>
-                                  <span className="text-sm font-bold text-orange-600">{roundUpVolume(photo.analysis.special_rules.autres_objets.volume_m3 || 0)} m³</span>
-                                </div>
-                                <h4 className="font-semibold text-gray-900 text-base mb-1">
-                                  Autres objets ({photo.analysis.special_rules.autres_objets.listed_items?.length || 0} items)
-                                </h4>
-                                <p className="text-sm text-orange-600 mb-2">
-                                  {photo.analysis.special_rules.autres_objets.listed_items?.join(', ') || 'Aucun objet listé'}
-                                </p>
-                                <p className="text-xs text-orange-500">Objets petits regroupés</p>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <div className="flex-1 bg-gray-200 rounded-full h-2">
-                              <div 
-                                className="bg-orange-600 h-2 rounded-full transition-all duration-300" 
-                                style={{ width: '85%' }}
-                              ></div>
-                            </div>
-                            <span className="text-xs font-semibold text-gray-700">85%</span>
-                          </div>
-                        </div>
-                      )}
                     </div>
 
                   </>
