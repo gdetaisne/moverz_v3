@@ -21,7 +21,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "frame-ancestors 'self' https://moverz.fr https://*.moverz.fr https://www.moverz.fr; frame-src 'self' https://moverz.fr https://*.moverz.fr;",
+            value: "frame-ancestors 'self' https://moverz.fr https://*.moverz.fr https://www.moverz.fr https://moverz-bordeaux.gslv.cloud https://*.gslv.cloud; frame-src 'self' https://moverz.fr https://*.moverz.fr https://moverz-bordeaux.gslv.cloud https://*.gslv.cloud;",
           },
           {
             key: 'Access-Control-Allow-Origin',
