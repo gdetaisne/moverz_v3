@@ -649,7 +649,7 @@ export default function Home() {
                   </div>
                 </div>
                 <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                  v {getBuildInfo().version}
+                  {getBuildInfo()}
                 </span>
               </div>
               <div className="flex space-x-2">
