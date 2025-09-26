@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import BackOffice from "@/components/BackOffice";
 import { getBuildInfo } from "@/lib/buildInfo";
 import { TInventoryItem } from "@/lib/schemas";
@@ -29,6 +29,20 @@ export default function Home() {
   });
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'tests' | 'backoffice'>('tests');
+  const [isEmbedded, setIsEmbedded] = useState(false);
+
+  // Détecter si l'app est dans un iframe
+  useEffect(() => {
+    const checkIfEmbedded = () => {
+      try {
+        return window.self !== window.top;
+      } catch (e) {
+        return true;
+      }
+    };
+    
+    setIsEmbedded(checkIfEmbedded());
+  }, []);
 
   // Fonction utilitaire pour arrondir les m³ à 2 chiffres avec arrondi supérieur
   const roundUpVolume = (volume: number): number => {
@@ -719,47 +733,51 @@ export default function Home() {
   );
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      {/* Version info - discrète en haut */}
-      <div className="bg-gray-100 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-1">
-          <div className="text-xs text-gray-500 text-center">
-            v {getBuildInfo()}
+    <main className={`min-h-screen bg-gray-50 ${isEmbedded ? 'iframe-mode' : ''}`}>
+      {/* Version info - seulement si pas en mode embed */}
+      {!isEmbedded && (
+        <div className="bg-gray-100 border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 py-1">
+            <div className="text-xs text-gray-500 text-center">
+              v {getBuildInfo()}
+            </div>
           </div>
         </div>
-      </div>
+      )}
       
-      {/* Navigation par onglets */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 lg:px-6">
-          <div className="flex space-x-4 lg:space-x-8">
-            <button
-              onClick={() => setActiveTab('tests')}
-              className={`py-3 lg:py-4 px-2 lg:px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'tests'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              🧪 Tests
-            </button>
-            <button
-              onClick={() => setActiveTab('backoffice')}
-              className={`py-3 lg:py-4 px-2 lg:px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'backoffice'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              🔧 Back-office
-            </button>
+      {/* Navigation par onglets - seulement si pas en mode embed */}
+      {!isEmbedded && (
+        <div className="bg-white border-b">
+          <div className="max-w-7xl mx-auto px-4 lg:px-6">
+            <div className="flex space-x-4 lg:space-x-8">
+              <button
+                onClick={() => setActiveTab('tests')}
+                className={`py-3 lg:py-4 px-2 lg:px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'tests'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                🧪 Tests
+              </button>
+              <button
+                onClick={() => setActiveTab('backoffice')}
+                className={`py-3 lg:py-4 px-2 lg:px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'backoffice'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                🔧 Back-office
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Contenu selon l'onglet actif */}
-      <div className="p-6 max-w-7xl mx-auto">
-        {activeTab === 'tests' ? renderTestsInterface() : <BackOffice />}
+      <div className={`${isEmbedded ? 'p-4' : 'p-6'} max-w-7xl mx-auto`}>
+        {isEmbedded ? renderTestsInterface() : (activeTab === 'tests' ? renderTestsInterface() : <BackOffice />)}
       </div>
     </main>
   );

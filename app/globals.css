@@ -24,3 +24,33 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Styles pour le mode iframe */
+.iframe-mode {
+  /* Supprimer les marges et paddings par défaut */
+  margin: 0;
+  padding: 0;
+}
+
+.iframe-mode .min-h-screen {
+  min-height: 100vh;
+}
+
+/* Optimisations pour mobile en mode iframe */
+@media (max-width: 768px) {
+  .iframe-mode {
+    font-size: 14px;
+  }
+  
+  .iframe-mode .p-4 {
+    padding: 1rem;
+  }
+  
+  .iframe-mode .text-2xl {
+    font-size: 1.5rem;
+  }
+  
+  .iframe-mode .text-3xl {
+    font-size: 2rem;
+  }
+}
