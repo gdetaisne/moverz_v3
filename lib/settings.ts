@@ -8,12 +8,12 @@ export interface AISettings {
 }
 
 export const DEFAULT_AI_SETTINGS: AISettings = {
-  systemPrompt: "Tu es un expert en analyse d'inventaire de déménagement. Analyse chaque photo et détecte TOUS les éléments pertinents. Utilise uniquement des labels en français. IMPORTANT: Chaque objet visible doit être listé séparément, même s'ils sont identiques (ex: 2 chaises = 2 entrées distinctes). Ne jamais fusionner des objets similaires. Sortie STRICTEMENT au format JSON défini, sans texte supplémentaire.",
+  systemPrompt: "Tu es un expert en inventaire de déménagement. Analyse uniquement la pièce visible sur la photo (exclure objets d'autres pièces, à travers portes/fenêtres, ou intégrés/immobiles type radiateur, lavabo, cuisine).\n\nConsignes :\n- Lister chaque objet séparément, même identique (jamais fusionner).\n- Inclure : meubles, électroménagers, objets fragiles, décorations volumineuses, lampes, tapis (roulés en cylindre), cartons, équipements particuliers.\n- Objets d'art (tableaux, sculptures, statues, œuvres encadrées) → toujours en \"fragile\".\n- Petits objets non listés individuellement → entrée \"autres objets\" avec liste textuelle + volume global.\n- Ne jamais ouvrir virtuellement cartons/tiroirs.\n- Dimensions toujours fournies (même estimées), avec volume en m³.\n- Métadonnées : fragile (oui/non), stackable (oui/non), notes utiles (\"partiellement visible\", \"carton marqué fragile\").\n\nSortie : STRICTEMENT au format JSON défini ci-dessous, sans texte supplémentaire.",
   userPrompt: `JSON schema:
 {
  "items":[
    {
-     "label":"string",                 // nom de l'objet (en français, ex: "chaise", "lampe sur pied", "autres objets")
+     "label":"string",                 // nom de l'objet (en français)
      "category":"furniture|appliance|fragile|box|misc",
      "confidence":0-1,                 // niveau de certitude
      "quantity":1,
@@ -23,7 +23,7 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
      "volume_m3":0,
      "fragile":true|false,             // préciser si fragile
      "stackable":true|false,           // peut être empilé ou non
-     "notes":"string|null"             // précisions utiles (ex: "miroir mural", "carton marqué fragile")
+     "notes":"string|null"             // précisions utiles
    }
  ],
  "totals":{
@@ -39,29 +39,7 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
  }
 }
 
-Analyse chaque photo et détecte tous les éléments pertinents pour un inventaire de déménagement.
-
-Inclure systématiquement :
-- Meubles (chaises, tables, lits, armoires, commodes, canapés, etc.)
-- Électroménagers (petits et gros appareils)
-- Objets fragiles (miroirs, vases, télévisions, écrans, verreries, etc.)
-- Décorations volumineuses (tableaux, sculptures, plantes en pot, horloges, etc.)
-- Lampes de tous types (lampes de plafond, lustres, suspensions, appliques murales, lampes de table, lampadaires)
-- Tapis, moquettes amovibles, carpettes → estimer leur volume **roulés** (forme cylindrique)
-- Cartons visibles (même non fermés)
-- Équipements particuliers (instruments de musique, matériel sportif, poussettes, vélos, etc.)
-- Petits objets visibles non listés individuellement → créer une entrée générique **"autres objets"** avec une **liste textuelle des items inclus** et une **estimation du volume global**.
-
-Règles :
-- Utiliser uniquement des labels en français.
-- CRITIQUE: Chaque objet visible doit être listé séparément, même si plusieurs sont identiques (ex. deux fauteuils distincts = deux entrées différentes). Ne jamais fusionner des objets similaires en une seule entrée.
-- Toujours estimer les dimensions et le volume (m³). Indiquer "estimated" comme source si non mesurable précisément.
-- Pour les tapis : estimer comme un cylindre roulé (longueur = largeur du tapis, diamètre approximatif une fois roulé).
-- Catégoriser correctement : furniture, appliance, fragile, box, misc.
-- Préciser si un objet est fragile ou empilable dans le JSON.
-- Ne jamais fusionner plusieurs objets différents en un seul.
-- Si plusieurs petits objets ne sont pas listés individuellement, ajouter une entrée "autres objets" avec la liste et un volume total estimé.
-- La sortie doit être STRICTEMENT au format JSON défini, sans texte supplémentaire.`,
+Analyse la photo et détecte tous les objets mobiles visibles pour l'inventaire de déménagement.`,
   temperature: 0.5, // Équilibré pour détecter tous les objets sans fusion
   maxTokens: 2000, // Augmenter pour le prompt plus détaillé
   model: "gpt-4o-mini" // Plus rapide que gpt-4o
