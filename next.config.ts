@@ -21,7 +21,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "frame-ancestors *; frame-src *;",
+            value: "frame-ancestors 'self' https://moverz.fr https://*.moverz.fr https://www.moverz.fr; frame-src 'self' https://moverz.fr https://*.moverz.fr;",
           },
           {
             key: 'Access-Control-Allow-Origin',
