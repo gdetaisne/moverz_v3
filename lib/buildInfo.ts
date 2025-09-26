@@ -1,9 +1,9 @@
 // Informations de build - générées automatiquement
-// Dernière mise à jour: 2025-09-26T03:16:27.968Z
+// Dernière mise à jour: 2025-09-26T03:23:01.556Z
 
 export const BUILD_INFO = {
-  timestamp: "2025-09-26T03:16:27.968Z",
-  date: "26/09/2025 10:16"
+  timestamp: "2025-09-26T03:23:01.556Z",
+  date: "26/09/2025 10:23"
 };
 
 export function getBuildInfo() {

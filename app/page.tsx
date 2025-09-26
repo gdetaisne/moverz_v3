@@ -310,7 +310,7 @@ export default function Home() {
                 </div>
                 <h1 className="text-2xl lg:text-3xl font-bold text-[var(--mz-navy)]">Inventaire IA</h1>
               </div>
-              <p className="text-base lg:text-lg text-gray-600">Détection automatique des objets pour votre déménagement</p>
+              <p className="text-base lg:text-lg text-gray-600">Chargez, scannez, sélectionnez</p>
             </div>
               <div className="flex flex-col lg:flex-row lg:items-center space-y-4 lg:space-y-0 lg:space-x-6">
               <div className="text-left lg:text-right">
