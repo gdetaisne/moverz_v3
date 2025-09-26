@@ -30,6 +30,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'tests' | 'backoffice'>('tests');
   const [isEmbedded, setIsEmbedded] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   // Détecter si l'app est dans un iframe
   useEffect(() => {
@@ -42,6 +43,15 @@ export default function Home() {
     };
     
     setIsEmbedded(checkIfEmbedded());
+  }, []);
+
+  // Mettre à jour l'heure toutes les secondes
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
   }, []);
 
   // Fonction utilitaire pour arrondir les m³ à 2 chiffres avec arrondi supérieur
@@ -646,9 +656,17 @@ export default function Home() {
                     </p>
                   </div>
                 </div>
-                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                  {getBuildInfo()}
-                </span>
+                <div className="flex flex-col items-end space-y-1">
+                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                    {getBuildInfo()}
+                  </span>
+                  <div className="flex items-center space-x-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs text-gray-400">
+                      Last update: {currentTime.toLocaleTimeString('fr-FR')}
+                    </span>
+                  </div>
+                </div>
               </div>
               <div className="flex space-x-2">
                 <button
