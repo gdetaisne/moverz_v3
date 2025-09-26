@@ -13,17 +13,17 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
 {
  "items":[
    {
-     "label":"string",                 // nom de l'objet (en français)
-     "category":"furniture|appliance|fragile|box|misc",
-     "confidence":0-1,                 // niveau de certitude
+     "label":"string",                  // ex: "chaise", "lampe sur pied", "tableau encadré"
+     "category":"furniture|appliance|box|art|misc",
+     "confidence":0-1,
      "quantity":1,
      "dimensions_cm":{
        "length":null,"width":null,"height":null,"source":"estimated"
      },
      "volume_m3":0,
-     "fragile":true|false,             // préciser si fragile
-     "stackable":true|false,           // peut être empilé ou non
-     "notes":"string|null"             // précisions utiles
+     "fragile":true,
+     "stackable":false,
+     "notes":"string|null"
    }
  ],
  "totals":{
@@ -32,9 +32,9 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
  },
  "special_rules":{
    "autres_objets":{
-     "present":true|false,             // si un regroupement a été créé
-     "listed_items":["string","string"], // liste textuelle des petits objets regroupés
-     "volume_m3":0                      // volume global estimé pour ce regroupement
+     "present":true,
+     "listed_items":["string","string"],
+     "volume_m3":0
    }
  }
 }

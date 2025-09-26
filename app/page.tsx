@@ -257,9 +257,8 @@ export default function Home() {
     switch (category) {
       case 'furniture': return 'Meuble';
       case 'appliance': return 'Électroménager';
-      case 'fragile': return 'Fragile';
       case 'box': return 'Carton';
-      case 'decor': return 'Déco';
+      case 'art': return 'Art';
       case 'misc': return 'Divers';
       default: return category;
     }
@@ -293,8 +292,8 @@ export default function Home() {
       }
     } else if (item.category === 'appliance') {
       description += ' (appareil électrique)';
-    } else if (item.category === 'fragile') {
-      description += ' (objet délicat)';
+    } else if (item.category === 'art') {
+      description += ' (œuvre d\'art)';
     }
     
     return description;
@@ -488,9 +487,8 @@ export default function Home() {
                                   <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                                     item.category === 'furniture' ? 'bg-blue-100 text-blue-800' :
                                     item.category === 'appliance' ? 'bg-green-100 text-green-800' :
-                                    item.category === 'fragile' ? 'bg-red-100 text-red-800' :
                                     item.category === 'box' ? 'bg-yellow-100 text-yellow-800' :
-                                    item.category === 'decor' ? 'bg-purple-100 text-purple-800' :
+                                    item.category === 'art' ? 'bg-purple-100 text-purple-800' :
                                     'bg-gray-100 text-gray-800'
                                   }`}>
                                     {translateCategory(item.category)}
