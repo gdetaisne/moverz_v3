@@ -302,21 +302,31 @@ export default function Home() {
 
   const renderTestsInterface = () => (
     <>
-        <div className="mb-8 p-4 lg:p-6 bg-white rounded-xl shadow-sm border">
+        <div className="mb-8 card">
           <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0">
             <div className="flex-1">
-              <h1 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-2">Analyse IA — Inventaire Déménagement</h1>
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="w-8 h-8 bg-[var(--mz-teal)] rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">M</span>
+                </div>
+                <h1 className="text-2xl lg:text-3xl font-bold text-[var(--mz-navy)]">Inventaire IA</h1>
+              </div>
               <p className="text-base lg:text-lg text-gray-600">Détection automatique des objets pour votre déménagement</p>
             </div>
               <div className="flex flex-col lg:flex-row lg:items-center space-y-4 lg:space-y-0 lg:space-x-6">
               <div className="text-left lg:text-right">
-                <div className="text-lg lg:text-xl font-bold text-blue-600">{currentRoom.name}</div>
-                <div className="text-sm text-gray-700">{currentRoom.photos.length} photo(s) ajoutée(s)</div>
+                <div className="text-lg lg:text-xl font-bold text-[var(--mz-teal)]">{currentRoom.name}</div>
+                <div className="text-sm text-gray-700 flex items-center space-x-2">
+                  <span className="bg-[var(--mz-teal)] text-white px-2 py-1 rounded-full text-xs font-medium">
+                    {currentRoom.photos.length} photo{currentRoom.photos.length > 1 ? 's' : ''}
+                  </span>
+                  <span>ajoutée{currentRoom.photos.length > 1 ? 's' : ''}</span>
+                </div>
               </div>
               <div className="flex flex-col lg:flex-row space-y-2 lg:space-y-0 lg:space-x-4">
                 <button
                   onClick={clearAnalysisCache}
-                  className="text-xs bg-orange-100 text-orange-700 px-3 py-2 rounded-lg hover:bg-orange-200 transition-colors"
+                  className="btn btn-outline text-sm"
                 >
                   🗑️ Vider le cache IA
                 </button>
@@ -325,7 +335,7 @@ export default function Home() {
                   multiple 
                   accept="image/*" 
                   onChange={onUpload}
-                  className="block text-sm lg:text-base text-gray-500 file:mr-4 file:py-2 lg:file:py-3 file:px-4 lg:file:px-6 file:rounded-full file:border-0 file:text-sm lg:file:text-base file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 transition-colors"
+                  className="block text-sm lg:text-base text-gray-500 file:mr-4 file:py-2 lg:file:py-3 file:px-4 lg:file:px-6 file:rounded-xl file:border-0 file:text-sm lg:file:text-base file:font-semibold file:bg-[var(--mz-teal)] file:text-white hover:file:opacity-90 transition-all duration-200"
                 />
               </div>
             </div>
@@ -618,13 +628,52 @@ export default function Home() {
   );
 
   return (
-    <main className={`min-h-screen bg-gray-50 ${isEmbedded ? 'iframe-mode' : ''}`}>
-      {/* Version info - seulement si pas en mode embed */}
+    <main className={`min-h-screen ${isEmbedded ? 'iframe-mode' : 'bg-[var(--mz-bg)]'}`}>
+      {/* Header moderne - seulement si pas en mode embed */}
       {!isEmbedded && (
-        <div className="bg-gray-100 border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 py-1">
-            <div className="text-xs text-gray-500 text-center">
-              v {getBuildInfo()}
+        <div className="bg-white shadow-sm border-b border-gray-100">
+          <div className="max-w-7xl mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-[var(--mz-teal)] rounded-xl flex items-center justify-center">
+                    <span className="text-white font-bold text-lg">M</span>
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold text-[var(--mz-navy)]">
+                      Inventaire IA
+                    </h1>
+                    <p className="text-sm text-gray-600">
+                      Analyse automatique pour déménagement
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                  v {getBuildInfo().version}
+                </span>
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setActiveTab('tests')}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    activeTab === 'tests' 
+                      ? 'bg-[var(--mz-teal)] text-white shadow-lg' 
+                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+                  }`}
+                >
+                  🧪 Tests
+                </button>
+                <button
+                  onClick={() => setActiveTab('backoffice')}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    activeTab === 'backoffice' 
+                      ? 'bg-[var(--mz-teal)] text-white shadow-lg' 
+                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+                  }`}
+                >
+                  🔧 Back-office
+                </button>
+              </div>
             </div>
           </div>
         </div>
