@@ -63,29 +63,26 @@ interface QuoteFormProps {
 
 // Liste des villes françaises principales
 const FRENCH_CITIES = Array.from(new Set([
-  'Paris', 'Lyon', 'Marseille', 'Toulouse', 'Nice', 'Nantes', 'Strasbourg', 'Montpellier',
-  'Bordeaux', 'Lille', 'Rennes', 'Reims', 'Le Havre', 'Saint-Étienne', 'Toulon', 'Grenoble',
-  'Dijon', 'Angers', 'Nîmes', 'Villeurbanne', 'Saint-Denis', 'Le Mans', 'Aix-en-Provence',
-  'Clermont-Ferrand', 'Brest', 'Tours', 'Amiens', 'Limoges', 'Annecy', 'Perpignan',
-  'Boulogne-Billancourt', 'Orléans', 'Mulhouse', 'Rouen', 'Caen', 'Nancy', 'Saint-Denis',
-  'Argenteuil', 'Montreuil', 'Roubaix', 'Tourcoing', 'Nanterre', 'Avignon', 'Créteil',
-  'Dunkirk', 'Poitiers', 'Asnières-sur-Seine', 'Versailles', 'Courbevoie', 'Vitry-sur-Seine',
-  'Colombes', 'Aulnay-sous-Bois', 'La Rochelle', 'Champigny-sur-Marne', 'Rueil-Malmaison',
-  'Antibes', 'Saint-Maur-des-Fossés', 'Cannes', 'Aubervilliers', 'Béziers', 'Colmar',
-  'Drancy', 'Mérignac', 'Saint-Nazaire', 'Issy-les-Moulineaux', 'Noisy-le-Grand', 'Évry',
-  'Cergy', 'Pessac', 'Vénissieux', 'Troyes', 'Clichy', 'Antony', 'Levallois-Perret',
-  'Neuilly-sur-Seine', 'Montauban', 'Sarcelles', 'Niort', 'Villejuif', 'Hyères', 'Cholet',
-  'Narbonne', 'Lorient', 'Beauvais', 'Maisons-Alfort', 'Meudon', 'Châteauroux', 'Chelles',
-  'Haguenau', 'Épinay-sur-Seine', 'Laval', 'Tarbes', 'Charleville-Mézières', 'Saint-Ouen',
-  'Sète', 'Roanne', 'Pantin', 'Lens', 'Évreux', 'Livry-Gargan', 'Belfort', 'La Courneuve',
-  'Sevran', 'Albi', 'Martigues', 'Corbeil-Essonnes', 'Bayonne', 'Gap', 'Massy', 'Vincennes',
-  'Boulogne-sur-Mer', 'Montrouge', 'Saint-Priest', 'Noisy-le-Sec', 'Wattrelos', 'Alfortville',
-  'Puteaux', 'Rosny-sous-Bois', 'Saint-Laurent-du-Var', 'Le Perreux-sur-Marne', 'Haguenau',
-  'Sainte-Geneviève-des-Bois', 'Gennevilliers', 'Le Cannet', 'Valence', 'La Seyne-sur-Mer',
-  'Thionville', 'Montluçon', 'Sarcelles', 'Châlons-en-Champagne', 'Chalon-sur-Saône',
-  'Douai', 'Troyes', 'Nogent-sur-Marne', 'Les Abymes', 'Cayenne', 'Fort-de-France',
-  'Saint-Pierre', 'Le Tampon', 'Mamoudzou', 'Saint-Benoît', 'Sainte-Marie', 'Le Lamentin'
-]));
+  'Aix-en-Provence', 'Albi', 'Alfortville', 'Amiens', 'Angers', 'Antibes', 'Antony', 'Argenteuil',
+  'Asnières-sur-Seine', 'Aubervilliers', 'Avignon', 'Bayonne', 'Beauvais', 'Belfort', 'Béziers',
+  'Bordeaux', 'Boulogne-Billancourt', 'Boulogne-sur-Mer', 'Brest', 'Caen', 'Cannes', 'Cayenne',
+  'Châlons-en-Champagne', 'Chalon-sur-Saône', 'Champigny-sur-Marne', 'Charleville-Mézières',
+  'Châteauroux', 'Chelles', 'Cholet', 'Clermont-Ferrand', 'Clichy', 'Colmar', 'Colombes',
+  'Corbeil-Essonnes', 'Courbevoie', 'Créteil', 'Dijon', 'Douai', 'Drancy', 'Dunkirk', 'Épinay-sur-Seine',
+  'Évry', 'Fort-de-France', 'Gap', 'Gennevilliers', 'Grenoble', 'Haguenau', 'Hyères', 'Issy-les-Moulineaux',
+  'La Courneuve', 'La Rochelle', 'La Seyne-sur-Mer', 'Le Cannet', 'Le Havre', 'Le Lamentin', 'Le Mans',
+  'Le Perreux-sur-Marne', 'Le Tampon', 'Levallois-Perret', 'Lille', 'Limoges', 'Lorient', 'Lyon',
+  'Mamoudzou', 'Marseille', 'Martigues', 'Massy', 'Maisons-Alfort', 'Mamoudzou', 'Marseille', 'Martigues',
+  'Massy', 'Meudon', 'Montauban', 'Montluçon', 'Montpellier', 'Montreuil', 'Montrouge', 'Mulhouse',
+  'Nancy', 'Nanterre', 'Nantes', 'Neuilly-sur-Seine', 'Nice', 'Niort', 'Nîmes', 'Nogent-sur-Marne',
+  'Noisy-le-Grand', 'Noisy-le-Sec', 'Orléans', 'Pantin', 'Paris', 'Perpignan', 'Pessac', 'Poitiers',
+  'Puteaux', 'Reims', 'Rennes', 'Roanne', 'Roubaix', 'Rouen', 'Rueil-Malmaison', 'Saint-Benoît',
+  'Saint-Denis', 'Saint-Laurent-du-Var', 'Saint-Maur-des-Fossés', 'Saint-Nazaire', 'Saint-Ouen',
+  'Saint-Pierre', 'Saint-Priest', 'Sainte-Geneviève-des-Bois', 'Sainte-Marie', 'Sarcelles', 'Sevran',
+  'Sète', 'Strasbourg', 'Tarbes', 'Thionville', 'Toulon', 'Toulouse', 'Tourcoing', 'Tours', 'Troyes',
+  'Valence', 'Vénissieux', 'Versailles', 'Villejuif', 'Villeurbanne', 'Vincennes', 'Vitry-sur-Seine',
+  'Wattrelos'
+])).sort();
 
 export default function QuoteForm({ onNext, onPrevious, initialData = {} }: QuoteFormProps) {
   // const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -269,17 +266,15 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
   // Mise à jour du volume et de la distance quand les données changent
   useEffect(() => {
     const departureArea = formData.departureArea;
-    const arrivalArea = formData.arrivalArea;
     const departureCity = formData.departureCity;
     const arrivalCity = formData.arrivalCity;
     
     let newVolume = 0;
     let newDistance = 0;
     
-    if (departureArea && arrivalArea) {
-      const departureVolume = calculateVolume(departureArea);
-      const arrivalVolume = calculateVolume(arrivalArea);
-      newVolume = Math.max(departureVolume, arrivalVolume); // Prendre le plus grand
+    // Le volume est calculé uniquement à partir de la superficie de départ
+    if (departureArea) {
+      newVolume = calculateVolume(departureArea);
       setVolume(newVolume);
     }
     
@@ -293,7 +288,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
       const newPrices = calculatePrices(newVolume, newDistance);
       setPrices(newPrices);
     }
-  }, [formData.departureArea, formData.arrivalArea, formData.departureCity, formData.arrivalCity]);
+  }, [formData.departureArea, formData.departureCity, formData.arrivalCity]);
 
   const validateForm = (): boolean => {
     const newErrors: { [key: string]: string } = {};
@@ -327,402 +322,269 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* Formulaire complet - plus d'authentification sociale */}
-      <div>
-          {/* En-tête du formulaire */}
-          <div className="bg-blue-50 p-6 rounded-lg border border-blue-200 mb-8">
-            <h3 className="text-lg font-semibold text-blue-800 mb-2">
-              📋 Remplissez votre demande de devis
-            </h3>
-            <p className="text-blue-600 text-sm">
-              Tous les champs marqués d'un * sont obligatoires
-            </p>
-          </div>
+    <div className="max-w-2xl mx-auto px-4">
+      {/* En-tête simple */}
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Demande de devis</h2>
+        <p className="text-gray-600">Remplissez les informations ci-dessous</p>
+      </div>
 
-          <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Informations personnelles */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <span className="text-xl mr-2">👤</span>
-            Informations personnelles
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Prénom *
-              </label>
-              <input
-                type="text"
-                value={formData.firstName}
-                onChange={(e) => handleInputChange('firstName', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.firstName ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="Votre prénom"
-              />
-              {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nom *
-              </label>
-              <input
-                type="text"
-                value={formData.lastName}
-                onChange={(e) => handleInputChange('lastName', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.lastName ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="Votre nom"
-              />
-              {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email *
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.email ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="votre@email.com"
-              />
-              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Téléphone *
-              </label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.phone ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="06 12 34 56 78"
-              />
-              {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
-            </div>
-          </div>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Email */}
+        <div className="bg-white p-4 rounded-lg shadow-sm border">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Email *
+          </label>
+          <input
+            type="email"
+            value={formData.email}
+            onChange={(e) => handleInputChange('email', e.target.value)}
+            className={`w-full px-3 py-3 border rounded-lg text-base ${
+              errors.email ? 'border-red-500' : 'border-gray-300'
+            }`}
+            placeholder="votre@email.com"
+          />
+          {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
         </div>
 
         {/* Adresse de départ */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <span className="text-xl mr-2">🏠</span>
-            Adresse de départ
-          </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Ville *
-                </label>
-                <select
-                  value={formData.departureCity}
-                  onChange={(e) => handleInputChange('departureCity', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.departureCity ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                >
-                  <option value="">Sélectionnez une ville</option>
-                  {FRENCH_CITIES.map(city => (
-                    <option key={city} value={city}>{city}</option>
-                  ))}
-                </select>
-                {errors.departureCity && <p className="text-red-500 text-xs mt-1">{errors.departureCity}</p>}
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Code postal *
-                </label>
-                <input
-                  type="text"
-                  value={formData.departurePostalCode}
-                  onChange={(e) => handleInputChange('departurePostalCode', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.departurePostalCode ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="33000"
-                />
-                {errors.departurePostalCode && <p className="text-red-500 text-xs mt-1">{errors.departurePostalCode}</p>}
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Étage
-                </label>
-                <input
-                  type="text"
-                  value={formData.departureFloor}
-                  onChange={(e) => handleInputChange('departureFloor', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="RDC, 1er, 2ème..."
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Superficie
-                </label>
-                <select
-                  value={formData.departureArea}
-                  onChange={(e) => handleInputChange('departureArea', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Sélectionner...</option>
-                  <option value="studio">Studio (&lt; 30m2)</option>
-                  <option value="t2">T2 (30-45m2)</option>
-                  <option value="t3">T3 (45-70m2)</option>
-                  <option value="t4">T4 (70-100m2)</option>
-                  <option value="t5">T5 (100-130m2)</option>
-                  <option value="t6">T6+ (&gt; 130m2)</option>
-                  <option value="maison">Maison individuelle</option>
-                  <option value="autre">Autre</option>
-                </select>
-              </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">🏠 Adresse de départ</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ville *
+              </label>
+              <select
+                value={formData.departureCity}
+                onChange={(e) => handleInputChange('departureCity', e.target.value)}
+                className={`w-full px-3 py-3 border rounded-lg text-base ${
+                  errors.departureCity ? 'border-red-500' : 'border-gray-300'
+                }`}
+              >
+                <option value="">Sélectionnez une ville</option>
+                {FRENCH_CITIES.map(city => (
+                  <option key={city} value={city}>{city}</option>
+                ))}
+              </select>
+              {errors.departureCity && <p className="text-red-500 text-sm mt-1">{errors.departureCity}</p>}
             </div>
-          
-          <div className="mt-4 flex items-center">
-            <input
-              type="checkbox"
-              id="departureElevator"
-              checked={formData.departureElevator}
-              onChange={(e) => handleInputChange('departureElevator', e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="departureElevator" className="ml-2 text-sm text-gray-700">
-              Ascenseur disponible
-            </label>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Code postal *
+              </label>
+              <input
+                type="text"
+                value={formData.departurePostalCode}
+                onChange={(e) => handleInputChange('departurePostalCode', e.target.value)}
+                className={`w-full px-3 py-3 border rounded-lg text-base ${
+                  errors.departurePostalCode ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="33000"
+              />
+              {errors.departurePostalCode && <p className="text-red-500 text-sm mt-1">{errors.departurePostalCode}</p>}
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Étage
+              </label>
+              <input
+                type="text"
+                value={formData.departureFloor}
+                onChange={(e) => handleInputChange('departureFloor', e.target.value)}
+                className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base"
+                placeholder="RDC, 1er, 2ème..."
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Superficie
+              </label>
+              <select
+                value={formData.departureArea}
+                onChange={(e) => handleInputChange('departureArea', e.target.value)}
+                className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base"
+              >
+                <option value="">Sélectionner...</option>
+                <option value="studio">Studio (&lt; 30m2)</option>
+                <option value="t2">T2 (30-45m2)</option>
+                <option value="t3">T3 (45-70m2)</option>
+                <option value="t4">T4 (70-100m2)</option>
+                <option value="t5">T5 (100-130m2)</option>
+                <option value="t6">T6+ (&gt; 130m2)</option>
+                <option value="maison">Maison individuelle</option>
+                <option value="autre">Autre</option>
+              </select>
+            </div>
           </div>
           
-          <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Spécificités d'accès
-            </label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="departureTruckAccess"
-                  checked={formData.departureTruckAccess}
-                  onChange={(e) => handleInputChange('departureTruckAccess', e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="departureTruckAccess" className="ml-2 text-sm text-gray-700">
-                  🚛 Accessible camion
-                </label>
-              </div>
-              
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="departureMonteCharge"
-                  checked={formData.departureMonteCharge}
-                  onChange={(e) => handleInputChange('departureMonteCharge', e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="departureMonteCharge" className="ml-2 text-sm text-gray-700">
-                  🛗 Prévoir monte-charge
-                </label>
-              </div>
-              
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="departureNarrowStairs"
-                  checked={formData.departureNarrowStairs}
-                  onChange={(e) => handleInputChange('departureNarrowStairs', e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="departureNarrowStairs" className="ml-2 text-sm text-gray-700">
-                  🪜 Escalier étroit
-                </label>
-              </div>
-              
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="departureTimeRestrictions"
-                  checked={formData.departureTimeRestrictions}
-                  onChange={(e) => handleInputChange('departureTimeRestrictions', e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="departureTimeRestrictions" className="ml-2 text-sm text-gray-700">
-                  ⏰ Horaires spécifiques
-                </label>
-              </div>
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="departureElevator"
+                checked={formData.departureElevator}
+                onChange={(e) => handleInputChange('departureElevator', e.target.checked)}
+                className="h-5 w-5 text-blue-600 rounded"
+              />
+              <label htmlFor="departureElevator" className="ml-3 text-sm text-gray-700">
+                Ascenseur disponible
+              </label>
+            </div>
+            
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="departureTruckAccess"
+                checked={formData.departureTruckAccess}
+                onChange={(e) => handleInputChange('departureTruckAccess', e.target.checked)}
+                className="h-5 w-5 text-blue-600 rounded"
+              />
+              <label htmlFor="departureTruckAccess" className="ml-3 text-sm text-gray-700">
+                Accessible camion
+              </label>
+            </div>
+            
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="departureMonteCharge"
+                checked={formData.departureMonteCharge}
+                onChange={(e) => handleInputChange('departureMonteCharge', e.target.checked)}
+                className="h-5 w-5 text-blue-600 rounded"
+              />
+              <label htmlFor="departureMonteCharge" className="ml-3 text-sm text-gray-700">
+                Prévoir monte-charge
+              </label>
             </div>
           </div>
         </div>
 
         {/* Adresse d'arrivée */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <span className="text-xl mr-2">🎯</span>
-            Adresse d'arrivée
-          </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Ville *
-                </label>
-                <select
-                  value={formData.arrivalCity}
-                  onChange={(e) => handleInputChange('arrivalCity', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.arrivalCity ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                >
-                  <option value="">Sélectionnez une ville</option>
-                  {FRENCH_CITIES.map(city => (
-                    <option key={city} value={city}>{city}</option>
-                  ))}
-                </select>
-                {errors.arrivalCity && <p className="text-red-500 text-xs mt-1">{errors.arrivalCity}</p>}
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Code postal *
-                </label>
-                <input
-                  type="text"
-                  value={formData.arrivalPostalCode}
-                  onChange={(e) => handleInputChange('arrivalPostalCode', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.arrivalPostalCode ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="33600"
-                />
-                {errors.arrivalPostalCode && <p className="text-red-500 text-xs mt-1">{errors.arrivalPostalCode}</p>}
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Étage
-                </label>
-                <input
-                  type="text"
-                  value={formData.arrivalFloor}
-                  onChange={(e) => handleInputChange('arrivalFloor', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="RDC, 1er, 2ème..."
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Superficie
-                </label>
-                <select
-                  value={formData.arrivalArea}
-                  onChange={(e) => handleInputChange('arrivalArea', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Sélectionner...</option>
-                  <option value="studio">Studio (&lt; 30m2)</option>
-                  <option value="t2">T2 (30-45m2)</option>
-                  <option value="t3">T3 (45-70m2)</option>
-                  <option value="t4">T4 (70-100m2)</option>
-                  <option value="t5">T5 (100-130m2)</option>
-                  <option value="t6">T6+ (&gt; 130m2)</option>
-                  <option value="maison">Maison individuelle</option>
-                  <option value="autre">Autre</option>
-                </select>
-              </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">🎯 Adresse d'arrivée</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ville *
+              </label>
+              <select
+                value={formData.arrivalCity}
+                onChange={(e) => handleInputChange('arrivalCity', e.target.value)}
+                className={`w-full px-3 py-3 border rounded-lg text-base ${
+                  errors.arrivalCity ? 'border-red-500' : 'border-gray-300'
+                }`}
+              >
+                <option value="">Sélectionnez une ville</option>
+                {FRENCH_CITIES.map(city => (
+                  <option key={city} value={city}>{city}</option>
+                ))}
+              </select>
+              {errors.arrivalCity && <p className="text-red-500 text-sm mt-1">{errors.arrivalCity}</p>}
             </div>
-          
-          <div className="mt-4 flex items-center">
-            <input
-              type="checkbox"
-              id="arrivalElevator"
-              checked={formData.arrivalElevator}
-              onChange={(e) => handleInputChange('arrivalElevator', e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="arrivalElevator" className="ml-2 text-sm text-gray-700">
-              Ascenseur disponible
-            </label>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Code postal *
+              </label>
+              <input
+                type="text"
+                value={formData.arrivalPostalCode}
+                onChange={(e) => handleInputChange('arrivalPostalCode', e.target.value)}
+                className={`w-full px-3 py-3 border rounded-lg text-base ${
+                  errors.arrivalPostalCode ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="33600"
+              />
+              {errors.arrivalPostalCode && <p className="text-red-500 text-sm mt-1">{errors.arrivalPostalCode}</p>}
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Étage
+              </label>
+              <input
+                type="text"
+                value={formData.arrivalFloor}
+                onChange={(e) => handleInputChange('arrivalFloor', e.target.value)}
+                className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base"
+                placeholder="RDC, 1er, 2ème..."
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Superficie
+              </label>
+              <select
+                value={formData.arrivalArea}
+                onChange={(e) => handleInputChange('arrivalArea', e.target.value)}
+                className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base"
+              >
+                <option value="">Sélectionner...</option>
+                <option value="studio">Studio (&lt; 30m2)</option>
+                <option value="t2">T2 (30-45m2)</option>
+                <option value="t3">T3 (45-70m2)</option>
+                <option value="t4">T4 (70-100m2)</option>
+                <option value="t5">T5 (100-130m2)</option>
+                <option value="t6">T6+ (&gt; 130m2)</option>
+                <option value="maison">Maison individuelle</option>
+                <option value="autre">Autre</option>
+              </select>
+            </div>
           </div>
           
-          <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Spécificités d'accès
-            </label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="arrivalTruckAccess"
-                  checked={formData.arrivalTruckAccess}
-                  onChange={(e) => handleInputChange('arrivalTruckAccess', e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="arrivalTruckAccess" className="ml-2 text-sm text-gray-700">
-                  🚛 Accessible camion
-                </label>
-              </div>
-              
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="arrivalMonteCharge"
-                  checked={formData.arrivalMonteCharge}
-                  onChange={(e) => handleInputChange('arrivalMonteCharge', e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="arrivalMonteCharge" className="ml-2 text-sm text-gray-700">
-                  🛗 Prévoir monte-charge
-                </label>
-              </div>
-              
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="arrivalNarrowStairs"
-                  checked={formData.arrivalNarrowStairs}
-                  onChange={(e) => handleInputChange('arrivalNarrowStairs', e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="arrivalNarrowStairs" className="ml-2 text-sm text-gray-700">
-                  🪜 Escalier étroit
-                </label>
-              </div>
-              
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="arrivalTimeRestrictions"
-                  checked={formData.arrivalTimeRestrictions}
-                  onChange={(e) => handleInputChange('arrivalTimeRestrictions', e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="arrivalTimeRestrictions" className="ml-2 text-sm text-gray-700">
-                  ⏰ Horaires spécifiques
-                </label>
-              </div>
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="arrivalElevator"
+                checked={formData.arrivalElevator}
+                onChange={(e) => handleInputChange('arrivalElevator', e.target.checked)}
+                className="h-5 w-5 text-blue-600 rounded"
+              />
+              <label htmlFor="arrivalElevator" className="ml-3 text-sm text-gray-700">
+                Ascenseur disponible
+              </label>
+            </div>
+            
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="arrivalTruckAccess"
+                checked={formData.arrivalTruckAccess}
+                onChange={(e) => handleInputChange('arrivalTruckAccess', e.target.checked)}
+                className="h-5 w-5 text-blue-600 rounded"
+              />
+              <label htmlFor="arrivalTruckAccess" className="ml-3 text-sm text-gray-700">
+                Accessible camion
+              </label>
+            </div>
+            
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="arrivalMonteCharge"
+                checked={formData.arrivalMonteCharge}
+                onChange={(e) => handleInputChange('arrivalMonteCharge', e.target.checked)}
+                className="h-5 w-5 text-blue-600 rounded"
+              />
+              <label htmlFor="arrivalMonteCharge" className="ml-3 text-sm text-gray-700">
+                Prévoir monte-charge
+              </label>
             </div>
           </div>
         </div>
 
         {/* Détails du déménagement */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <span className="text-xl mr-2">📅</span>
-            Détails du déménagement
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white p-4 rounded-lg shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">📅 Détails du déménagement</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Date souhaitée *
               </label>
               <input
@@ -730,21 +592,21 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
                 value={formData.movingDate}
                 onChange={(e) => handleInputChange('movingDate', e.target.value)}
                 min={new Date().toISOString().split('T')[0]}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-3 py-3 border rounded-lg text-base ${
                   errors.movingDate ? 'border-red-500' : 'border-gray-300'
                 }`}
               />
-              {errors.movingDate && <p className="text-red-500 text-xs mt-1">{errors.movingDate}</p>}
+              {errors.movingDate && <p className="text-red-500 text-sm mt-1">{errors.movingDate}</p>}
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Heure préférée
               </label>
               <select
                 value={formData.movingTime}
                 onChange={(e) => handleInputChange('movingTime', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base"
               >
                 <option value="08:00">8h00 - 10h00</option>
                 <option value="09:00">9h00 - 11h00</option>
@@ -762,91 +624,71 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
               id="flexibleDate"
               checked={formData.flexibleDate}
               onChange={(e) => handleInputChange('flexibleDate', e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-5 w-5 text-blue-600 rounded"
             />
-            <label htmlFor="flexibleDate" className="ml-2 text-sm text-gray-700">
+            <label htmlFor="flexibleDate" className="ml-3 text-sm text-gray-700">
               Dates flexibles (± 3 jours)
             </label>
           </div>
         </div>
 
         {/* Choix de l'offre */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <span className="text-xl mr-2">📦</span>
-            Choisissez votre offre
-          </h3>
-          <p className="text-gray-600 mb-6">
-            Sélectionnez la formule qui correspond le mieux à vos besoins
-          </p>
+        <div className="bg-white p-4 rounded-lg shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">📦 Choisissez votre offre</h3>
           
-          <div className="space-y-4">
-        {/* Offre Économique */}
-        <div className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-          formData.selectedOffer === 'economique' 
-            ? 'border-blue-500 bg-blue-50' 
-            : 'border-gray-200 hover:border-gray-300'
-        }`}>
-          <div className="flex items-start space-x-3">
-            <input
-              type="radio"
-              id="offer-economique"
-              name="selectedOffer"
-              value="economique"
-              checked={formData.selectedOffer === 'economique'}
-              onChange={(e) => handleInputChange('selectedOffer', e.target.value)}
-              className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-            />
-            <div className="flex-1">
-              <label htmlFor="offer-economique" className="cursor-pointer">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-lg font-semibold text-gray-900">1. Économique</h4>
-                  <div className="text-right">
-                    <span className="text-sm text-gray-500">💰</span>
-                    {prices.economique > 0 && !isNaN(prices.economique) && (
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-green-600">
-                          {new Intl.NumberFormat('fr-FR', {
-                            style: 'currency',
-                            currency: 'EUR',
-                            minimumFractionDigits: 0,
-                            maximumFractionDigits: 0
-                          }).format(Math.round(prices.economique * 0.9))} - {new Intl.NumberFormat('fr-FR', {
-                            style: 'currency',
-                            currency: 'EUR',
-                            minimumFractionDigits: 0,
-                            maximumFractionDigits: 0
-                          }).format(Math.round(prices.economique * 1.25))}
+          <div className="space-y-3">
+            {/* Offre Économique */}
+            <div className={`border-2 rounded-lg p-4 cursor-pointer ${
+              formData.selectedOffer === 'economique' 
+                ? 'border-blue-500 bg-blue-50' 
+                : 'border-gray-200'
+            }`}>
+              <div className="flex items-center space-x-3">
+                <input
+                  type="radio"
+                  id="offer-economique"
+                  name="selectedOffer"
+                  value="economique"
+                  checked={formData.selectedOffer === 'economique'}
+                  onChange={(e) => handleInputChange('selectedOffer', e.target.value)}
+                  className="h-5 w-5 text-blue-600"
+                />
+                <div className="flex-1">
+                  <label htmlFor="offer-economique" className="cursor-pointer">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-lg font-semibold text-gray-900">Économique</h4>
+                      {prices.economique > 0 && !isNaN(prices.economique) && (
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-green-600">
+                            {new Intl.NumberFormat('fr-FR', {
+                              style: 'currency',
+                              currency: 'EUR',
+                              minimumFractionDigits: 0,
+                              maximumFractionDigits: 0
+                            }).format(Math.round(prices.economique * 0.9))} - {new Intl.NumberFormat('fr-FR', {
+                              style: 'currency',
+                              currency: 'EUR',
+                              minimumFractionDigits: 0,
+                              maximumFractionDigits: 0
+                            }).format(Math.round(prices.economique * 1.25))}
+                          </div>
+                          <div className="text-xs text-gray-500">TTC</div>
                         </div>
-                        <div className="text-xs text-gray-500">estimation TTC</div>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">Transport simple A → B</p>
+                  </label>
                 </div>
-                <p className="text-sm text-gray-600 mb-3">
-                  Transport simple du point A au point B
-                </p>
-                <ul className="text-sm text-gray-600 space-y-1 mb-3">
-                  <li>✅ Chargement et déchargement par les déménageurs</li>
-                  <li>❌ Pas de démontage ni remontage de meubles</li>
-                  <li>❌ Pas de fourniture de cartons</li>
-                  <li>❌ Pas d'emballage des affaires par l'équipe</li>
-                </ul>
-                <p className="text-xs text-blue-600 font-medium">
-                  👉 Adapté aux clients qui préparent eux-mêmes cartons et meubles, et veulent réduire les coûts.
-                </p>
-              </label>
+              </div>
             </div>
-          </div>
-        </div>
 
             {/* Offre Standard */}
-            <div className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+            <div className={`border-2 rounded-lg p-4 cursor-pointer ${
               formData.selectedOffer === 'standard' 
                 ? 'border-blue-500 bg-blue-50' 
-                : 'border-gray-200 hover:border-gray-300'
+                : 'border-gray-200'
             }`}>
-              <div className="flex items-start space-x-3">
+              <div className="flex items-center space-x-3">
                 <input
                   type="radio"
                   id="offer-standard"
@@ -854,57 +696,44 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
                   value="standard"
                   checked={formData.selectedOffer === 'standard'}
                   onChange={(e) => handleInputChange('selectedOffer', e.target.value)}
-                  className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                  className="h-5 w-5 text-blue-600"
                 />
                 <div className="flex-1">
                   <label htmlFor="offer-standard" className="cursor-pointer">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-lg font-semibold text-gray-900">2. Standard</h4>
-                      <div className="text-right">
-                        <span className="text-sm text-gray-500">⭐</span>
-                        {prices.standard > 0 && !isNaN(prices.standard) && (
-                          <div className="text-right">
-                            <div className="text-lg font-bold text-blue-600">
-                              {new Intl.NumberFormat('fr-FR', {
-                                style: 'currency',
-                                currency: 'EUR',
-                                minimumFractionDigits: 0,
-                                maximumFractionDigits: 0
-                              }).format(Math.round(prices.standard * 0.9))} - {new Intl.NumberFormat('fr-FR', {
-                                style: 'currency',
-                                currency: 'EUR',
-                                minimumFractionDigits: 0,
-                                maximumFractionDigits: 0
-                              }).format(Math.round(prices.standard * 1.25))}
-                            </div>
-                            <div className="text-xs text-gray-500">estimation TTC</div>
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-lg font-semibold text-gray-900">Standard</h4>
+                      {prices.standard > 0 && !isNaN(prices.standard) && (
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-blue-600">
+                            {new Intl.NumberFormat('fr-FR', {
+                              style: 'currency',
+                              currency: 'EUR',
+                              minimumFractionDigits: 0,
+                              maximumFractionDigits: 0
+                            }).format(Math.round(prices.standard * 0.9))} - {new Intl.NumberFormat('fr-FR', {
+                              style: 'currency',
+                              currency: 'EUR',
+                              minimumFractionDigits: 0,
+                              maximumFractionDigits: 0
+                            }).format(Math.round(prices.standard * 1.25))}
                           </div>
-                        )}
-                      </div>
+                          <div className="text-xs text-gray-500">TTC</div>
+                        </div>
+                      )}
                     </div>
-                    <p className="text-sm text-gray-600 mb-3">
-                      Tous les services de la formule Économique
-                    </p>
-                    <ul className="text-sm text-gray-600 space-y-1 mb-3">
-                      <li>✅ Démontage et remontage basique des meubles standards</li>
-                      <li>✅ Fourniture d'un lot de cartons classiques</li>
-                      <li>✅ Aide à l'emballage des objets fragiles uniquement</li>
-                    </ul>
-                    <p className="text-xs text-blue-600 font-medium">
-                      👉 Adapté aux familles ou particuliers qui veulent un accompagnement partiel.
-                    </p>
+                    <p className="text-sm text-gray-600 mt-1">Avec démontage et cartons</p>
                   </label>
                 </div>
               </div>
             </div>
 
             {/* Offre Premium */}
-            <div className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+            <div className={`border-2 rounded-lg p-4 cursor-pointer ${
               formData.selectedOffer === 'premium' 
                 ? 'border-blue-500 bg-blue-50' 
-                : 'border-gray-200 hover:border-gray-300'
+                : 'border-gray-200'
             }`}>
-              <div className="flex items-start space-x-3">
+              <div className="flex items-center space-x-3">
                 <input
                   type="radio"
                   id="offer-premium"
@@ -912,46 +741,32 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
                   value="premium"
                   checked={formData.selectedOffer === 'premium'}
                   onChange={(e) => handleInputChange('selectedOffer', e.target.value)}
-                  className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                  className="h-5 w-5 text-blue-600"
                 />
                 <div className="flex-1">
                   <label htmlFor="offer-premium" className="cursor-pointer">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-lg font-semibold text-gray-900">3. Premium</h4>
-                      <div className="text-right">
-                        <span className="text-sm text-gray-500">👑</span>
-                        {prices.premium > 0 && !isNaN(prices.premium) && (
-                          <div className="text-right">
-                            <div className="text-lg font-bold text-purple-600">
-                              {new Intl.NumberFormat('fr-FR', {
-                                style: 'currency',
-                                currency: 'EUR',
-                                minimumFractionDigits: 0,
-                                maximumFractionDigits: 0
-                              }).format(Math.round(prices.premium * 0.9))} - {new Intl.NumberFormat('fr-FR', {
-                                style: 'currency',
-                                currency: 'EUR',
-                                minimumFractionDigits: 0,
-                                maximumFractionDigits: 0
-                              }).format(Math.round(prices.premium * 1.25))}
-                            </div>
-                            <div className="text-xs text-gray-500">estimation TTC</div>
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-lg font-semibold text-gray-900">Premium</h4>
+                      {prices.premium > 0 && !isNaN(prices.premium) && (
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-purple-600">
+                            {new Intl.NumberFormat('fr-FR', {
+                              style: 'currency',
+                              currency: 'EUR',
+                              minimumFractionDigits: 0,
+                              maximumFractionDigits: 0
+                            }).format(Math.round(prices.premium * 0.9))} - {new Intl.NumberFormat('fr-FR', {
+                              style: 'currency',
+                              currency: 'EUR',
+                              minimumFractionDigits: 0,
+                              maximumFractionDigits: 0
+                            }).format(Math.round(prices.premium * 1.25))}
                           </div>
-                        )}
-                      </div>
+                          <div className="text-xs text-gray-500">TTC</div>
+                        </div>
+                      )}
                     </div>
-                    <p className="text-sm text-gray-600 mb-3">
-                      Tous les services de la formule Standard
-                    </p>
-                    <ul className="text-sm text-gray-600 space-y-1 mb-3">
-                      <li>✅ Fourniture complète de tout le matériel d'emballage</li>
-                      <li>✅ Emballage intégral des affaires par l'équipe</li>
-                      <li>✅ Déballage et remise en place à l'arrivée</li>
-                      <li>✅ Gestion des objets spéciaux incluse</li>
-                    </ul>
-                    <p className="text-xs text-blue-600 font-medium">
-                      👉 Adapté aux clients qui veulent un déménagement clé en main, sans effort.
-                    </p>
+                    <p className="text-sm text-gray-600 mt-1">Clé en main complet</p>
                   </label>
                 </div>
               </div>
@@ -978,68 +793,24 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
       )}
         </div>
 
-
-
-
-        {/* Préférences de contact */}
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <span className="text-xl mr-2">📞</span>
-            Préférences de contact
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Méthode de contact préférée
-              </label>
-              <select
-                value={formData.preferredContactMethod}
-                onChange={(e) => handleInputChange('preferredContactMethod', e.target.value as 'email' | 'phone' | 'sms')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="email">Email</option>
-                <option value="phone">Téléphone</option>
-                <option value="sms">SMS</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Heure de contact préférée
-              </label>
-              <select
-                value={formData.contactTime}
-                onChange={(e) => handleInputChange('contactTime', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="09:00-12:00">Matin (9h-12h)</option>
-                <option value="09:00-18:00">Journée (9h-18h)</option>
-                <option value="14:00-18:00">Après-midi (14h-18h)</option>
-                <option value="18:00-20:00">Soirée (18h-20h)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
         {/* Boutons de navigation */}
-        <div className="flex justify-between pt-6">
+        <div className="flex flex-col sm:flex-row gap-4 pt-6">
           <button
             type="button"
             onClick={onPrevious}
-            className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+            className="flex-1 px-6 py-4 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-base font-medium"
           >
             ← Précédent
           </button>
           
           <button
             type="submit"
-            className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            className="flex-1 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-base font-medium"
           >
-            Continuer vers la validation →
+            Continuer →
           </button>
         </div>
       </form>
     </div>
-  </div>
-);
+  );
 }
