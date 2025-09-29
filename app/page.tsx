@@ -833,7 +833,7 @@ export default function Home() {
                     <div>
                       <span className="font-medium">Offre choisie :</span> {quoteFormData.selectedOffer ? 
                         (() => {
-                          const offers = {
+                          const offers: { [key: string]: string } = {
                             'economique': '1. Économique 💰',
                             'standard': '2. Standard ⭐',
                             'premium': '3. Premium 👑'
