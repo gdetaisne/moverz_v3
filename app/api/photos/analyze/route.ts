@@ -25,9 +25,7 @@ export async function POST(req: NextRequest) {
       // Analyse A : Détection d'objets (sans détection de pièce)
       analyzePhotoWithOptimizedVision({ 
         photoId: saved.id, 
-        imageUrl: saved.dataUrl,
-        enableDuplicateDetection: true,
-        enableRoomGrouping: false
+        imageUrl: saved.dataUrl
       }),
       // Analyse B : Détection de pièce (spécialisée)
       detectRoomTypeParallel(saved.dataUrl)

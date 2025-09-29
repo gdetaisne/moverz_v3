@@ -1,6 +1,4 @@
 import { TPhotoAnalysis } from "@/lib/schemas";
-import { analyzePhotoWithClaude } from "./claudeVision";
-import { originalAnalyzePhotoWithVision } from "./openaiVision";
 
 export interface RoomDetectionResult {
   roomType: string;
