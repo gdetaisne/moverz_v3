@@ -927,7 +927,7 @@ export default function Home() {
         </div>
       )}
 
-      {activePhotoTab === 'inventory' && currentStep === 2 && (
+      {activePhotoTab === 'inventory' && (currentStep === 1 || currentStep === 2) && (
         <div className="space-y-8">
           {/* Bouton de retour */}
           <div className="flex justify-between items-center">
@@ -938,8 +938,19 @@ export default function Home() {
               <span>←</span>
               <span>Retour aux photos</span>
             </button>
-            <div className="text-sm text-gray-600">
-              {currentRoom.photos.length} photo{currentRoom.photos.length > 1 ? 's' : ''} chargée{currentRoom.photos.length > 1 ? 's' : ''}
+            <div className="flex items-center space-x-4">
+              <div className="text-sm text-gray-600">
+                {currentRoom.photos.length} photo{currentRoom.photos.length > 1 ? 's' : ''} chargée{currentRoom.photos.length > 1 ? 's' : ''}
+              </div>
+              {currentStep === 1 && currentRoom.photos.some(p => p.status === 'completed') && (
+                <button
+                  onClick={() => setCurrentStep(2)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <span>Valider l'inventaire</span>
+                  <span>→</span>
+                </button>
+              )}
             </div>
           </div>
 
