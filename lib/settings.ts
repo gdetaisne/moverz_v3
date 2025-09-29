@@ -5,6 +5,7 @@ export interface AISettings {
   temperature: number;
   maxTokens?: number;
   model: string;
+  openaiApiKey?: string;
 }
 
 export const DEFAULT_AI_SETTINGS: AISettings = {
@@ -42,7 +43,8 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
 Analyse la photo et détecte tous les objets mobiles visibles pour l'inventaire de déménagement.`,
   temperature: 0.5, // Équilibré pour détecter tous les objets sans fusion
   maxTokens: 2000, // Augmenter pour le prompt plus détaillé
-  model: "gpt-4o-mini" // Plus rapide que gpt-4o
+  model: "gpt-4o-mini", // Plus rapide que gpt-4o
+  openaiApiKey: "" // Clé API à configurer
 };
 
 // Stockage local des paramètres (pour MVP)

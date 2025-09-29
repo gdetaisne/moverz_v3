@@ -5,31 +5,101 @@ import { getCachedAnalysis, setCachedAnalysis } from "@/lib/cache";
 import { optimizeImageForAI } from "@/lib/imageOptimization";
 import { getAISettings } from "@/lib/settings";
 
-// Client OpenAI initialisé dans la fonction pour éviter les problèmes de build
-function getOpenAIClient() {
-  if (!process.env.OPENAI_API_KEY) {
-    console.warn("OPENAI_API_KEY missing - using mock mode");
-    // Retourner un client mock pour éviter le crash
+// Fonction pour estimer les dimensions basées sur la catégorie
+function getEstimatedDimensions(category: string) {
+  const estimates: { [key: string]: { length: number; width: number; height: number } } = {
+    'furniture': { length: 100, width: 50, height: 80 },
+    'appliance': { length: 60, width: 40, height: 50 },
+    'art': { length: 30, width: 20, height: 40 },
+    'box': { length: 40, width: 30, height: 30 },
+    'misc': { length: 25, width: 25, height: 25 }
+  };
+  
+  return estimates[category] || estimates['misc'];
+}
+
+// Client OpenAI initialisé avec la clé configurée
+function getOpenAIClient(apiKey?: string) {
+  // Priorité : clé configurée dans le Back office, puis variable d'environnement
+  const key = apiKey || process.env.OPENAI_API_KEY;
+  
+  if (!key) {
+    console.warn("Aucune clé OpenAI configurée - using mock mode");
     return null as any;
   }
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  
+  console.log("Utilisation de la clé OpenAI configurée");
+  return new OpenAI({ apiKey: key });
 }
 
 export async function analyzePhotoWithVision(opts: {
   photoId: string;
   imageUrl: string; // local file served or presigned URL
 }): Promise<TPhotoAnalysis> {
-  const client = getOpenAIClient();
+  // Récupérer les paramètres IA configurables côté serveur
+  let aiSettings;
+  try {
+    // Import dynamique pour éviter les problèmes de build
+    const { getServerAISettings } = await import('@/lib/serverSettings');
+    aiSettings = getServerAISettings();
+    console.log('Paramètres IA chargés:', {
+      model: aiSettings.model,
+      temperature: aiSettings.temperature,
+      hasApiKey: !!aiSettings.openaiApiKey
+    });
+  } catch (error) {
+    console.warn('Erreur lors de la récupération des paramètres IA côté serveur:', error);
+    aiSettings = getAISettings();
+  }
+
+  const client = getOpenAIClient(aiSettings.openaiApiKey);
   
-  // Si pas de clé API, retourner une réponse mock
+  // Si pas de clé API, retourner une réponse mock avec des données réalistes
   if (!client) {
+    // Données mock réalistes pour les tests
+    const mockItems = [
+      {
+        label: "Fauteuil en cuir",
+        category: "furniture" as const,
+        dimensions_cm: { length: 80, width: 80, height: 90, source: "estimated" as const },
+        volume_m3: 0.576,
+        quantity: 1,
+        confidence: 0.85,
+        fragile: false,
+        stackable: false,
+        notes: "Siège rembourré en cuir"
+      },
+      {
+        label: "Table basse en bois",
+        category: "furniture" as const, 
+        dimensions_cm: { length: 120, width: 60, height: 40, source: "estimated" as const },
+        volume_m3: 0.288,
+        quantity: 1,
+        confidence: 0.92,
+        fragile: false,
+        stackable: true,
+        notes: "Surface plane en bois"
+      },
+      {
+        label: "Plante en pot",
+        category: "misc" as const,
+        dimensions_cm: { length: 30, width: 30, height: 80, source: "estimated" as const },
+        volume_m3: 0.072,
+        quantity: 1,
+        confidence: 0.78,
+        fragile: true,
+        stackable: false,
+        notes: "Fragile - attention au transport"
+      }
+    ];
+
     return {
       version: "1.0.0",
       photo_id: opts.photoId,
-      items: [],
+      items: mockItems,
       totals: {
-        count_items: 0,
-        volume_m3: 0
+        count_items: mockItems.reduce((sum, item) => sum + (item.quantity || 1), 0),
+        volume_m3: Number(mockItems.reduce((sum, item) => sum + (item.volume_m3 || 0) * (item.quantity || 1), 0).toFixed(3))
       },
       special_rules: {
         autres_objets: {
@@ -38,13 +108,10 @@ export async function analyzePhotoWithVision(opts: {
           volume_m3: 0
         }
       },
-      warnings: ["OPENAI_API_KEY manquante - mode démo"],
+      warnings: ["Mode démo - données simulées"],
       errors: []
     };
   }
-
-  // Récupérer les paramètres IA configurables
-  const aiSettings = getAISettings();
 
   // Traitement de l'image et vérification du cache
   let imageContent;
@@ -135,9 +202,25 @@ export async function analyzePhotoWithVision(opts: {
 
   for (const it of parsed.items ?? []) {
     const cat = mapToCatalog(it.label);
-    if (cat && (!it.dimensions_cm || !it.dimensions_cm.length || !it.dimensions_cm.width || !it.dimensions_cm.height)) {
+    
+    // Vérifier si les dimensions sont valides (non nulles, non zéro, non vides)
+    const hasValidDimensions = it.dimensions_cm && 
+      it.dimensions_cm.length && it.dimensions_cm.length > 0 &&
+      it.dimensions_cm.width && it.dimensions_cm.width > 0 &&
+      it.dimensions_cm.height && it.dimensions_cm.height > 0;
+    
+    if (cat && !hasValidDimensions) {
       it.dimensions_cm = {
         length: cat.length, width: cat.width, height: cat.height, source: "catalog"
+      };
+    } else if (!hasValidDimensions && !cat) {
+      // Fallback : dimensions estimées basées sur la catégorie
+      const estimatedDims = getEstimatedDimensions(it.category || 'misc');
+      it.dimensions_cm = {
+        length: estimatedDims.length,
+        width: estimatedDims.width, 
+        height: estimatedDims.height,
+        source: "estimated"
       };
     }
     if (!it.category && cat) it.category = cat.category;

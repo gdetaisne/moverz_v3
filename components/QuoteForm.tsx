@@ -85,6 +85,7 @@ const FRENCH_CITIES = Array.from(new Set([
 ])).sort();
 
 export default function QuoteForm({ onNext, onPrevious, initialData = {} }: QuoteFormProps) {
+  console.log('🔄 [QUOTEFORM] Composant rendu avec props:', { onNext: !!onNext, onPrevious: !!onPrevious, initialData });
   // const [isAuthenticated, setIsAuthenticated] = useState(false);
   // const [user, setUser] = useState<User | null>(null);
   // const [authError, setAuthError] = useState<string | null>(null);
@@ -127,6 +128,136 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
   });
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [postalCodeSuggestions, setPostalCodeSuggestions] = useState<{
+    departure: string[];
+    arrival: string[];
+  }>({ departure: [], arrival: [] });
+  const [showSuggestions, setShowSuggestions] = useState<{
+    departure: boolean;
+    arrival: boolean;
+  }>({ departure: false, arrival: false });
+
+  // Mettre à jour le formulaire quand initialData change (persistance)
+  useEffect(() => {
+    if (initialData && Object.keys(initialData).length > 0) {
+      setFormData(prev => ({
+        ...prev,
+        ...initialData
+      }));
+    }
+  }, [initialData]);
+
+  // Charger les données sauvegardées au démarrage
+  useEffect(() => {
+    const savedFormData = localStorage.getItem('moverz_form_data');
+    if (savedFormData) {
+      try {
+        const data = JSON.parse(savedFormData);
+        setFormData(prev => ({
+          ...prev,
+          ...data
+        }));
+      } catch (error) {
+        console.error('Erreur lors du chargement des données du formulaire:', error);
+      }
+    }
+  }, []);
+
+  // Sauvegarder automatiquement les données du formulaire
+  useEffect(() => {
+    // Sauvegarder dans localStorage toutes les 2 secondes
+    const interval = setInterval(() => {
+      localStorage.setItem('moverz_form_data', JSON.stringify(formData));
+    }, 2000);
+
+    // Sauvegarder immédiatement
+    localStorage.setItem('moverz_form_data', JSON.stringify(formData));
+
+    return () => clearInterval(interval);
+  }, [formData]);
+
+  // Fonction pour récupérer les codes postaux basés sur la ville
+  const getPostalCodesForCity = async (city: string, type: 'departure' | 'arrival') => {
+    if (!city || city.length < 2) {
+      setPostalCodeSuggestions(prev => ({
+        ...prev,
+        [type]: []
+      }));
+      return;
+    }
+
+    try {
+      // Utiliser l'API gouvernementale française pour les codes postaux
+      const response = await fetch(`https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(city)}&limit=5`);
+      if (response.ok) {
+        const data = await response.json();
+        const postalCodes = data.map((commune: any) => commune.codesPostaux).flat();
+        setPostalCodeSuggestions(prev => ({
+          ...prev,
+          [type]: postalCodes
+        }));
+        // Afficher les suggestions automatiquement
+        setShowSuggestions(prev => ({
+          ...prev,
+          [type]: postalCodes.length > 0
+        }));
+      }
+    } catch (error) {
+      console.error('Erreur lors de la récupération des codes postaux:', error);
+      // Fallback avec quelques codes postaux courants pour les grandes villes
+      const fallbackCodes: { [key: string]: string[] } = {
+        'paris': ['75001', '75002', '75003', '75004', '75005', '75006', '75007', '75008', '75009', '75010', '75011', '75012', '75013', '75014', '75015', '75016', '75017', '75018', '75019', '75020'],
+        'lyon': ['69001', '69002', '69003', '69004', '69005', '69006', '69007', '69008', '69009'],
+        'marseille': ['13001', '13002', '13003', '13004', '13005', '13006', '13007', '13008', '13009', '13010', '13011', '13012', '13013', '13014', '13015', '13016'],
+        'toulouse': ['31000', '31100', '31200', '31300', '31400', '31500'],
+        'nice': ['06000', '06100', '06200', '06300'],
+        'nantes': ['44000', '44100', '44200', '44300'],
+        'strasbourg': ['67000', '67100', '67200'],
+        'montpellier': ['34000', '34070', '34080', '34090'],
+        'bordeaux': ['33000', '33100', '33200', '33300', '33400', '33500'],
+        'lille': ['59000', '59100', '59200', '59300', '59400', '59500', '59600', '59700', '59800']
+      };
+      
+      const cityKey = city.toLowerCase().replace(/[^a-z]/g, '');
+      const fallbackPostalCodes = fallbackCodes[cityKey] || [];
+      
+      setPostalCodeSuggestions(prev => ({
+        ...prev,
+        [type]: fallbackPostalCodes
+      }));
+      // Afficher les suggestions automatiquement
+      setShowSuggestions(prev => ({
+        ...prev,
+        [type]: fallbackPostalCodes.length > 0
+      }));
+    }
+  };
+
+  // Effet pour récupérer les codes postaux quand la ville change
+  useEffect(() => {
+    if (formData.departureCity) {
+      getPostalCodesForCity(formData.departureCity, 'departure');
+    }
+  }, [formData.departureCity]);
+
+  useEffect(() => {
+    if (formData.arrivalCity) {
+      getPostalCodesForCity(formData.arrivalCity, 'arrival');
+    }
+  }, [formData.arrivalCity]);
+
+  // Effet pour masquer les suggestions quand on clique ailleurs
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.postal-code-field')) {
+        setShowSuggestions({ departure: false, arrival: false });
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   // Gestion de l'authentification sociale (désactivée)
   // const handleAuthSuccess = (authenticatedUser: User) => {
@@ -260,7 +391,11 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
     const arrivalSize = citySizes[arrival] || 100;
     
     // Distance approximative basée sur la taille des villes
-    return Math.abs(departureSize - arrivalSize) + 100;
+    const estimatedDistance = Math.abs(departureSize - arrivalSize) + 100;
+    
+    // Si les villes ne sont pas reconnues, utiliser une distance par défaut de 200km
+    // (plus réaliste que 100km pour un déménagement inter-villes)
+    return estimatedDistance > 50 ? estimatedDistance : 200;
   };
 
   // Mise à jour du volume et de la distance quand les données changent
@@ -292,23 +427,65 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
 
   const validateForm = (): boolean => {
     const newErrors: { [key: string]: string } = {};
+    console.log('🔍 [VALIDATION] Début de la validation...');
 
     // Validation des champs obligatoires
-    if (!formData.firstName.trim()) newErrors.firstName = 'Le prénom est requis';
-    if (!formData.lastName.trim()) newErrors.lastName = 'Le nom est requis';
-    if (!formData.email.trim()) newErrors.email = 'L\'email est requis';
-    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email invalide';
-    if (!formData.phone.trim()) newErrors.phone = 'Le téléphone est requis';
+    if (!formData.email.trim()) {
+      newErrors.email = 'L\'email est requis';
+      console.log('❌ [VALIDATION] Email manquant');
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email invalide';
+      console.log('❌ [VALIDATION] Email invalide:', formData.email);
+    } else {
+      console.log('✅ [VALIDATION] Email OK:', formData.email);
+    }
     
-    if (!formData.departureCity.trim()) newErrors.departureCity = 'La ville de départ est requise';
-    if (!formData.departurePostalCode.trim()) newErrors.departurePostalCode = 'Le code postal de départ est requis';
+    if (!formData.departureCity.trim()) {
+      newErrors.departureCity = 'La ville de départ est requise';
+      console.log('❌ [VALIDATION] Ville de départ manquante');
+    } else {
+      console.log('✅ [VALIDATION] Ville de départ OK:', formData.departureCity);
+    }
     
-    if (!formData.arrivalCity.trim()) newErrors.arrivalCity = 'La ville d\'arrivée est requise';
-    if (!formData.arrivalPostalCode.trim()) newErrors.arrivalPostalCode = 'Le code postal d\'arrivée est requis';
+    if (!formData.departurePostalCode.trim()) {
+      newErrors.departurePostalCode = 'Le code postal de départ est requis';
+      console.log('❌ [VALIDATION] Code postal départ manquant');
+    } else {
+      console.log('✅ [VALIDATION] Code postal départ OK:', formData.departurePostalCode);
+    }
     
-    if (!formData.movingDate) newErrors.movingDate = 'La date de déménagement est requise';
+    if (!formData.arrivalCity.trim()) {
+      newErrors.arrivalCity = 'La ville d\'arrivée est requise';
+      console.log('❌ [VALIDATION] Ville d\'arrivée manquante');
+    } else {
+      console.log('✅ [VALIDATION] Ville d\'arrivée OK:', formData.arrivalCity);
+    }
     
-    if (!formData.selectedOffer) newErrors.selectedOffer = 'Veuillez choisir une offre';
+    if (!formData.arrivalPostalCode.trim()) {
+      newErrors.arrivalPostalCode = 'Le code postal d\'arrivée est requis';
+      console.log('❌ [VALIDATION] Code postal arrivée manquant');
+    } else {
+      console.log('✅ [VALIDATION] Code postal arrivée OK:', formData.arrivalPostalCode);
+    }
+    
+    if (!formData.movingDate) {
+      newErrors.movingDate = 'La date de déménagement est requise';
+      console.log('❌ [VALIDATION] Date de déménagement manquante');
+    } else {
+      console.log('✅ [VALIDATION] Date de déménagement OK:', formData.movingDate);
+    }
+    
+    if (!formData.selectedOffer) {
+      newErrors.selectedOffer = 'Veuillez choisir une offre';
+      console.log('❌ [VALIDATION] Offre non sélectionnée');
+    } else {
+      console.log('✅ [VALIDATION] Offre OK:', formData.selectedOffer);
+    }
+
+    console.log('📊 [VALIDATION] Résultat final:', {
+      erreurs: Object.keys(newErrors),
+      valide: Object.keys(newErrors).length === 0
+    });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -316,8 +493,19 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
+    console.log('🔍 [DEBUG] Bouton Continuer cliqué');
+    console.log('📋 [DEBUG] Données actuelles:', formData);
+    
+    const isValid = validateForm();
+    console.log('✅ [DEBUG] Formulaire valide:', isValid);
+    console.log('❌ [DEBUG] Erreurs détectées:', errors);
+    
+    if (isValid) {
+      console.log('🚀 [DEBUG] Appel de onNext...');
       onNext(formData);
+    } else {
+      console.log('🛑 [DEBUG] Formulaire invalide - soumission bloquée');
+      console.log('📝 [DEBUG] Champs manquants:', Object.keys(errors));
     }
   };
 
@@ -370,7 +558,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
               {errors.departureCity && <p className="text-red-500 text-sm mt-1">{errors.departureCity}</p>}
             </div>
             
-            <div>
+            <div className="relative postal-code-field">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Code postal *
               </label>
@@ -378,11 +566,35 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
                 type="text"
                 value={formData.departurePostalCode}
                 onChange={(e) => handleInputChange('departurePostalCode', e.target.value)}
+                onFocus={() => setShowSuggestions(prev => ({ ...prev, departure: true }))}
                 className={`w-full px-3 py-3 border rounded-lg text-base ${
                   errors.departurePostalCode ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="33000"
+                list="departure-postal-codes"
               />
+              <datalist id="departure-postal-codes">
+                {postalCodeSuggestions.departure.map((code, index) => (
+                  <option key={index} value={code} />
+                ))}
+              </datalist>
+              {showSuggestions.departure && postalCodeSuggestions.departure.length > 0 && (
+                <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-32 overflow-y-auto">
+                  {postalCodeSuggestions.departure.slice(0, 5).map((code, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => {
+                        handleInputChange('departurePostalCode', code);
+                        setShowSuggestions(prev => ({ ...prev, departure: false }));
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm"
+                    >
+                      {code}
+                    </button>
+                  ))}
+                </div>
+              )}
               {errors.departurePostalCode && <p className="text-red-500 text-sm mt-1">{errors.departurePostalCode}</p>}
             </div>
             
@@ -486,7 +698,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
               {errors.arrivalCity && <p className="text-red-500 text-sm mt-1">{errors.arrivalCity}</p>}
             </div>
             
-            <div>
+            <div className="relative postal-code-field">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Code postal *
               </label>
@@ -494,11 +706,35 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
                 type="text"
                 value={formData.arrivalPostalCode}
                 onChange={(e) => handleInputChange('arrivalPostalCode', e.target.value)}
+                onFocus={() => setShowSuggestions(prev => ({ ...prev, arrival: true }))}
                 className={`w-full px-3 py-3 border rounded-lg text-base ${
                   errors.arrivalPostalCode ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="33600"
+                list="arrival-postal-codes"
               />
+              <datalist id="arrival-postal-codes">
+                {postalCodeSuggestions.arrival.map((code, index) => (
+                  <option key={index} value={code} />
+                ))}
+              </datalist>
+              {showSuggestions.arrival && postalCodeSuggestions.arrival.length > 0 && (
+                <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-32 overflow-y-auto">
+                  {postalCodeSuggestions.arrival.slice(0, 5).map((code, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => {
+                        handleInputChange('arrivalPostalCode', code);
+                        setShowSuggestions(prev => ({ ...prev, arrival: false }));
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm"
+                    >
+                      {code}
+                    </button>
+                  ))}
+                </div>
+              )}
               {errors.arrivalPostalCode && <p className="text-red-500 text-sm mt-1">{errors.arrivalPostalCode}</p>}
             </div>
             
@@ -676,7 +912,15 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
                         </div>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">Transport simple A → B</p>
+                    <div className="text-sm text-gray-600 mt-1">
+                      <p className="font-medium">Transport simple A → B</p>
+                      <ul className="text-xs mt-1 space-y-1">
+                        <li>• Transport de vos objets personnels</li>
+                        <li>• Équipe de déménageurs professionnels</li>
+                        <li>• Véhicule adapté au volume</li>
+                        <li>• Assurance transport de base</li>
+                      </ul>
+                    </div>
                   </label>
                 </div>
               </div>
@@ -721,7 +965,16 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
                         </div>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">Avec démontage et cartons</p>
+                    <div className="text-sm text-gray-600 mt-1">
+                      <p className="font-medium">Avec démontage et cartons</p>
+                      <ul className="text-xs mt-1 space-y-1">
+                        <li>• Tout de l'offre Économique</li>
+                        <li>• Démontage/remontage mobilier</li>
+                        <li>• Fourniture de cartons et matériel</li>
+                        <li>• Emballage des objets fragiles</li>
+                        <li>• Assurance transport étendue</li>
+                      </ul>
+                    </div>
                   </label>
                 </div>
               </div>
@@ -766,7 +1019,17 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
                         </div>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">Clé en main complet</p>
+                    <div className="text-sm text-gray-600 mt-1">
+                      <p className="font-medium">Clé en main complet</p>
+                      <ul className="text-xs mt-1 space-y-1">
+                        <li>• Tout de l'offre Standard</li>
+                        <li>• Déballage et rangement</li>
+                        <li>• Installation électroménager</li>
+                        <li>• Nettoyage après déménagement</li>
+                        <li>• Assurance tous risques</li>
+                        <li>• Service client prioritaire</li>
+                      </ul>
+                    </div>
                   </label>
                 </div>
               </div>
@@ -805,6 +1068,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
           
           <button
             type="submit"
+            onClick={() => console.log('🖱️ [DEBUG] Bouton Continuer cliqué directement')}
             className="flex-1 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-base font-medium"
           >
             Continuer →
