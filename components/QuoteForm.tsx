@@ -129,7 +129,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
     ...initialData
   });
 
-  const [errors, setErrors] = useState<Partial<QuoteFormData>>({});
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   // Gestion de l'authentification sociale (désactivée)
   // const handleAuthSuccess = (authenticatedUser: User) => {
@@ -287,7 +287,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
   }, [formData.departureArea, formData.arrivalArea, formData.departureCity, formData.arrivalCity]);
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<QuoteFormData> = {};
+    const newErrors: { [key: string]: string } = {};
 
     // Validation des champs obligatoires
     if (!formData.firstName.trim()) newErrors.firstName = 'Le prénom est requis';
