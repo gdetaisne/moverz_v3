@@ -36,6 +36,21 @@ export async function analyzePhotoWithVision(opts: {
   photoId: string;
   imageUrl: string; // local file served or presigned URL
 }): Promise<TPhotoAnalysis> {
+  // Utiliser directement l'analyse hybride
+  try {
+    const { analyzePhotoWithHybridVision } = await import('./parallelAnalysis');
+    return await analyzePhotoWithHybridVision(opts);
+  } catch (error) {
+    console.warn('Analyse hybride non disponible, utilisation de l\'analyse OpenAI seule:', error);
+    return await originalAnalyzePhotoWithVision(opts);
+  }
+}
+
+// Fonction originale renommée pour le fallback
+export async function originalAnalyzePhotoWithVision(opts: {
+  photoId: string;
+  imageUrl: string; // local file served or presigned URL
+}): Promise<TPhotoAnalysis> {
   // Récupérer les paramètres IA configurables côté serveur
   let aiSettings;
   try {

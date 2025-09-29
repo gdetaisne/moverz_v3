@@ -11,19 +11,28 @@ export interface OptimizedImage {
 export async function optimizeImageForAI(inputBuffer: Buffer): Promise<OptimizedImage> {
   const originalSize = inputBuffer.length;
   
-  // Optimiser l'image pour l'IA : 1024x1024 max, qualité 85%
+  // Déterminer la taille optimale basée sur la taille originale
+  let targetSize = 1024; // Taille par défaut maintenue pour la qualité
+  if (originalSize > 5 * 1024 * 1024) { // > 5MB
+    targetSize = 768; // Plus petit pour les très grandes images
+  } else if (originalSize > 2 * 1024 * 1024) { // > 2MB
+    targetSize = 896; // Taille intermédiaire
+  }
+  
+  // Optimiser l'image pour l'IA : taille adaptative, qualité 80%
   // + Correction automatique de l'orientation EXIF
   const optimizedBuffer = await sharp(inputBuffer)
     .rotate() // Correction automatique de l'orientation selon EXIF
-    .resize(1024, 1024, { 
+    .resize(targetSize, targetSize, { 
       fit: 'inside', 
       withoutEnlargement: true,
-      fastShrinkOnLoad: false // Meilleure qualité
+      fastShrinkOnLoad: true // Plus rapide pour les grandes images
     })
     .jpeg({ 
-      quality: 85,
+      quality: 85, // Qualité maintenue pour la précision
       progressive: true,
-      mozjpeg: true // Compression optimisée
+      mozjpeg: true, // Compression optimisée
+      optimizeScans: true // Optimisation supplémentaire
     })
     .toBuffer();
 

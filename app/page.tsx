@@ -19,6 +19,7 @@ interface RoomData {
     selectedItems: Set<number>; // Indices des objets sélectionnés (toujours défini)
     photoId?: string; // ID unique pour le traitement asynchrone
     progress?: number; // Pourcentage de progression (0-100)
+    roomName?: string; // Nom de la pièce pour cette photo spécifique
   }[];
 }
 
@@ -26,7 +27,7 @@ interface RoomData {
 export default function Home() {
   const [currentRoom, setCurrentRoom] = useState<RoomData>({
     id: 'room-1',
-    name: 'Pièce 1',
+    name: 'Détection automatique...',
     photos: []
   });
   const [loading, setLoading] = useState(false);
@@ -39,6 +40,7 @@ export default function Home() {
   const [isSubmittingQuote, setIsSubmittingQuote] = useState(false);
   const [activePhotoTab, setActivePhotoTab] = useState<'upload' | 'inventory'>('upload');
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isEditingRoomName, setIsEditingRoomName] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Configuration des étapes du workflow
@@ -59,7 +61,7 @@ export default function Home() {
     {
       id: 2,
       title: "Valider l'inventaire",
-      description: "Vérifiez les objets détectés",
+      description: "Vérifiez les objets dans la pièce",
       icon: "🔍",
       completed: isStep3Completed,
       disabled: !isStep1Completed
@@ -212,20 +214,38 @@ export default function Home() {
     return `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   };
 
+  // Fonction pour changer le nom de la pièce
+  const handleRoomNameChange = (newName: string) => {
+    setCurrentRoom(prev => ({
+      ...prev,
+      name: newName || 'Pièce sans nom'
+    }));
+    setIsEditingRoomName(false);
+  };
+
   // Fonction de traitement asynchrone d'une photo
   const processPhotoAsync = async (photoIndex: number, file: File, photoId: string) => {
     try {
-      // Marquer comme en cours de traitement
-      setCurrentRoom(prev => ({
-        ...prev,
-        photos: prev.photos.map((photo, idx) => 
-          idx === photoIndex ? { 
-            ...photo, 
-            status: 'processing',
-            progress: 10
-          } : photo
-        )
-      }));
+      // Vérifier si la photo est déjà en cours de traitement
+      setCurrentRoom(prev => {
+        const photo = prev.photos[photoIndex];
+        if (!photo || photo.status === 'processing' || photo.status === 'completed') {
+          console.log(`Photo ${photoIndex} déjà traitée ou en cours, ignorée`);
+          return prev;
+        }
+        
+        // Marquer comme en cours de traitement
+        return {
+          ...prev,
+          photos: prev.photos.map((photo, idx) => 
+            idx === photoIndex ? { 
+              ...photo, 
+              status: 'processing',
+              progress: 10
+            } : photo
+          )
+        };
+      });
 
       // Simuler progression
       const progressInterval = setInterval(() => {
@@ -248,6 +268,20 @@ export default function Home() {
       clearInterval(progressInterval);
 
       if (res.ok) {
+        // Mettre à jour le nom de la pièce pour cette photo spécifique
+        if (result.roomDetection?.roomType) {
+          setCurrentRoom(prev => ({
+            ...prev,
+            photos: prev.photos.map((photo, idx) => 
+              idx === photoIndex ? { 
+                ...photo, 
+                roomName: result.roomDetection.roomType
+              } : photo
+            )
+          }));
+          console.log(`Photo ${photoIndex}: pièce détectée = ${result.roomDetection.roomType}`);
+        }
+
         // Marquer comme terminé avec le résultat et l'URL Base64
         setCurrentRoom(prev => ({
           ...prev,
@@ -322,6 +356,7 @@ export default function Home() {
       const photoId = generatePhotoId();
       return {
         file,
+        fileUrl: URL.createObjectURL(file), // Créer l'URL immédiatement
         status: 'uploaded' as const,
         selectedItems: new Set<number>(),
         photoId,
@@ -366,6 +401,7 @@ export default function Home() {
       const photoId = generatePhotoId();
       return {
         file,
+        fileUrl: URL.createObjectURL(file), // Créer l'URL immédiatement
         status: 'uploaded' as const,
         selectedItems: new Set<number>(),
         photoId,
@@ -383,13 +419,18 @@ export default function Home() {
     // Traiter chaque photo en arrière-plan
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const photoIndex = currentRoom.photos.length + i;
       const photoId = newPhotos[i].photoId!;
       
-      // Lancer le traitement asynchrone (ne pas attendre)
-      // Utiliser setTimeout pour s'assurer que le state est mis à jour avant
+      // Lancer le traitement asynchrone avec l'index correct
       setTimeout(() => {
-        processPhotoAsync(photoIndex, file, photoId);
+        // Trouver l'index de la photo dans le state mis à jour
+        setCurrentRoom(prev => {
+          const photoIndex = prev.photos.findIndex(photo => photo.photoId === photoId);
+          if (photoIndex !== -1) {
+            processPhotoAsync(photoIndex, file, photoId);
+          }
+          return prev;
+        });
       }, 100);
     }
     
@@ -564,12 +605,34 @@ export default function Home() {
         {currentStep === 2 && (
           <div className="max-w-4xl mx-auto">
             <div className="bg-white p-8 rounded-lg border border-gray-200">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                <span className="text-3xl mr-3">🔍</span>
-                Valider l'inventaire
+              <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="text-3xl mr-3">🔍</span>
+                  Valider l'inventaire
+                </div>
+                <div className="flex items-center space-x-2">
+                  {isEditingRoomName ? (
+                    <input
+                      type="text"
+                      value={currentRoom.name}
+                      onChange={(e) => setCurrentRoom(prev => ({ ...prev, name: e.target.value }))}
+                      onBlur={(e) => handleRoomNameChange(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleRoomNameChange(e.currentTarget.value)}
+                      className="px-2 py-1 border border-gray-300 rounded text-sm"
+                      autoFocus
+                    />
+                  ) : (
+                    <button
+                      onClick={() => setIsEditingRoomName(true)}
+                      className="text-sm text-blue-600 hover:text-blue-800 underline"
+                    >
+                      Renommer la pièce
+                    </button>
+                  )}
+                </div>
               </h3>
               <p className="text-gray-600 mb-6">
-                Vérifiez et validez les objets détectés par l'IA dans vos photos.
+                Vérifiez et validez les objets dans {currentRoom.name} détectés par l'IA dans vos photos.
               </p>
               
               {/* Interface des onglets photos */}
@@ -738,7 +801,7 @@ export default function Home() {
                                 <div>
                                   <h5 className="font-medium text-gray-900">Photo {photoIndex + 1}</h5>
                                   <p className="text-sm text-gray-500">
-                                    {photo.analysis.items.length} objet(s) détecté(s)
+                                    {photo.analysis.items.length} objet(s) dans {photo.roomName || currentRoom.name}
                                   </p>
                                 </div>
                               </div>
@@ -768,7 +831,7 @@ export default function Home() {
                     ) : (
                       <div className="text-center py-8 text-gray-500">
                         <div className="text-4xl mb-4">🔍</div>
-                        <p>Aucun objet détecté pour le moment</p>
+                        <p>Aucun objet dans {photo.roomName || currentRoom.name} pour le moment</p>
                         <p className="text-sm">L'analyse des photos est en cours...</p>
                       </div>
                     )}
@@ -1007,7 +1070,7 @@ export default function Home() {
                   {/* Côté droit - Tableau de données */}
                   <div className="lg:col-span-2 space-y-6">
                     <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm">
-                      <h3 className="text-xl font-bold text-gray-800">Objets détectés</h3>
+                      <h3 className="text-xl font-bold text-gray-800">Objets dans {photo.roomName || currentRoom.name}</h3>
                       {photo.status === 'completed' && (
                         <div className="flex items-center space-x-3">
                           <div className="flex space-x-2">
@@ -1025,7 +1088,7 @@ export default function Home() {
                             </button>
                           </div>
                           <span className="text-base font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
-                            {photo.analysis?.items?.length || 0} objet(s) détecté(s)
+                            {photo.analysis?.items?.length || 0} objet(s) dans {photo.roomName || currentRoom.name}
                           </span>
                         </div>
                       )}

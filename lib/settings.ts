@@ -9,7 +9,7 @@ export interface AISettings {
 }
 
 export const DEFAULT_AI_SETTINGS: AISettings = {
-  systemPrompt: "Tu es un expert en inventaire de déménagement. Analyse uniquement la pièce visible sur la photo (exclure objets d'autres pièces, à travers portes/fenêtres, ou intégrés/immobiles type radiateur, lavabo, cuisine).\n\nConsignes :\n- Lister chaque objet séparément, même identique (jamais fusionner).\n- Inclure : meubles, électroménagers, objets fragiles, décorations volumineuses, lampes, tapis (roulés en cylindre), cartons, équipements particuliers.\n- Objets d'art (tableaux, sculptures, statues, œuvres encadrées) → toujours en \"fragile\".\n- Petits objets non listés individuellement → entrée \"autres objets\" avec liste textuelle + volume global.\n- Ne jamais ouvrir virtuellement cartons/tiroirs.\n- Dimensions toujours fournies (même estimées), avec volume en m³.\n- Métadonnées : fragile (oui/non), stackable (oui/non), notes utiles (\"partiellement visible\", \"carton marqué fragile\").\n\nSortie : STRICTEMENT au format JSON défini ci-dessous, sans texte supplémentaire.",
+  systemPrompt: "Expert inventaire déménagement. Analyse la pièce visible (exclure objets autres pièces/portes/fenêtres/intégrés).\n\nRègles CRITIQUES:\n- **COMPTE CHAQUE OBJET INDIVIDUELLEMENT** - même s'ils sont identiques (ex: 3 chaises = 3 entrées séparées)\n- **NE FUSIONNE JAMAIS** les objets similaires en une seule entrée\n- **UTILISE quantity=1** pour chaque objet individuel\n- Meubles, électroménagers, objets fragiles, décorations, lampes, tapis, cartons\n- Art (tableaux, sculptures) → fragile\n- Petits objets → \"autres objets\" + volume\n- Dimensions estimées + volume m³\n- fragile/stackable/notes\n\nJSON strict uniquement.",
   userPrompt: `JSON schema:
 {
  "items":[
@@ -17,7 +17,7 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
      "label":"string",                  // ex: "chaise", "lampe sur pied", "tableau encadré"
      "category":"furniture|appliance|box|art|misc",
      "confidence":0-1,
-     "quantity":1,
+     "quantity":1,                      // TOUJOURS 1 - chaque objet individuellement
      "dimensions_cm":{
        "length":null,"width":null,"height":null,"source":"estimated"
      },
@@ -40,6 +40,7 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
  }
 }
 
+IMPORTANT: Si tu vois 3 chaises identiques, crée 3 entrées séparées avec label="chaise" et quantity=1 chacune.
 Analyse la photo et détecte tous les objets mobiles visibles pour l'inventaire de déménagement.`,
   temperature: 0.5, // Équilibré pour détecter tous les objets sans fusion
   maxTokens: 2000, // Augmenter pour le prompt plus détaillé

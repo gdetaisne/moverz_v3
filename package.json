@@ -11,6 +11,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.65.0",
+    "jimp": "^1.6.0",
     "next": "15.5.4",
     "openai": "^5.23.0",
     "react": "19.1.0",

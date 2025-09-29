@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { analyzePhotoWithVision } from "@/services/openaiVision";
+import { analyzePhotoWithOptimizedVision } from "@/services/optimizedAnalysis";
+import { detectRoomTypeParallel } from "@/services/parallelRoomDetection";
 import { saveAsBase64 } from "@/lib/storage";
 
 export const runtime = "nodejs";
@@ -18,15 +19,30 @@ export async function POST(req: NextRequest) {
     const saved = await saveAsBase64(file);
     console.log("Base64 conversion successful:", saved.id);
     
-    // Analyser avec l'URL data Base64
-    const analysis = await analyzePhotoWithVision({ 
-      photoId: saved.id, 
-      imageUrl: saved.dataUrl 
-    });
-    console.log("AI analysis successful:", analysis.items?.length, "items");
+    // Lancer les deux analyses EN PARALLÈLE
+    console.log("🚀 Lancement des analyses parallèles...");
+    const [analysis, roomDetection] = await Promise.all([
+      // Analyse A : Détection d'objets (sans détection de pièce)
+      analyzePhotoWithOptimizedVision({ 
+        photoId: saved.id, 
+        imageUrl: saved.dataUrl,
+        enableDuplicateDetection: true,
+        enableRoomGrouping: false
+      }),
+      // Analyse B : Détection de pièce (spécialisée)
+      detectRoomTypeParallel(saved.dataUrl)
+    ]);
+    
+    console.log("✅ Analyse objets terminée:", analysis.items?.length, "objets, temps:", analysis.processingTime, "ms");
+    console.log("✅ Détection pièce terminée:", roomDetection.roomType, "confiance:", roomDetection.confidence, "temps:", roomDetection.processingTime, "ms");
 
     return NextResponse.json({
       ...analysis,
+      roomDetection: {
+        roomType: roomDetection.roomType,
+        confidence: roomDetection.confidence,
+        reasoning: roomDetection.reasoning
+      },
       file_url: saved.dataUrl, // URL Base64 directement
       file_size: saved.size
     });
