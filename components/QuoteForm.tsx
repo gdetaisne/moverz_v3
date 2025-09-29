@@ -180,6 +180,15 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
 
   // Fonction pour calculer les prix selon le barème
   const calculatePrices = (volume: number, distance: number) => {
+    // Vérifications de sécurité
+    if (!volume || volume <= 0 || !distance || distance < 0) {
+      return {
+        economique: 0,
+        standard: 0,
+        premium: 0
+      };
+    }
+    
     let rateEconomique = 0;
     let rateStandard = 0;
     let ratePremium = 0;
@@ -199,9 +208,9 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
     }
     
     return {
-      economique: volume * rateEconomique,
-      standard: volume * rateStandard,
-      premium: volume * ratePremium
+      economique: Math.round(volume * rateEconomique * 100) / 100,
+      standard: Math.round(volume * rateStandard * 100) / 100,
+      premium: Math.round(volume * ratePremium * 100) / 100
     };
   };
 
@@ -794,7 +803,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
                   <h4 className="text-lg font-semibold text-gray-900">1. Économique</h4>
                   <div className="text-right">
                     <span className="text-sm text-gray-500">💰</span>
-                    {prices.economique > 0 && (
+                    {prices.economique > 0 && !isNaN(prices.economique) && (
                       <div className="text-right">
                         <div className="text-lg font-bold text-green-600">
                           {new Intl.NumberFormat('fr-FR', {
@@ -853,7 +862,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
                       <h4 className="text-lg font-semibold text-gray-900">2. Standard</h4>
                       <div className="text-right">
                         <span className="text-sm text-gray-500">⭐</span>
-                        {prices.standard > 0 && (
+                        {prices.standard > 0 && !isNaN(prices.standard) && (
                           <div className="text-right">
                             <div className="text-lg font-bold text-blue-600">
                               {new Intl.NumberFormat('fr-FR', {
@@ -911,7 +920,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
                       <h4 className="text-lg font-semibold text-gray-900">3. Premium</h4>
                       <div className="text-right">
                         <span className="text-sm text-gray-500">👑</span>
-                        {prices.premium > 0 && (
+                        {prices.premium > 0 && !isNaN(prices.premium) && (
                           <div className="text-right">
                             <div className="text-lg font-bold text-purple-600">
                               {new Intl.NumberFormat('fr-FR', {
@@ -958,7 +967,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
         <div className="mt-4 p-3 bg-blue-50 rounded-lg">
           <p className="text-sm text-blue-700">
             <span className="font-medium">ℹ️</span> Fourchettes calculées selon le barème officiel France : 
-            <span className="font-semibold"> {volume}m³ × {prices.economique > 0 ? Math.round(prices.economique / volume) : 0}€/m³</span> 
+            <span className="font-semibold"> {volume}m³ × {prices.economique > 0 && volume > 0 ? Math.round(prices.economique / volume) : 0}€/m³</span> 
             (distance {distance}km). <br/>
             <span className="text-xs text-blue-600">
               💡 Conversion : 1m² d'habitation = 0,3m³ à déménager
