@@ -35,12 +35,14 @@ export default function Home() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [currentStep, setCurrentStep] = useState(1);
   const [quoteFormData, setQuoteFormData] = useState<any>(null);
+  const [inventoryValidated, setInventoryValidated] = useState(false);
 
   // Configuration des étapes du workflow
-  const isStep2Completed = currentRoom.photos.some(p => p.status === 'completed') && 
-                          currentRoom.photos.every(p => p.status !== 'processing');
+  const isStep2Completed = inventoryValidated;
   const isStep1Completed = currentRoom.photos.length > 0;
   const isStep3Completed = quoteFormData !== null;
+  const isStep2Ready = currentRoom.photos.some(p => p.status === 'completed') && 
+                      currentRoom.photos.every(p => p.status !== 'processing');
   
   const workflowSteps = [
     {
@@ -57,7 +59,7 @@ export default function Home() {
       description: "Vérifiez les objets détectés",
       icon: "✅",
       completed: isStep2Completed,
-      disabled: !isStep1Completed
+      disabled: !isStep2Ready
     },
     {
       id: 3,
@@ -783,8 +785,13 @@ export default function Home() {
               
               {currentStep < 4 && (
                 <button
-                  onClick={() => setCurrentStep(currentStep + 1)}
-                  disabled={!workflowSteps[currentStep - 1]?.completed}
+                  onClick={() => {
+                    if (currentStep === 2) {
+                      setInventoryValidated(true);
+                    }
+                    setCurrentStep(currentStep + 1);
+                  }}
+                  disabled={currentStep === 2 ? !isStep2Ready : !workflowSteps[currentStep - 1]?.completed}
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {currentStep === 2 ? "Continuer vers la demande" : "Suivant →"}
