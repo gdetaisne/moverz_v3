@@ -6,11 +6,13 @@
     "dev": "next dev --turbopack",
     "prebuild": "node scripts/update-build-info.js",
     "build": "next build",
-    "start": "next start",
+    "start": "node server.js",
+    "start:next": "next start",
     "lint": "eslint"
   },
   "dependencies": {
     "next": "15.5.4",
+    "next-auth": "^4.24.11",
     "openai": "^5.23.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",

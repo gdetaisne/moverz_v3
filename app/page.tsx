@@ -1,6 +1,8 @@
 "use client";
 import { useState, useMemo, useEffect } from "react";
 import BackOffice from "@/components/BackOffice";
+import WorkflowSteps from "@/components/WorkflowSteps";
+import QuoteForm from "@/components/QuoteForm";
 import { getBuildInfo } from "@/lib/buildInfo";
 import { TInventoryItem } from "@/lib/schemas";
 import { clearCache } from "@/lib/cache";
@@ -31,6 +33,83 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'tests' | 'backoffice'>('tests');
   const [isEmbedded, setIsEmbedded] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentStep, setCurrentStep] = useState(1);
+  const [quoteFormData, setQuoteFormData] = useState<any>(null);
+
+  // Configuration des étapes du workflow
+  const isStep2Completed = currentRoom.photos.some(p => p.status === 'completed') && 
+                          currentRoom.photos.every(p => p.status !== 'processing');
+  const isStep1Completed = currentRoom.photos.length > 0;
+  const isStep3Completed = quoteFormData !== null;
+  
+  const workflowSteps = [
+    {
+      id: 1,
+      title: "Charger des photos",
+      description: "Uploadez vos photos de pièces",
+      icon: "📸",
+      completed: isStep1Completed,
+      disabled: false
+    },
+    {
+      id: 2,
+      title: "Valider l'inventaire",
+      description: "Vérifiez les objets détectés",
+      icon: "✅",
+      completed: isStep2Completed,
+      disabled: !isStep1Completed
+    },
+    {
+      id: 3,
+      title: "Préparer la demande",
+      description: "Renseignez vos informations",
+      icon: "📋",
+      completed: isStep3Completed,
+      disabled: false // Permettre l'accès même sans photos
+    },
+    {
+      id: 4,
+      title: "Valider",
+      description: "Confirmez votre demande",
+      icon: "✅",
+      completed: false, // À implémenter
+      disabled: !isStep3Completed
+    }
+  ];
+
+  // Fonction pour changer d'étape
+  const handleStepChange = (step: number) => {
+    // Permettre l'accès à l'étape 3 même sans photos
+    if (step === 3 || step <= currentStep || workflowSteps[step - 1]?.completed) {
+      setCurrentStep(step);
+    }
+  };
+
+  // Fonctions pour gérer le formulaire
+  const handleQuoteFormNext = (formData: any) => {
+    setQuoteFormData(formData);
+    setCurrentStep(4);
+  };
+
+  const handleQuoteFormPrevious = () => {
+    // Revenir à l'étape 2 si on a des photos, sinon à l'étape 1
+    if (currentRoom.photos.length > 0) {
+      setCurrentStep(2);
+    } else {
+      setCurrentStep(1);
+    }
+  };
+
+  // Auto-avancement des étapes
+  useEffect(() => {
+    if (currentStep === 1 && isStep1Completed) {
+      setCurrentStep(2);
+    } else if (currentStep === 2 && isStep2Completed) {
+      setCurrentStep(3);
+    } else if (currentStep === 3 && isStep3Completed) {
+      setCurrentStep(4);
+    }
+  }, [currentRoom.photos, isStep1Completed, isStep2Completed, isStep3Completed, currentStep]);
 
   // Détecter si l'app est dans un iframe
   useEffect(() => {
@@ -311,6 +390,66 @@ export default function Home() {
 
   const renderTestsInterface = () => (
     <>
+        {/* Message contextuel selon l'étape */}
+        {currentStep === 1 && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center space-x-3">
+              <span className="text-2xl">📸</span>
+              <div>
+                <h3 className="text-lg font-semibold text-blue-800">Étape 1 : Charger des photos</h3>
+                <p className="text-blue-600">Uploadez 1 à 10 photos de vos pièces pour commencer l'analyse IA</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {currentStep === 2 && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center space-x-3">
+              <span className="text-2xl">✅</span>
+              <div>
+                <h3 className="text-lg font-semibold text-green-800">Étape 2 : Valider l'inventaire</h3>
+                <p className="text-green-600">Vérifiez et ajustez les objets détectés par l'IA avant de continuer</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {currentStep === 3 && (
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-center space-x-3">
+              <span className="text-2xl">📋</span>
+              <div>
+                <h3 className="text-lg font-semibold text-yellow-800">Étape 3 : Préparer la demande</h3>
+                <p className="text-yellow-600">Renseignez vos informations personnelles et les détails du déménagement</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {currentStep === 4 && (
+          <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+            <div className="flex items-center space-x-3">
+              <span className="text-2xl">✅</span>
+              <div>
+                <h3 className="text-lg font-semibold text-purple-800">Étape 4 : Valider</h3>
+                <p className="text-purple-600">Confirmez votre demande de devis et envoyez-la</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Formulaire pour l'étape 3 */}
+        {currentStep === 3 && (
+          <QuoteForm 
+            onNext={handleQuoteFormNext}
+            onPrevious={handleQuoteFormPrevious}
+            initialData={quoteFormData}
+          />
+        )}
+
+        {/* Interface principale pour les étapes 1 et 2 */}
+        {(currentStep === 1 || currentStep === 2) && (
         <div className="mb-8 card">
           <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0">
             <div className="flex-1">
@@ -350,6 +489,7 @@ export default function Home() {
             </div>
           </div>
         </div>
+        )}
 
       {currentRoom.photos.some(p => p.status === 'processing') && (
         <div className="mb-6 p-6 bg-blue-50 rounded-lg border border-blue-200">
@@ -630,6 +770,121 @@ export default function Home() {
                 </div>
               </div>
             </div>
+            
+            {/* Boutons de navigation */}
+            <div className="mt-6 flex justify-between">
+              <button
+                onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
+                disabled={currentStep === 1}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                ← Précédent
+              </button>
+              
+              {currentStep < 4 && (
+                <button
+                  onClick={() => setCurrentStep(currentStep + 1)}
+                  disabled={!workflowSteps[currentStep - 1]?.completed}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {currentStep === 2 ? "Continuer vers la demande" : "Suivant →"}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Étape 4 - Validation finale */}
+        {currentStep === 4 && (
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white p-8 rounded-lg border border-gray-200">
+              <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                <span className="text-3xl mr-3">✅</span>
+                Validation de votre demande
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Votre demande de devis a été préparée avec succès ! 
+                Récapitulatif de vos informations et de l'inventaire détecté.
+              </p>
+              
+              {/* Récapitulatif des données du formulaire */}
+              {quoteFormData && (
+                <div className="bg-gray-50 p-6 rounded-lg mb-6">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4">Informations de contact</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">Nom :</span> {quoteFormData.firstName} {quoteFormData.lastName}
+                    </div>
+                    <div>
+                      <span className="font-medium">Email :</span> {quoteFormData.email}
+                    </div>
+                    <div>
+                      <span className="font-medium">Téléphone :</span> {quoteFormData.phone}
+                    </div>
+                    <div>
+                      <span className="font-medium">Date de déménagement :</span> {quoteFormData.movingDate ? 
+                        new Date(quoteFormData.movingDate).toLocaleDateString('fr-FR') : 
+                        'Non renseignée'
+                      }
+                      {quoteFormData.flexibleDate && (
+                        <span className="ml-2 text-sm text-blue-600">(± 3 jours)</span>
+                      )}
+                    </div>
+                    <div>
+                      <span className="font-medium">Offre choisie :</span> {quoteFormData.selectedOffer ? 
+                        (() => {
+                          const offers = {
+                            'economique': '1. Économique 💰',
+                            'standard': '2. Standard ⭐',
+                            'premium': '3. Premium 👑'
+                          };
+                          return offers[quoteFormData.selectedOffer] || 'Non renseignée';
+                        })() : 
+                        'Non renseignée'
+                      }
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Récapitulatif de l'inventaire */}
+              {currentRoom.photos.some(p => p.status === 'completed') && (
+                <div className="bg-blue-50 p-6 rounded-lg mb-6">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4">Inventaire détecté</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">Nombre d'objets :</span> {totalVolumeSelected.totalItems}
+                    </div>
+                    <div>
+                      <span className="font-medium">Volume total :</span> {totalVolumeSelected.totalVolume} m³
+                    </div>
+                    <div>
+                      <span className="font-medium">Photos analysées :</span> {currentRoom.photos.filter(p => p.status === 'completed').length}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Boutons d'action */}
+              <div className="flex justify-between pt-6">
+                <button
+                  onClick={() => setCurrentStep(3)}
+                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  ← Modifier la demande
+                </button>
+                
+                <button
+                  onClick={() => {
+                    // Ici on enverrait la demande de devis
+                    alert('Demande de devis envoyée ! Nous vous contacterons dans les plus brefs délais.');
+                  }}
+                  className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                >
+                  Envoyer la demande de devis
+                </button>
+              </div>
+            </div>
           </div>
         )}
     </>
@@ -723,6 +978,15 @@ export default function Home() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Étapes du workflow - seulement si pas en mode embed et onglet tests */}
+      {!isEmbedded && activeTab === 'tests' && (
+        <WorkflowSteps 
+          currentStep={currentStep}
+          onStepChange={handleStepChange}
+          steps={workflowSteps}
+        />
       )}
 
       {/* Contenu selon l'onglet actif */}
