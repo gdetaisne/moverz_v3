@@ -32,7 +32,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'tests' | 'backoffice'>('tests');
   const [isEmbedded, setIsEmbedded] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [quoteFormData, setQuoteFormData] = useState<any>(null);
   const [inventoryValidated, setInventoryValidated] = useState(false);
@@ -126,8 +126,11 @@ export default function Home() {
     setIsEmbedded(checkIfEmbedded());
   }, []);
 
-  // Mettre à jour l'heure toutes les secondes
+  // Mettre à jour l'heure toutes les secondes (côté client uniquement)
   useEffect(() => {
+    // Initialiser l'heure côté client
+    setCurrentTime(new Date());
+    
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
@@ -925,7 +928,7 @@ export default function Home() {
                   <div className="flex items-center space-x-1">
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                     <span className="text-xs text-gray-400">
-                      Last update: {currentTime.toLocaleTimeString('fr-FR')}
+                      Last update: {currentTime ? currentTime.toLocaleTimeString('fr-FR') : '--:--:--'}
                     </span>
                   </div>
                 </div>
