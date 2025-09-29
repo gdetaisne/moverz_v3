@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // Mode standalone pour déploiement CapRover
-  output: 'standalone',
+  // output: 'standalone', // Désactivé temporairement pour le dev
   
   // Désactiver ESLint pendant le build pour CapRover
   eslint: {

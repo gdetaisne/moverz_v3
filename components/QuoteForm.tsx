@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import SocialAuth from "./SocialAuth";
+// import SocialAuth from "./SocialAuth"; // Désactivé
 
 interface User {
   id: string;
@@ -62,7 +62,7 @@ interface QuoteFormProps {
 }
 
 // Liste des villes françaises principales
-const FRENCH_CITIES = [
+const FRENCH_CITIES = Array.from(new Set([
   'Paris', 'Lyon', 'Marseille', 'Toulouse', 'Nice', 'Nantes', 'Strasbourg', 'Montpellier',
   'Bordeaux', 'Lille', 'Rennes', 'Reims', 'Le Havre', 'Saint-Étienne', 'Toulon', 'Grenoble',
   'Dijon', 'Angers', 'Nîmes', 'Villeurbanne', 'Saint-Denis', 'Le Mans', 'Aix-en-Provence',
@@ -85,12 +85,12 @@ const FRENCH_CITIES = [
   'Thionville', 'Montluçon', 'Sarcelles', 'Châlons-en-Champagne', 'Chalon-sur-Saône',
   'Douai', 'Troyes', 'Nogent-sur-Marne', 'Les Abymes', 'Cayenne', 'Fort-de-France',
   'Saint-Pierre', 'Le Tampon', 'Mamoudzou', 'Saint-Benoît', 'Sainte-Marie', 'Le Lamentin'
-];
+]));
 
 export default function QuoteForm({ onNext, onPrevious, initialData = {} }: QuoteFormProps) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [authError, setAuthError] = useState<string | null>(null);
+  // const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // const [user, setUser] = useState<User | null>(null);
+  // const [authError, setAuthError] = useState<string | null>(null);
   
   // États pour le calcul de prix
   const [volume, setVolume] = useState(0);
@@ -131,26 +131,26 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
 
   const [errors, setErrors] = useState<Partial<QuoteFormData>>({});
 
-  // Gestion de l'authentification sociale
-  const handleAuthSuccess = (authenticatedUser: User) => {
-    setUser(authenticatedUser);
-    setIsAuthenticated(true);
-    setAuthError(null);
-    
-    // Pré-remplir les champs avec les données de l'utilisateur
-    const nameParts = authenticatedUser.name.split(' ');
-    setFormData(prev => ({
-      ...prev,
-      user: authenticatedUser,
-      firstName: nameParts[0] || '',
-      lastName: nameParts.slice(1).join(' ') || '',
-      email: authenticatedUser.email || '',
-    }));
-  };
+  // Gestion de l'authentification sociale (désactivée)
+  // const handleAuthSuccess = (authenticatedUser: User) => {
+  //   setUser(authenticatedUser);
+  //   setIsAuthenticated(true);
+  //   setAuthError(null);
+  //   
+  //   // Pré-remplir les champs avec les données de l'utilisateur
+  //   const nameParts = authenticatedUser.name.split(' ');
+  //   setFormData(prev => ({
+  //     ...prev,
+  //     user: authenticatedUser,
+  //     firstName: nameParts[0] || '',
+  //     lastName: nameParts.slice(1).join(' ') || '',
+  //     email: authenticatedUser.email || '',
+  //   }));
+  // };
 
-  const handleAuthError = (error: string) => {
-    setAuthError(error);
-  };
+  // const handleAuthError = (error: string) => {
+  //   setAuthError(error);
+  // };
 
   const handleInputChange = (field: keyof QuoteFormData, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -289,13 +289,11 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
   const validateForm = (): boolean => {
     const newErrors: Partial<QuoteFormData> = {};
 
-    // Validation des champs obligatoires (seulement si pas authentifié)
-    if (!isAuthenticated) {
-      if (!formData.firstName.trim()) newErrors.firstName = 'Le prénom est requis';
-      if (!formData.lastName.trim()) newErrors.lastName = 'Le nom est requis';
-      if (!formData.email.trim()) newErrors.email = 'L\'email est requis';
-      else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email invalide';
-    }
+    // Validation des champs obligatoires
+    if (!formData.firstName.trim()) newErrors.firstName = 'Le prénom est requis';
+    if (!formData.lastName.trim()) newErrors.lastName = 'Le nom est requis';
+    if (!formData.email.trim()) newErrors.email = 'L\'email est requis';
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email invalide';
     if (!formData.phone.trim()) newErrors.phone = 'Le téléphone est requis';
     
     if (!formData.departureCity.trim()) newErrors.departureCity = 'La ville de départ est requise';
@@ -321,55 +319,16 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
 
   return (
     <div className="max-w-4xl mx-auto">
-      {!isAuthenticated ? (
-        // Affichage de l'authentification sociale
-        <div className="bg-white p-8 rounded-lg border border-gray-200">
-          <SocialAuth 
-            onAuthSuccess={handleAuthSuccess}
-            onAuthError={handleAuthError}
-          />
-          {authError && (
-            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-600 text-sm">{authError}</p>
-            </div>
-          )}
-        </div>
-      ) : (
-        // Affichage du formulaire complet
-        <div>
-          {/* En-tête avec informations utilisateur */}
-          <div className="bg-green-50 p-6 rounded-lg border border-green-200 mb-8">
-            <div className="flex items-center space-x-4">
-              {user?.picture && (
-                <img 
-                  src={user.picture} 
-                  alt="Photo de profil" 
-                  className="w-12 h-12 rounded-full"
-                />
-              )}
-              <div>
-                <h3 className="text-lg font-semibold text-green-800">
-                  Connecté en tant que {user?.name}
-                </h3>
-                <p className="text-green-600 text-sm">{user?.email}</p>
-                <button
-                  onClick={() => {
-                    setIsAuthenticated(false);
-                    setUser(null);
-                    setFormData(prev => ({
-                      ...prev,
-                      user: undefined,
-                      firstName: '',
-                      lastName: '',
-                      email: '',
-                    }));
-                  }}
-                  className="mt-2 text-sm text-green-700 hover:text-green-800 underline"
-                >
-                  Changer de compte
-                </button>
-              </div>
-            </div>
+      {/* Formulaire complet - plus d'authentification sociale */}
+      <div>
+          {/* En-tête du formulaire */}
+          <div className="bg-blue-50 p-6 rounded-lg border border-blue-200 mb-8">
+            <h3 className="text-lg font-semibold text-blue-800 mb-2">
+              📋 Remplissez votre demande de devis
+            </h3>
+            <p className="text-blue-600 text-sm">
+              Tous les champs marqués d'un * sont obligatoires
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-8">
@@ -378,25 +337,19 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <span className="text-xl mr-2">👤</span>
             Informations personnelles
-            {isAuthenticated && (
-              <span className="ml-2 text-sm text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                ✓ Rempli automatiquement
-              </span>
-            )}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Prénom {!isAuthenticated && '*'}
+                Prénom *
               </label>
               <input
                 type="text"
                 value={formData.firstName}
                 onChange={(e) => handleInputChange('firstName', e.target.value)}
-                disabled={isAuthenticated}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                   errors.firstName ? 'border-red-500' : 'border-gray-300'
-                } ${isAuthenticated ? 'bg-gray-50 text-gray-600' : ''}`}
+                }`}
                 placeholder="Votre prénom"
               />
               {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
@@ -404,16 +357,15 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nom {!isAuthenticated && '*'}
+                Nom *
               </label>
               <input
                 type="text"
                 value={formData.lastName}
                 onChange={(e) => handleInputChange('lastName', e.target.value)}
-                disabled={isAuthenticated}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                   errors.lastName ? 'border-red-500' : 'border-gray-300'
-                } ${isAuthenticated ? 'bg-gray-50 text-gray-600' : ''}`}
+                }`}
                 placeholder="Votre nom"
               />
               {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
@@ -421,16 +373,15 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email {!isAuthenticated && '*'}
+                Email *
               </label>
               <input
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
-                disabled={isAuthenticated}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                   errors.email ? 'border-red-500' : 'border-gray-300'
-                } ${isAuthenticated ? 'bg-gray-50 text-gray-600' : ''}`}
+                }`}
                 placeholder="votre@email.com"
               />
               {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
@@ -1078,9 +1029,8 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
             Continuer vers la validation →
           </button>
         </div>
-          </form>
-        </div>
-      )}
+      </form>
     </div>
-  );
+  </div>
+);
 }
