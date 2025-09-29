@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import BackOffice from "@/components/BackOffice";
 import WorkflowSteps from "@/components/WorkflowSteps";
 import QuoteForm from "@/components/QuoteForm";
@@ -38,6 +38,8 @@ export default function Home() {
   const [inventoryValidated, setInventoryValidated] = useState(false);
   const [isSubmittingQuote, setIsSubmittingQuote] = useState(false);
   const [activePhotoTab, setActivePhotoTab] = useState<'upload' | 'inventory'>('upload');
+  const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Configuration des étapes du workflow
   const isStep1Completed = currentRoom.photos.length > 0;
@@ -278,6 +280,76 @@ export default function Home() {
     }
   };
 
+  // Fonctions pour le drag & drop
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      handleFiles(files);
+    }
+  };
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const onDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length > 0) {
+      handleFiles(files);
+    }
+  };
+
+  const handleFiles = (files: File[]) => {
+    // Vérifier la limite de 100 photos
+    if (currentRoom.photos.length + files.length > 100) {
+      alert(`Limite de 100 photos atteinte. Vous ne pouvez ajouter que ${100 - currentRoom.photos.length} photo(s) supplémentaire(s).`);
+      return;
+    }
+    
+    setLoading(true);
+    
+    // Initialiser les photos avec statut 'uploaded' immédiatement
+    const newPhotos = files.map(file => {
+      const photoId = generatePhotoId();
+      return {
+        file,
+        status: 'uploaded' as const,
+        selectedItems: new Set<number>(),
+        photoId,
+        progress: 0
+      };
+    });
+    
+    setCurrentRoom(prev => ({
+      ...prev,
+      photos: [...prev.photos, ...newPhotos]
+    }));
+    
+    // Traiter chaque photo en arrière-plan
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const photoIndex = currentRoom.photos.length + i;
+      const photoId = newPhotos[i].photoId!;
+      
+      // Lancer le traitement asynchrone (ne pas attendre)
+      // Utiliser setTimeout pour s'assurer que le state est mis à jour avant
+      setTimeout(() => {
+        processPhotoAsync(photoIndex, file, photoId);
+      }, 100);
+    }
+    
+    setLoading(false);
+  };
+
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     
@@ -408,6 +480,14 @@ export default function Home() {
         ...prev,
         photos: prev.photos.filter((_, index) => index !== photoIndex)
       }));
+    }
+  };
+
+  // Fonction pour réessayer l'analyse d'une photo
+  const retryPhotoAnalysis = (photoIndex: number) => {
+    const photo = currentRoom.photos[photoIndex];
+    if (photo && photo.photoId) {
+      processPhotoAsync(photoIndex, photo.file, photo.photoId);
     }
   };
 
@@ -564,7 +644,7 @@ export default function Home() {
                           <div key={photoIndex} className="relative group">
                             <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
                               <img
-                                src={photo.url}
+                                src={photo.fileUrl || URL.createObjectURL(photo.file)}
                                 alt={`Photo ${photoIndex + 1}`}
                                 className="w-full h-full object-cover"
                               />
@@ -651,7 +731,7 @@ export default function Home() {
                             <div key={photoIndex} className="bg-white p-4 rounded-lg border">
                               <div className="flex items-center space-x-3 mb-3">
                                 <img
-                                  src={photo.url}
+                                  src={photo.fileUrl || URL.createObjectURL(photo.file)}
                                   alt={`Photo ${photoIndex + 1}`}
                                   className="w-16 h-16 object-cover rounded"
                                 />
@@ -664,7 +744,7 @@ export default function Home() {
                               </div>
                               
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {photo.analysis.items.map((item, itemIndex) => (
+                                {photo.analysis.items.map((item: TInventoryItem, itemIndex: number) => (
                                   <div key={itemIndex} className="bg-gray-50 p-3 rounded border">
                                     <div className="flex items-center justify-between mb-2">
                                       <h6 className="font-medium text-gray-900">{item.label}</h6>
@@ -1218,7 +1298,7 @@ export default function Home() {
                     <div className="text-3xl font-bold text-green-600 mb-2">
                       {(() => {
                         const basePrice = totalVolumeSelected.totalVolume * 50; // 50€/m³ de base
-                        const offerMultiplier = {
+                        const offerMultiplier: { [key: string]: number } = {
                           'economique': 1,
                           'standard': 1.3,
                           'premium': 1.6
