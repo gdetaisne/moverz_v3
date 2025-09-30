@@ -5,6 +5,7 @@ import BackOffice from "@/components/BackOffice";
 import WorkflowSteps from "@/components/WorkflowSteps";
 import QuoteForm from "@/components/QuoteForm";
 import DismountableToggle from "@/components/DismountableToggle";
+import FragileToggle from "@/components/FragileToggle";
 import { getBuildInfo } from "@/lib/buildInfo";
 import { TInventoryItem } from "@/lib/schemas";
 import { clearCache } from "@/lib/cache";
@@ -157,6 +158,51 @@ export default function Home() {
                   };
                   
                   // Recalculer le volume emballé avec la nouvelle démontabilité
+                  const packagingInfo = calculatePackagedVolume(
+                    updatedItem.volume_m3,
+                    updatedItem.fragile,
+                    updatedItem.category,
+                    updatedItem.dimensions_cm,
+                    updatedItem.dismountable
+                  );
+                  
+                  return {
+                    ...updatedItem,
+                    packaged_volume_m3: packagingInfo.packagedVolumeM3,
+                    packaging_display: packagingInfo.displayValue,
+                    is_small_object: packagingInfo.isSmallObject,
+                    packaging_calculation_details: packagingInfo.calculationDetails
+                  };
+                }
+                return item;
+              }) || []
+            }
+          };
+        }
+        return photo;
+      })
+    }));
+  }, []);
+
+  // Fonction pour gérer le toggle de fragilité
+  const handleFragileToggle = useCallback((photoId: string, itemIndex: number, isFragile: boolean) => {
+    setCurrentRoom(prev => ({
+      ...prev,
+      photos: prev.photos.map(photo => {
+        if (photo.photoId === photoId) {
+          return {
+            ...photo,
+            analysis: {
+              ...photo.analysis,
+              items: photo.analysis?.items?.map((item: any, index: number) => {
+                if (index === itemIndex) {
+                  // Mettre à jour le statut fragile
+                  const updatedItem = {
+                    ...item,
+                    fragile: isFragile
+                  };
+                  
+                  // Recalculer le volume emballé avec la nouvelle fragilité
                   const packagingInfo = calculatePackagedVolume(
                     updatedItem.volume_m3,
                     updatedItem.fragile,
@@ -880,8 +926,8 @@ export default function Home() {
                                                   Tout désélectionner
                                 </button>
                               </div>
-                                            </div>
-                                          </div>
+                          </div>
+                      </div>
                                           <div className="divide-y divide-gray-200">
                                             {grosObjets.map((item: any, itemIndex: number) => {
                                               const originalIndex = photo.analysis.items.findIndex((originalItem: any) => originalItem === item);
@@ -904,13 +950,20 @@ export default function Home() {
                                                       {item.label}
                                                     </span>
                                                     <span className="text-xs text-gray-500">{item.volume_m3}m³</span>
-                                                    <DismountableToggle
-                                                      item={item}
-                                                      onToggle={(isDismountable) => 
-                                                        handleDismountableToggle(photo.photoId || `photo-${photoIndex}`, originalIndex, isDismountable)
-                                                      }
-                                                      className="ml-2"
-                                                    />
+                                                    <div className="flex items-center space-x-2">
+                                                      <FragileToggle
+                                                        item={item}
+                                                        onToggle={(isFragile) => 
+                                                          handleFragileToggle(photo.photoId || `photo-${photoIndex}`, originalIndex, isFragile)
+                                                        }
+                                                      />
+                                                      <DismountableToggle
+                                                        item={item}
+                                                        onToggle={(isDismountable) => 
+                                                          handleDismountableToggle(photo.photoId || `photo-${photoIndex}`, originalIndex, isDismountable)
+                                                        }
+                                                      />
+                    </div>
                                                   </div>
                                                   <div className="flex items-center space-x-2">
                                                     {item.packaging_display && (
@@ -994,8 +1047,8 @@ export default function Home() {
                                                 </svg>
                                               </div>
                                 </div>
-                              </div>
-                              
+                  </div>
+
                                           <AnimatePresence>
                                             {isSmallObjectsExpanded && (
                                               <motion.div 
@@ -1027,14 +1080,21 @@ export default function Home() {
                                                             {item.label}
                                       </span>
                                                           <span className="text-xs text-gray-500">{item.volume_m3}m³</span>
-                                                          <DismountableToggle
-                                                            item={item}
-                                                            onToggle={(isDismountable) => 
-                                                              handleDismountableToggle(photo.photoId || `photo-${photoIndex}`, originalIndex, isDismountable)
-                                                            }
-                                                            className="ml-2"
-                                                          />
-                                                        </div>
+                                                          <div className="flex items-center space-x-2">
+                                                            <FragileToggle
+                                                              item={item}
+                                                              onToggle={(isFragile) => 
+                                                                handleFragileToggle(photo.photoId || `photo-${photoIndex}`, originalIndex, isFragile)
+                                                              }
+                                                            />
+                                                            <DismountableToggle
+                                                              item={item}
+                                                              onToggle={(isDismountable) => 
+                                                                handleDismountableToggle(photo.photoId || `photo-${photoIndex}`, originalIndex, isDismountable)
+                                                              }
+                                                            />
+                                </div>
+                              </div>
                                                         <div className="flex items-center space-x-2">
                                                           {item.packaging_display && (
                                                             <span 
@@ -1042,9 +1102,9 @@ export default function Home() {
                                                               title={getPackagingDetails(item)}
                                                             >
                                                               📦 {item.packaging_display}
-                                                            </span>
+                                      </span>
                                                           )}
-                                                        </div>
+                                    </div>
                                                         <button
                                                           onClick={() => {
                                                             // TODO: Implémenter l'édition de description
@@ -1139,7 +1199,7 @@ export default function Home() {
                         </h4>
                         <p className="text-gray-600 mb-6">
                           Glissez-déposez vos photos ici ou cliquez pour sélectionner.<br />
-                          <span className="text-sm text-gray-500">Formats acceptés : JPG, PNG, WEBP, HEIC</span>
+                          <span className="text-sm text-gray-500">Formats acceptés : JPG, PNG, WEBP, HEIC, AVIF, TIFF, BMP</span>
                         </p>
                         
                         <input
@@ -1147,7 +1207,7 @@ export default function Home() {
                           ref={fileInputRef}
                           onChange={onFileSelect}
                           multiple
-                          accept="image/*,.heic,.heif"
+                          accept="image/*,.heic,.heif,.avif,.tiff,.tif,.bmp"
                           className="hidden"
                         />
               <button
@@ -1199,7 +1259,7 @@ export default function Home() {
                           ref={fileInputRef}
                           onChange={onFileSelect}
                   multiple 
-                            accept="image/*,.heic,.heif"
+                            accept="image/*,.heic,.heif,.avif,.tiff,.tif,.bmp"
                           className="hidden"
                         />
           </div>

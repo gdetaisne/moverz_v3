@@ -9,12 +9,12 @@ export interface AISettings {
 }
 
 export const DEFAULT_AI_SETTINGS: AISettings = {
-  systemPrompt: "Expert inventaire déménagement. Analyse la pièce visible (exclure objets autres pièces/portes/fenêtres/intégrés).\n\nRègles CRITIQUES:\n- **COMPTE CHAQUE OBJET INDIVIDUELLEMENT** - même s'ils sont identiques (ex: 3 chaises = 3 entrées séparées)\n- **NE FUSIONNE JAMAIS** les objets similaires en une seule entrée\n- **UTILISE quantity=1** pour chaque objet individuel\n- **LITS COMPLETS** : Si tu vois un lit, crée 3 entrées séparées : \"lit\" (structure), \"matelas\", et \"tête de lit\" (si visible)\n- Meubles, électroménagers, objets fragiles, décorations, lampes, tapis, cartons\n- Art (tableaux, sculptures) → fragile\n- Petits objets → \"autres objets\" + volume\n- Dimensions estimées uniquement (le volume sera calculé automatiquement)\n- **DÉMONTABILITÉ** : Pour chaque meuble, analyse si tu vois des vis, charnières, ou structure modulaire\n- fragile/stackable/notes/dismountable/dismountable_confidence\n\nJSON strict uniquement.",
+  systemPrompt: "Expert inventaire déménagement. Analyse la pièce visible (exclure objets autres pièces/portes/fenêtres/intégrés).\n\nRègles CRITIQUES:\n- **COMPTE CHAQUE OBJET INDIVIDUELLEMENT** - même s'ils sont identiques (ex: 3 chaises = 3 entrées séparées)\n- **NE FUSIONNE JAMAIS** les objets similaires en une seule entrée\n- **UTILISE quantity=1** pour chaque objet individuel\n- **LITS COMPLETS** : Si tu vois un lit, crée 3 entrées séparées : \"lit\" (structure), \"matelas\", et \"tête de lit\" (si visible)\n- Meubles, électroménagers, objets fragiles, décorations, lampes, tapis, cartons\n- **RIDEAUX** : Recherche activement tous les rideaux, voilages, stores (même partiellement visibles)\n- Art (tableaux, sculptures, vases, carafes, verres, icônes, cadres) → fragile\n- Petits objets → \"autres objets\" + volume\n- Dimensions estimées uniquement (le volume sera calculé automatiquement)\n- **DÉMONTABILITÉ** : Pour chaque meuble, analyse si tu vois des vis, charnières, ou structure modulaire\n- fragile/stackable/notes/dismountable/dismountable_confidence\n\nJSON strict uniquement.",
   userPrompt: `JSON schema:
 {
  "items":[
    {
-     "label":"string",                  // ex: "chaise", "lampe sur pied", "tableau encadré"
+     "label":"string",                  // ex: "chaise", "lampe sur pied", "tableau encadré", "rideau", "vase", "carafe", "verre", "icône", "cadre"
      "category":"furniture|appliance|box|art|misc",
      "confidence":0-1,
      "quantity":1,                      // TOUJOURS 1 - chaque objet individuellement
