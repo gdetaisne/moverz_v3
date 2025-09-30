@@ -16,6 +16,11 @@ export default function DismountableToggle({ item, onToggle, className = "" }: D
     return null;
   }
 
+  // Ne pas afficher si la confiance est inférieure à 70%
+  if (confidence < 0.7) {
+    return null;
+  }
+
   const handleToggle = () => {
     const newValue = !isDismountable;
     setIsDismountable(newValue);
