@@ -13,8 +13,8 @@ export default function FragileToggle({ item, onToggle, className = "" }: Fragil
   const [isFragile, setIsFragile] = useState(item.fragile ?? false);
   const confidence = item.confidence ?? 0.5;
   
-  // Ne pas afficher si la confiance est inférieure à 70%
-  if (confidence < 0.7) {
+  // Ne pas afficher si l'objet n'est pas fragile ou si la confiance est faible
+  if (!isFragile || confidence < 0.6) {
     return null;
   }
 
