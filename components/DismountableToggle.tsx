@@ -66,11 +66,12 @@ export default function DismountableToggle({ item, onToggle, className = "" }: D
       <button
         onClick={handleToggle}
         className={`
-          inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
-          transition-all duration-200 cursor-pointer
-          ${displayInfo.bgColor} ${displayInfo.borderColor} border
-          ${displayInfo.textColor} hover:shadow-sm
-          hover:scale-105 active:scale-95
+          inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium
+          transition-all duration-200 cursor-pointer group relative
+          ${displayInfo.bgColor} ${displayInfo.borderColor} border-2
+          ${displayInfo.textColor} hover:shadow-md hover:border-opacity-60
+          hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-300
+          ${isDismountable ? 'hover:bg-opacity-80' : 'hover:bg-opacity-80'}
         `}
         title={`
           ${displayInfo.label}
@@ -79,13 +80,26 @@ export default function DismountableToggle({ item, onToggle, className = "" }: D
           Cliquez pour modifier
         `}
       >
-        <span className="mr-1">{displayInfo.icon}</span>
-        <span className="text-xs">
+        {/* Indicateur de modification */}
+        <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+        
+        <span className="mr-1.5 text-sm">{displayInfo.icon}</span>
+        <span className="text-xs font-medium">
           {isDismountable ? 'Démontable' : 'Non démontable'}
         </span>
         {confidence < 0.8 && (
           <span className="ml-1 opacity-60">?</span>
         )}
+        
+        {/* Flèche indicateur de modification */}
+        <svg 
+          className="ml-1 w-3 h-3 opacity-40 group-hover:opacity-70 transition-opacity duration-200" 
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+        </svg>
       </button>
     </div>
   );
