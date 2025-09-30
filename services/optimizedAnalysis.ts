@@ -1,57 +1,61 @@
 import { TPhotoAnalysis } from '@/lib/schemas';
 import { analyzePhotoWithClaude } from './claudeVision';
 import { originalAnalyzePhotoWithVision } from './openaiVision';
+import { analyzeVolumineuxHybrid } from './volumineuxAnalysis';
+import { analyzePetitsHybrid } from './petitsAnalysis';
 import { optimizeImageForAI } from '@/lib/imageOptimization';
 import { calculatePackagedVolume } from '@/lib/packaging';
+import { validateAllMeasurements } from '@/lib/measurementValidation';
+import { safeApiCall, createErrorHandler, APIError } from './core/errorHandling';
+import { cacheService, generateAnalysisCacheKey, cacheAnalysisResult, getCachedAnalysisResult } from './core/cacheService';
+import { config } from '../config/app';
 import crypto from 'crypto';
 
 export interface OptimizedAnalysisResult extends TPhotoAnalysis {
   processingTime: number;
-  aiProvider: 'claude' | 'openai' | 'hybrid';
+  aiProvider: 'claude' | 'openai' | 'hybrid' | 'specialized-hybrid';
   roomDetection?: {
     roomType: string;
     confidence: number;
     reasoning: string;
   };
+  analysisType?: 'legacy' | 'specialized';
 }
 
-// Cache intelligent
-const analysisCache = new Map<string, { result: OptimizedAnalysisResult; timestamp: number }>();
-const CACHE_TTL = 60 * 60 * 1000; // 1 heure
-const MAX_CACHE_SIZE = 500;
+// Cache géré par le service centralisé
 
 /**
- * Analyse optimisée avec double validation IA
+ * Analyse optimisée avec double validation IA - NOUVELLE VERSION SPÉCIALISÉE
  */
 export async function analyzePhotoWithOptimizedVision(opts: {
   photoId: string;
   imageUrl: string;
 }): Promise<OptimizedAnalysisResult> {
   const startTime = Date.now();
-  const cacheKey = generateCacheKey(opts.imageUrl);
+  const cacheKey = generateAnalysisCacheKey(opts.imageUrl, 'specialized');
   
   try {
     // 1. Vérifier le cache
-    const cached = analysisCache.get(cacheKey);
-    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+    const cached = getCachedAnalysisResult<OptimizedAnalysisResult>(cacheKey);
+    if (cached) {
       console.log(`Cache hit pour ${cacheKey.substring(0, 8)}...`);
-      return { ...cached.result, photo_id: opts.photoId };
+      return { ...cached, photo_id: opts.photoId };
     }
 
-    // 2. Analyse hybride Claude + OpenAI (seulement si Claude est configuré)
-    const isClaudeConfigured = !!process.env.CLAUDE_API_KEY;
+    // 2. NOUVELLE APPROCHE : Analyse hybride spécialisée par catégorie
+    console.log("🚀 Lancement de l'analyse hybride spécialisée...");
     
-    const [claudeResults, openaiResults] = await Promise.allSettled([
-      // Claude 3.5 Haiku (1ère passe rapide) - seulement si configuré
-      isClaudeConfigured ? analyzePhotoWithClaude(opts) : Promise.resolve(null),
-      // OpenAI GPT-4o-mini (2ème passe précise)
-      originalAnalyzePhotoWithVision(opts)
+    const [volumineuxResults, petitsResults] = await Promise.allSettled([
+      // Analyse VOLUMINEUX : Claude + OpenAI sur gros objets (>50cm)
+      safeApiCall(() => analyzeVolumineuxHybrid(opts), 'VolumineuxAnalysis'),
+      // Analyse PETITS : Claude + OpenAI sur petits objets (<50cm)
+      safeApiCall(() => analyzePetitsHybrid(opts), 'PetitsAnalysis')
     ]);
 
-    // 3. Fusionner les résultats des deux IA
-    const finalResults = mergeAIResults(
-      claudeResults.status === 'fulfilled' ? claudeResults.value : null,
-      openaiResults.status === 'fulfilled' ? openaiResults.value : null
+    // 3. Fusionner les résultats des deux analyses spécialisées
+    const finalResults = mergeSpecializedResults(
+      volumineuxResults.status === 'fulfilled' ? volumineuxResults.value : null,
+      petitsResults.status === 'fulfilled' ? petitsResults.value : null
     );
 
     // 4. Recalculer le volume pour tous les objets (correction des erreurs IA)
@@ -82,21 +86,14 @@ export async function analyzePhotoWithOptimizedVision(opts: {
     const result: OptimizedAnalysisResult = {
       ...correctedResults,
       processingTime,
-      aiProvider: determineAIProvider(claudeResults, openaiResults),
+      aiProvider: determineSpecializedAIProvider(volumineuxResults, petitsResults),
+      analysisType: 'specialized',
       photo_id: opts.photoId,
       roomDetection
     };
 
     // 7. Mettre en cache
-    analysisCache.set(cacheKey, { result, timestamp: Date.now() });
-
-    // 8. Nettoyer le cache si nécessaire
-    if (analysisCache.size > MAX_CACHE_SIZE) {
-      const oldestKey = analysisCache.keys().next().value;
-      if (oldestKey) {
-        analysisCache.delete(oldestKey);
-      }
-    }
+    cacheAnalysisResult(cacheKey, result, config.cache.ttl);
 
     console.log(`Analyse optimisée terminée en ${processingTime}ms (${result.aiProvider})`);
     return result;
@@ -115,7 +112,109 @@ export async function analyzePhotoWithOptimizedVision(opts: {
 }
 
 /**
- * Fusionne les résultats de Claude et OpenAI
+ * Déduplique les objets entre les analyses volumineux et petits
+ */
+function deduplicateItems(volumineuxItems: any[], petitsItems: any[]): any[] {
+  const allItems = [...volumineuxItems, ...petitsItems];
+  const deduplicatedItems: any[] = [];
+  const processedPositions = new Set<string>();
+
+  for (const item of allItems) {
+    // Créer une clé unique basée sur le label et les dimensions (plus flexible)
+    const labelKey = item.label.toLowerCase().trim();
+    const dimensionsKey = `${item.dimensions_cm?.length || 0}_${item.dimensions_cm?.width || 0}_${item.dimensions_cm?.height || 0}`;
+    const positionKey = `${labelKey}_${dimensionsKey}`;
+    
+    // Vérifier si cet objet a déjà été traité
+    if (!processedPositions.has(positionKey)) {
+      processedPositions.add(positionKey);
+      deduplicatedItems.push(item);
+    } else {
+      // Objet dupliqué détecté - garder celui avec la plus haute confidence
+      const existingIndex = deduplicatedItems.findIndex(existing => 
+        existing.label.toLowerCase().trim() === labelKey &&
+        Math.abs((existing.dimensions_cm?.length || 0) - (item.dimensions_cm?.length || 0)) < 15 &&
+        Math.abs((existing.dimensions_cm?.width || 0) - (item.dimensions_cm?.width || 0)) < 15 &&
+        Math.abs((existing.dimensions_cm?.height || 0) - (item.dimensions_cm?.height || 0)) < 15
+      );
+      
+      if (existingIndex !== -1) {
+        const existing = deduplicatedItems[existingIndex];
+        if (item.confidence > existing.confidence) {
+          // Remplacer par l'objet avec la plus haute confidence
+          deduplicatedItems[existingIndex] = item;
+        }
+      }
+    }
+  }
+
+  return deduplicatedItems;
+}
+
+/**
+ * Fusionne les résultats des analyses spécialisées (volumineux + petits)
+ */
+function mergeSpecializedResults(
+  volumineuxResults: any | null,
+  petitsResults: any | null
+): TPhotoAnalysis {
+  // Si un seul résultat disponible, l'utiliser
+  if (!volumineuxResults && !petitsResults) {
+    throw new Error('Aucun résultat d\'analyse spécialisée disponible');
+  }
+  
+  if (!volumineuxResults) return petitsResults!;
+  if (!petitsResults) return volumineuxResults;
+
+  // Fusionner les items des deux analyses avec déduplication
+  const mergedItems = deduplicateItems(
+    volumineuxResults.items || [],
+    petitsResults.items || []
+  );
+  
+  // Valider et corriger les mesures de tous les objets
+  const validatedItems = validateAllMeasurements(mergedItems);
+  
+  // Fusionner les règles spéciales
+  const specialRules = {
+    autres_objets: {
+      present: (volumineuxResults.special_rules?.autres_objets?.present || false) || 
+               (petitsResults.special_rules?.autres_objets?.present || false),
+      listed_items: [
+        ...(volumineuxResults.special_rules?.autres_objets?.listed_items || []),
+        ...(petitsResults.special_rules?.autres_objets?.listed_items || [])
+      ],
+      volume_m3: (volumineuxResults.special_rules?.autres_objets?.volume_m3 || 0) + 
+                 (petitsResults.special_rules?.autres_objets?.volume_m3 || 0)
+    }
+  };
+  
+  // Calculer les totaux combinés avec les items validés
+  const totals = {
+    count_items: validatedItems.reduce((sum, item) => sum + (item.quantity || 1), 0),
+    volume_m3: Number(validatedItems.reduce((sum, item) => sum + (item.volume_m3 || 0) * (item.quantity || 1), 0).toFixed(3))
+  };
+
+  // Fusionner les warnings
+  const warnings = [
+    ...(volumineuxResults.warnings || []),
+    ...(petitsResults.warnings || []),
+    'Analyse hybride spécialisée volumineux + petits objets'
+  ];
+
+  return {
+    version: "1.0.0",
+    photo_id: volumineuxResults.photo_id || petitsResults.photo_id || '',
+    items: validatedItems,
+    special_rules: specialRules,
+    warnings,
+    errors: [...(volumineuxResults.errors || []), ...(petitsResults.errors || [])],
+    totals
+  };
+}
+
+/**
+ * Fusionne les résultats de Claude et OpenAI (LEGACY)
  */
 function mergeAIResults(
   claudeResults: TPhotoAnalysis | null,
@@ -210,7 +309,31 @@ function mergeItems(items1: any[], items2: any[]): any[] {
 }
 
 /**
- * Détermine le fournisseur IA utilisé
+ * Détermine le fournisseur IA utilisé pour l'analyse spécialisée
+ */
+function determineSpecializedAIProvider(
+  volumineuxResults: PromiseSettledResult<any>,
+  petitsResults: PromiseSettledResult<any>
+): 'claude' | 'openai' | 'hybrid' | 'specialized-hybrid' {
+  const volumineuxSuccess = volumineuxResults.status === 'fulfilled';
+  const petitsSuccess = petitsResults.status === 'fulfilled';
+  
+  if (volumineuxSuccess && petitsSuccess) {
+    // Vérifier si les deux analyses utilisent l'hybride
+    const volumineuxHybrid = volumineuxResults.value?.aiProvider === 'hybrid';
+    const petitsHybrid = petitsResults.value?.aiProvider === 'hybrid';
+    
+    if (volumineuxHybrid && petitsHybrid) return 'specialized-hybrid';
+    return 'hybrid';
+  }
+  
+  if (volumineuxSuccess) return 'openai'; // Fallback
+  if (petitsSuccess) return 'openai'; // Fallback
+  return 'openai'; // Fallback final
+}
+
+/**
+ * Détermine le fournisseur IA utilisé (LEGACY)
  */
 function determineAIProvider(
   claudeResults: PromiseSettledResult<TPhotoAnalysis | null>,
@@ -235,22 +358,11 @@ function calculateVolume(length: number, width: number, height: number): number 
 /**
  * Génère une clé de cache pour l'image
  */
-function generateCacheKey(imageUrl: string): string {
-  if (imageUrl.startsWith('data:')) {
-    const base64Data = imageUrl.split(',')[1];
-    const hash = crypto.createHash('md5').update(base64Data).digest('hex').substring(0, 16);
-    return `base64_${hash}`;
-  } else {
-    return `url_${imageUrl}`;
-  }
-}
+// Fonction generateCacheKey supprimée - utilisée par le service de cache centralisé
 
 /**
  * Statistiques du cache
  */
-export function getCacheStats(): { size: number; hitRate: number } {
-  return {
-    size: analysisCache.size,
-    hitRate: 0 // TODO: Implémenter le calcul du hit rate
-  };
+export function getCacheStats() {
+  return cacheService.getStats();
 }

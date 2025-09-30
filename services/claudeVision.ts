@@ -5,25 +5,15 @@ import { mapToCatalog, volumeFromDims } from "@/lib/normalize";
 import { calculatePackagedVolume } from "@/lib/packaging";
 import { calculateDismountableProbability, requiresVisualCheck } from "@/lib/dismountable";
 
-// Fonction pour estimer les dimensions basées sur la catégorie
-function getEstimatedDimensions(category: string) {
-  const estimates: { [key: string]: { length: number; width: number; height: number } } = {
-    'furniture': { length: 100, width: 50, height: 80 },
-    'appliance': { length: 60, width: 40, height: 50 },
-    'art': { length: 30, width: 20, height: 40 },
-    'box': { length: 40, width: 30, height: 30 },
-    'misc': { length: 25, width: 25, height: 25 }
-  };
-  
-  return estimates[category] || estimates['misc'];
-}
+import { getEstimatedDimensions, hasValidDimensions, validateObjectDimensions, calculateVolumeFromDimensions } from './core/measurementUtils';
+import { config, getApiConfig } from '../config/app';
 
 export async function analyzePhotoWithClaude(opts: {
   photoId: string;
   imageUrl: string;
 }): Promise<TPhotoAnalysis> {
   const settings = getAISettings();
-  const isClaudeApiKeyConfigured = !!process.env.CLAUDE_API_KEY;
+  const isClaudeApiKeyConfigured = !!config.claude.apiKey;
 
   if (!isClaudeApiKeyConfigured) {
     console.warn('Aucune clé Claude configurée - using mock mode');
@@ -58,7 +48,7 @@ export async function analyzePhotoWithClaude(opts: {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
-        'x-api-key': process.env.CLAUDE_API_KEY!,
+        'x-api-key': config.claude.apiKey!,
         'Content-Type': 'application/json',
         'anthropic-version': '2023-06-01'
       },
@@ -114,17 +104,14 @@ export async function analyzePhotoWithClaude(opts: {
     for (const it of analysis.items ?? []) {
       const cat = mapToCatalog(it.label);
       
-      // Vérifier si les dimensions sont valides (non nulles, non zéro, non vides)
-      const hasValidDimensions = it.dimensions_cm && 
-        it.dimensions_cm.length && it.dimensions_cm.length > 0 &&
-        it.dimensions_cm.width && it.dimensions_cm.width > 0 &&
-        it.dimensions_cm.height && it.dimensions_cm.height > 0;
+    // Vérifier si les dimensions sont valides
+    const dimensionsValid = hasValidDimensions(it.dimensions_cm);
       
-      if (cat && !hasValidDimensions) {
+      if (cat && !dimensionsValid) {
         it.dimensions_cm = {
           length: cat.length, width: cat.width, height: cat.height, source: "catalog"
         };
-      } else if (!hasValidDimensions && !cat) {
+      } else if (!dimensionsValid && !cat) {
         // Fallback : dimensions estimées basées sur la catégorie
         const estimatedDims = getEstimatedDimensions(it.category || 'misc');
         it.dimensions_cm = {
@@ -137,9 +124,7 @@ export async function analyzePhotoWithClaude(opts: {
       if (!it.category && cat) it.category = cat.category;
       
       // TOUJOURS calculer le volume nous-mêmes à partir des dimensions (plus fiable)
-      it.volume_m3 = cat?.volume_m3 ?? volumeFromDims(
-        it.dimensions_cm?.length, it.dimensions_cm?.width, it.dimensions_cm?.height
-      );
+      it.volume_m3 = cat?.volume_m3 ?? calculateVolumeFromDimensions(it.dimensions_cm);
       
       // Enrichir avec les propriétés du catalogue
       if (cat) {

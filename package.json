@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.65.0",
+    "@google-cloud/vision": "^5.3.3",
+    "aws-sdk": "^2.1692.0",
     "framer-motion": "^12.23.22",
     "jimp": "^1.6.0",
     "lucide-react": "^0.544.0",

@@ -55,14 +55,23 @@ Analyse la photo et détecte tous les objets mobiles visibles pour l'inventaire 
 
 // Stockage local des paramètres (pour MVP)
 export function getAISettings(): AISettings {
-  if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem('ai-settings');
-    if (stored) {
-      try {
-        return { ...DEFAULT_AI_SETTINGS, ...JSON.parse(stored) };
-      } catch {
-        return DEFAULT_AI_SETTINGS;
-      }
+  // Côté serveur, utiliser la configuration centralisée
+  if (typeof window === 'undefined') {
+    try {
+      const { getServerAISettings } = require('./serverSettings');
+      return getServerAISettings();
+    } catch {
+      return DEFAULT_AI_SETTINGS;
+    }
+  }
+  
+  // Côté client, utiliser localStorage
+  const stored = localStorage.getItem('ai-settings');
+  if (stored) {
+    try {
+      return { ...DEFAULT_AI_SETTINGS, ...JSON.parse(stored) };
+    } catch {
+      return DEFAULT_AI_SETTINGS;
     }
   }
   return DEFAULT_AI_SETTINGS;
