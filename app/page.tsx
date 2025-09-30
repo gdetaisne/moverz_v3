@@ -8,6 +8,7 @@ import DismountableToggle from "@/components/DismountableToggle";
 import { getBuildInfo } from "@/lib/buildInfo";
 import { TInventoryItem } from "@/lib/schemas";
 import { clearCache } from "@/lib/cache";
+import { calculatePackagedVolume } from "@/lib/packaging";
 
 interface RoomData {
   id: string;
@@ -148,10 +149,28 @@ export default function Home() {
               ...photo.analysis,
               items: photo.analysis?.items?.map((item: any, index: number) => {
                 if (index === itemIndex) {
-                  return {
+                  // Mettre à jour le statut démontable
+                  const updatedItem = {
                     ...item,
                     dismountable: isDismountable,
                     dismountable_source: 'user'
+                  };
+                  
+                  // Recalculer le volume emballé avec la nouvelle démontabilité
+                  const packagingInfo = calculatePackagedVolume(
+                    updatedItem.volume_m3,
+                    updatedItem.fragile,
+                    updatedItem.category,
+                    updatedItem.dimensions_cm,
+                    updatedItem.dismountable
+                  );
+                  
+                  return {
+                    ...updatedItem,
+                    packaged_volume_m3: packagingInfo.packagedVolumeM3,
+                    packaging_display: packagingInfo.displayValue,
+                    is_small_object: packagingInfo.isSmallObject,
+                    packaging_calculation_details: packagingInfo.calculationDetails
                   };
                 }
                 return item;
