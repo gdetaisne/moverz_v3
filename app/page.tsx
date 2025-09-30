@@ -885,14 +885,6 @@ export default function Home() {
                                                       {item.label}
                                                     </span>
                                                     <span className="text-xs text-gray-500">{item.volume_m3}m³</span>
-                                                    {item.packaging_display && (
-                                                      <span 
-                                                        className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full cursor-help hover:bg-blue-100 transition-colors"
-                                                        title={getPackagingDetails(item)}
-                                                      >
-                                                        📦 {item.packaging_display}
-                                                      </span>
-                            )}
                                                     <DismountableToggle
                                                       item={item}
                                                       onToggle={(isDismountable) => 
@@ -900,7 +892,17 @@ export default function Home() {
                                                       }
                                                       className="ml-2"
                                                     />
-                          </div>
+                                                  </div>
+                                                  <div className="flex items-center space-x-2">
+                                                    {item.packaging_display && (
+                                                      <span 
+                                                        className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full cursor-help hover:bg-blue-100 transition-colors"
+                                                        title={getPackagingDetails(item)}
+                                                      >
+                                                        📦 {item.packaging_display}
+                                                      </span>
+                                                    )}
+                                                  </div>
                                                   <button
                                                     onClick={() => {
                                                       // TODO: Implémenter l'édition de description
@@ -1006,6 +1008,15 @@ export default function Home() {
                                                             {item.label}
                                       </span>
                                                           <span className="text-xs text-gray-500">{item.volume_m3}m³</span>
+                                                          <DismountableToggle
+                                                            item={item}
+                                                            onToggle={(isDismountable) => 
+                                                              handleDismountableToggle(photo.photoId || `photo-${photoIndex}`, originalIndex, isDismountable)
+                                                            }
+                                                            className="ml-2"
+                                                          />
+                                                        </div>
+                                                        <div className="flex items-center space-x-2">
                                                           {item.packaging_display && (
                                                             <span 
                                                               className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full cursor-help hover:bg-green-100 transition-colors"
@@ -1014,14 +1025,7 @@ export default function Home() {
                                                               📦 {item.packaging_display}
                                                             </span>
                                                           )}
-                                                          <DismountableToggle
-                                                            item={item}
-                                                            onToggle={(isDismountable) => 
-                                                              handleDismountableToggle(photo.photoId || `photo-${photoIndex}`, originalIndex, isDismountable)
-                                                            }
-                                                            className="ml-2"
-                                                          />
-                                    </div>
+                                                        </div>
                                                         <button
                                                           onClick={() => {
                                                             // TODO: Implémenter l'édition de description
