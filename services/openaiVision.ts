@@ -38,8 +38,8 @@ export async function analyzePhotoWithVision(opts: {
 }): Promise<TPhotoAnalysis> {
   // Utiliser directement l'analyse hybride
   try {
-    const { analyzePhotoWithHybridVision } = await import('./parallelAnalysis');
-    return await analyzePhotoWithHybridVision(opts);
+    const { analyzePhotoWithOptimizedVision } = await import('./optimizedAnalysis');
+    return await analyzePhotoWithOptimizedVision(opts);
   } catch (error) {
     console.warn('Analyse hybride non disponible, utilisation de l\'analyse OpenAI seule:', error);
     return await originalAnalyzePhotoWithVision(opts);

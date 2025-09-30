@@ -148,12 +148,13 @@ function mergeAIResults(
   ];
 
   return {
+    version: "1.0.0",
+    photo_id: openaiResults.photo_id || claudeResults.photo_id || '',
     items: mergedItems,
     special_rules: specialRules,
     warnings,
     errors: [...(claudeResults.errors || []), ...(openaiResults.errors || [])],
-    totals,
-    file_url: openaiResults.file_url || claudeResults.file_url
+    totals
   };
 }
 

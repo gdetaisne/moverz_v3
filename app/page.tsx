@@ -831,7 +831,7 @@ export default function Home() {
                     ) : (
                       <div className="text-center py-8 text-gray-500">
                         <div className="text-4xl mb-4">🔍</div>
-                        <p>Aucun objet dans {photo.roomName || currentRoom.name} pour le moment</p>
+                        <p>Aucun objet dans {currentRoom.name} pour le moment</p>
                         <p className="text-sm">L'analyse des photos est en cours...</p>
                       </div>
                     )}

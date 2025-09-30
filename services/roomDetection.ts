@@ -17,7 +17,7 @@ export async function detectRoomType(photoAnalysis: TPhotoAnalysis, imageUrl?: s
     if (isClaudeConfigured) {
       return await detectRoomTypeWithClaude(photoAnalysis, imageUrl);
     } else {
-      return await detectRoomTypeWithOpenAI(photoAnalysis, imageUrl);
+      return await detectRoomTypeWithOpenAI(photoAnalysis);
     }
   } catch (error) {
     console.warn('Erreur lors de la détection de pièce:', error);
@@ -168,12 +168,11 @@ async function prepareImageForClaude(imageUrl: string): Promise<Buffer> {
 }
 
 async function detectRoomTypeWithOpenAI(photoAnalysis: TPhotoAnalysis): Promise<RoomDetectionResult> {
-  const { Configuration, OpenAIApi } = await import("openai");
+  const OpenAI = (await import("openai")).default;
   
-  const configuration = new Configuration({
+  const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   });
-  const openai = new OpenAIApi(configuration);
 
   const prompt = `Analyse cette liste d'objets détectés dans une photo et détermine le type de pièce.
 
@@ -199,14 +198,14 @@ Réponds UNIQUEMENT avec un JSON:
   "reasoning": "explication basée sur les objets détectés"
 }`;
 
-  const response = await openai.createChatCompletion({
+  const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{ role: "user", content: prompt }],
     temperature: 0.3,
     max_tokens: 200
   });
 
-  const content = response.data.choices[0]?.message?.content || '';
+  const content = response.choices[0]?.message?.content || '';
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   
   if (jsonMatch) {
