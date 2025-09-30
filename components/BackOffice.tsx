@@ -1,11 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
 import { AISettings, DEFAULT_AI_SETTINGS, getAISettings, saveAISettings, resetAISettings } from "@/lib/settings";
+import { getPackagingRulesForDisplay } from "@/lib/packaging";
 
 export default function BackOffice() {
   const [settings, setSettings] = useState<AISettings>(DEFAULT_AI_SETTINGS);
   const [isModified, setIsModified] = useState(false);
-  const [activeSection, setActiveSection] = useState<'overview' | 'configuration' | 'prompts' | 'json'>('overview');
+  const [activeSection, setActiveSection] = useState<'overview' | 'configuration' | 'prompts' | 'packaging' | 'json'>('overview');
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -103,6 +104,7 @@ export default function BackOffice() {
             { id: 'overview', label: '🤖 Synthèse IA', icon: '📊' },
             { id: 'configuration', label: '⚙️ Configuration', icon: '🔧' },
             { id: 'prompts', label: '💬 Prompts', icon: '📝' },
+            { id: 'packaging', label: '📦 Emballage', icon: '📦' },
             { id: 'json', label: '📋 Schéma JSON', icon: '🔍' }
           ].map((section) => (
             <button
@@ -363,6 +365,92 @@ export default function BackOffice() {
             <p className="text-sm text-gray-700 mt-2">
               Instructions détaillées et schéma JSON pour l'analyse des images ({settings.userPrompt.length} caractères)
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Section Emballage */}
+      {activeSection === 'packaging' && (
+        <div className="space-y-6">
+          <div className="bg-white p-6 rounded-xl shadow-sm border">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">📦 Règles d'Emballage</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Configuration du carton standard */}
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-blue-800 mb-3">📦 Carton Standard</h3>
+                <div className="space-y-2 text-sm">
+                  <div><strong>Volume:</strong> {getPackagingRulesForDisplay().cartonStandard.volume} M³</div>
+                  <div><strong>Dimensions:</strong> {getPackagingRulesForDisplay().cartonStandard.dimensions.length} × {getPackagingRulesForDisplay().cartonStandard.dimensions.width} × {getPackagingRulesForDisplay().cartonStandard.dimensions.height} cm</div>
+                  <div className="text-gray-600">{getPackagingRulesForDisplay().cartonStandard.description}</div>
+                </div>
+              </div>
+
+              {/* Seuil de classification */}
+              <div className="bg-yellow-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-yellow-800 mb-3">📏 Classification</h3>
+                <div className="space-y-2 text-sm">
+                  <div><strong>Seuil petit objet:</strong> ≤ {getPackagingRulesForDisplay().threshold.smallObjectLimit} M³</div>
+                  <div className="text-gray-600">{getPackagingRulesForDisplay().threshold.description}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Règles d'emballage */}
+            <div className="mt-6">
+              <h3 className="font-semibold text-gray-800 mb-4">📋 Règles d'Emballage</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                
+                {/* Petits objets non fragiles */}
+                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <div className="flex items-center mb-2">
+                    <span className="text-2xl mr-2">📦</span>
+                    <h4 className="font-semibold text-green-800">Petits Objets</h4>
+                  </div>
+                  <div className="text-sm space-y-1">
+                    <div><strong>Condition:</strong> {getPackagingRulesForDisplay().rules.smallNonFragile.description}</div>
+                    <div><strong>Augmentation:</strong> +{getPackagingRulesForDisplay().rules.smallNonFragile.increase}</div>
+                    <div><strong>Destination:</strong> {getPackagingRulesForDisplay().rules.smallNonFragile.destination}</div>
+                  </div>
+                </div>
+
+                {/* Meubles non fragiles */}
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <div className="flex items-center mb-2">
+                    <span className="text-2xl mr-2">🪑</span>
+                    <h4 className="font-semibold text-blue-800">Meubles</h4>
+                  </div>
+                  <div className="text-sm space-y-1">
+                    <div><strong>Condition:</strong> {getPackagingRulesForDisplay().rules.furnitureNonFragile.description}</div>
+                    <div><strong>Augmentation:</strong> +{getPackagingRulesForDisplay().rules.furnitureNonFragile.increase}</div>
+                    <div><strong>Destination:</strong> {getPackagingRulesForDisplay().rules.furnitureNonFragile.destination}</div>
+                  </div>
+                </div>
+
+                {/* Objets fragiles */}
+                <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                  <div className="flex items-center mb-2">
+                    <span className="text-2xl mr-2">⚠️</span>
+                    <h4 className="font-semibold text-red-800">Objets Fragiles</h4>
+                  </div>
+                  <div className="text-sm space-y-1">
+                    <div><strong>Condition:</strong> {getPackagingRulesForDisplay().rules.fragile.description}</div>
+                    <div><strong>Multiplicateur:</strong> ×{getPackagingRulesForDisplay().rules.fragile.multiplier}</div>
+                    <div><strong>Destination:</strong> {getPackagingRulesForDisplay().rules.fragile.destination}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Exemples de calcul */}
+            <div className="mt-6 bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-gray-800 mb-3">🧮 Exemples de Calcul</h3>
+              <div className="text-sm space-y-2">
+                <div><strong>Petit objet (0.03 M³, non fragile):</strong> 0.03 × 1.10 = 0.033 M³ → "55% d'un carton"</div>
+                <div><strong>Meuble (0.5 M³, non fragile):</strong> 0.5 × 1.05 = 0.525 M³ → "0.5 M³ emballés"</div>
+                <div><strong>Vase (0.02 M³, fragile):</strong> 0.02 × 2.0 = 0.04 M³ → "66.7% d'un carton"</div>
+              </div>
+            </div>
           </div>
         </div>
       )}

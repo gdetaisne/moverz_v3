@@ -2,6 +2,7 @@ import { TPhotoAnalysis } from '@/lib/schemas';
 import { analyzePhotoWithClaude } from './claudeVision';
 import { originalAnalyzePhotoWithVision } from './openaiVision';
 import { optimizeImageForAI } from '@/lib/imageOptimization';
+import { calculatePackagedVolume } from '@/lib/packaging';
 import crypto from 'crypto';
 
 export interface OptimizedAnalysisResult extends TPhotoAnalysis {
@@ -188,7 +189,23 @@ function mergeItems(items1: any[], items2: any[]): any[] {
     }
   });
   
-  return Array.from(mergedMap.values());
+  // S'assurer que tous les items ont leurs informations d'emballage calculées
+  return Array.from(mergedMap.values()).map(item => {
+    // Recalculer l'emballage si pas déjà fait
+    if (!item.packaged_volume_m3) {
+      const packagingInfo = calculatePackagedVolume(
+        item.volume_m3 || 0,
+        item.fragile || false,
+        item.category || 'misc',
+        item.dimensions_cm
+      );
+      item.packaged_volume_m3 = packagingInfo.packagedVolumeM3;
+      item.packaging_display = packagingInfo.displayValue;
+      item.is_small_object = packagingInfo.isSmallObject;
+      item.packaging_calculation_details = packagingInfo.calculationDetails;
+    }
+    return item;
+  });
 }
 
 /**

@@ -1,8 +1,10 @@
 "use client";
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import BackOffice from "@/components/BackOffice";
 import WorkflowSteps from "@/components/WorkflowSteps";
 import QuoteForm from "@/components/QuoteForm";
+import DismountableToggle from "@/components/DismountableToggle";
 import { getBuildInfo } from "@/lib/buildInfo";
 import { TInventoryItem } from "@/lib/schemas";
 import { clearCache } from "@/lib/cache";
@@ -38,15 +40,16 @@ export default function Home() {
   const [quoteFormData, setQuoteFormData] = useState<any>(null);
   const [inventoryValidated, setInventoryValidated] = useState(false);
   const [isSubmittingQuote, setIsSubmittingQuote] = useState(false);
-  const [activePhotoTab, setActivePhotoTab] = useState<'upload' | 'inventory'>('upload');
   const [isDragOver, setIsDragOver] = useState(false);
-  const [isEditingRoomName, setIsEditingRoomName] = useState(false);
+  const [isSmallObjectsExpanded, setIsSmallObjectsExpanded] = useState(false);
+  const [selectedObjects, setSelectedObjects] = useState<Map<string, Set<number>>>(new Map()); // photoId -> Set<itemIndex>
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Configuration des étapes du workflow
-  const isStep1Completed = currentRoom.photos.length > 0;
-  const isStep2Completed = quoteFormData !== null;
-  const isStep3Completed = currentRoom.photos.some(p => p.analysis?.items && p.analysis.items.length > 0);
+  // Une étape n'est "terminée" que si on est passé à l'étape suivante
+  const isStep1Completed = currentStep > 1 && currentRoom.photos.length > 0;
+  const isStep2Completed = currentStep > 2 && currentRoom.photos.some(p => p.analysis?.items && p.analysis.items.length > 0);
+  const isStep3Completed = currentStep > 3 && quoteFormData !== null;
   const isStep4Completed = false; // Toujours false car c'est la dernière étape
   
   const workflowSteps = [
@@ -63,7 +66,7 @@ export default function Home() {
       title: "Valider l'inventaire",
       description: "Vérifiez les objets dans la pièce",
       icon: "🔍",
-      completed: isStep3Completed,
+      completed: isStep2Completed,
       disabled: !isStep1Completed
     },
     {
@@ -71,8 +74,8 @@ export default function Home() {
       title: "Préparer la demande",
       description: "Renseignez vos informations",
       icon: "📋",
-      completed: isStep2Completed,
-      disabled: !isStep1Completed
+      completed: isStep3Completed,
+      disabled: false // Toujours accessible
     },
     {
       id: 4,
@@ -80,29 +83,178 @@ export default function Home() {
       description: "Finalisez votre demande",
       icon: "📤",
       completed: isStep4Completed,
-      disabled: !isStep2Completed
+      disabled: !isStep3Completed
     }
   ];
 
   // Fonction pour changer d'étape
   const handleStepChange = (step: number) => {
+    console.log('🎯 handleStepChange appelée avec étape:', step);
     setCurrentStep(step);
   };
 
-  // Fonctions pour gérer le formulaire
-  const handleQuoteFormNext = (formData: any) => {
+  // Fonctions pour gérer le formulaire (mémorisées pour éviter les re-rendus)
+  const handleQuoteFormNext = useCallback((formData: any) => {
     console.log('🎯 [PARENT] handleQuoteFormNext appelée avec:', formData);
     setQuoteFormData(formData);
     // Passer à l'étape suivante (étape 4 - Envoyer le devis)
     console.log('📈 [PARENT] Passage à l\'étape 4');
     setCurrentStep(4);
     console.log('✅ [PARENT] currentStep mis à jour');
-  };
+  }, []);
 
-  const handleQuoteFormPrevious = () => {
+  const handleQuoteFormPrevious = useCallback(() => {
     // Retourner à l'étape précédente (étape 2 - Valider l'inventaire)
     setCurrentStep(2);
-  };
+  }, []);
+
+  // Fonction pour gérer la sélection/désélection des objets
+  const toggleObjectSelection = useCallback((photoId: string, itemIndex: number) => {
+    setSelectedObjects(prev => {
+      const newMap = new Map(prev);
+      const currentSelection = newMap.get(photoId) || new Set<number>();
+      const newSelection = new Set(currentSelection);
+      
+      if (newSelection.has(itemIndex)) {
+        // Désélectionner
+        newSelection.delete(itemIndex);
+      } else {
+        // Sélectionner
+        newSelection.add(itemIndex);
+      }
+      
+      newMap.set(photoId, newSelection);
+      return newMap;
+    });
+  }, []);
+
+  // Fonction pour vérifier si un objet est sélectionné
+  const isObjectSelected = useCallback((photoId: string, itemIndex: number) => {
+    const selection = selectedObjects.get(photoId);
+    // Par défaut, tous les objets sont sélectionnés si pas d'état spécifique
+    // Si la sélection existe mais ne contient pas l'index, alors l'objet n'est pas sélectionné
+    return selection ? selection.has(itemIndex) : true;
+  }, [selectedObjects]);
+
+  // Fonction pour gérer le toggle de démontabilité
+  const handleDismountableToggle = useCallback((photoId: string, itemIndex: number, isDismountable: boolean) => {
+    setCurrentRoom(prev => ({
+      ...prev,
+      photos: prev.photos.map(photo => {
+        if (photo.photoId === photoId) {
+          return {
+            ...photo,
+            analysis: {
+              ...photo.analysis,
+              items: photo.analysis?.items?.map((item: any, index: number) => {
+                if (index === itemIndex) {
+                  return {
+                    ...item,
+                    dismountable: isDismountable,
+                    dismountable_source: 'user'
+                  };
+                }
+                return item;
+              }) || []
+            }
+          };
+        }
+        return photo;
+      })
+    }));
+  }, []);
+
+  // Fonction pour obtenir les détails de calcul d'emballage
+  const getPackagingDetails = useCallback((item: any) => {
+    if (item.packaging_calculation_details) {
+      return item.packaging_calculation_details;
+    }
+    
+    // Si pas de détails, créer un résumé basique avec la nouvelle structure
+    const volume = item.volume_m3 || 0;
+    const packaged = item.packaged_volume_m3 || volume;
+    const isFragile = item.fragile || false;
+    const isSmall = item.is_small_object || false;
+    
+    // 1. DIMENSIONS
+    let details = "📏 DIMENSIONS\n";
+    if (item.dimensions_cm && item.dimensions_cm.length && item.dimensions_cm.width && item.dimensions_cm.height) {
+      const maxDim = Math.max(item.dimensions_cm.length, item.dimensions_cm.width, item.dimensions_cm.height);
+      details += `${item.dimensions_cm.length}×${item.dimensions_cm.width}×${item.dimensions_cm.height}cm (max: ${maxDim}cm)`;
+    } else {
+      details += "Non disponibles";
+    }
+    
+    // 2. RÈGLE TYPE D'OBJET
+    details += "\n\n🔧 RÈGLE TYPE D'OBJET\n";
+    if (isFragile) {
+      details += "Objet fragile → Volume × 2";
+    } else if (isSmall) {
+      details += "Petit objet non fragile → Volume + 10%";
+    } else {
+      details += "Meuble non fragile → Volume + 5%";
+    }
+    
+    // 3. RÈGLE DU CARTON
+    details += "\n\n📦 RÈGLE DU CARTON\n";
+    if (item.dimensions_cm && item.dimensions_cm.length && item.dimensions_cm.width && item.dimensions_cm.height) {
+      const maxDim = Math.max(item.dimensions_cm.length, item.dimensions_cm.width, item.dimensions_cm.height);
+      details += `Dimension max: ${maxDim}cm\n`;
+      details += `Carton max: 50cm\n`;
+      details += `Résultat: ${maxDim <= 50 ? '✓ Rentré dans carton' : '✗ Trop grand pour carton'}`;
+    } else {
+      details += "Seuil volume: 0.06 m³";
+      details += `\nRésultat: ${volume <= 0.06 ? '✓ Petit objet' : '✗ Gros objet'}`;
+    }
+    
+    // 4. DIMENSION EMBALLÉE
+    details += "\n\n📊 DIMENSION EMBALLÉE\n";
+    details += `Volume original: ${volume.toFixed(3)} m³\n`;
+    details += `Volume emballé: ${packaged.toFixed(3)} m³`;
+    
+    if (isSmall) {
+      const percentage = (packaged / 0.06) * 100;
+      const rounded = Math.ceil(percentage * 10) / 10;
+      details += `\n\nPourcentage carton:\n${packaged.toFixed(3)} ÷ 0.060 = ${percentage.toFixed(1)}%\nArrondi supérieur: ${rounded}%`;
+    } else {
+      details += `\n\nAffichage: ${packaged.toFixed(1)} m³ emballés`;
+    }
+    
+    return details;
+  }, []);
+
+  // Fonction pour initialiser la sélection par défaut pour une photo
+  const initializeDefaultSelection = useCallback((photoId: string, totalItems: number) => {
+    setSelectedObjects(prev => {
+      const newMap = new Map(prev);
+      
+      // Si cette photo n'a pas encore de sélection, on l'initialise avec tous les objets sélectionnés
+      if (!newMap.has(photoId)) {
+        const defaultSelection = new Set<number>();
+        for (let i = 0; i < totalItems; i++) {
+          defaultSelection.add(i);
+        }
+        newMap.set(photoId, defaultSelection);
+      }
+      
+      return newMap;
+    });
+  }, []);
+
+  // Initialiser la sélection par défaut pour toutes les photos analysées
+  useEffect(() => {
+    currentRoom.photos.forEach(photo => {
+      if (photo.analysis?.items && photo.analysis.items.length > 0) {
+        const photoId = photo.photoId || `photo-${currentRoom.photos.indexOf(photo)}`;
+        const totalItems = photo.analysis.items.length;
+        
+        // Vérifier si cette photo a déjà une sélection
+        if (!selectedObjects.has(photoId)) {
+          initializeDefaultSelection(photoId, totalItems);
+        }
+      }
+    });
+  }, [currentRoom.photos, selectedObjects, initializeDefaultSelection]);
 
   // Fonction pour envoyer la demande de devis
   const handleSubmitQuote = async () => {
@@ -141,7 +293,6 @@ export default function Home() {
         currentStep,
         quoteFormData,
         inventoryValidated,
-        activePhotoTab,
         timestamp: Date.now()
       };
       localStorage.setItem('moverz_inventory_data', JSON.stringify(dataToSave));
@@ -154,7 +305,7 @@ export default function Home() {
     saveData();
 
     return () => clearInterval(interval);
-  }, [currentRoom, currentStep, quoteFormData, inventoryValidated, activePhotoTab]);
+  }, [currentRoom, currentStep, quoteFormData, inventoryValidated]);
 
   // Charger les données sauvegardées au démarrage
   useEffect(() => {
@@ -168,7 +319,6 @@ export default function Home() {
           if (data.currentStep) setCurrentStep(data.currentStep);
           if (data.quoteFormData) setQuoteFormData(data.quoteFormData);
           if (data.inventoryValidated) setInventoryValidated(data.inventoryValidated);
-          if (data.activePhotoTab) setActivePhotoTab(data.activePhotoTab);
         }
       } catch (error) {
         console.error('Erreur lors du chargement des données sauvegardées:', error);
@@ -220,7 +370,6 @@ export default function Home() {
       ...prev,
       name: newName || 'Pièce sans nom'
     }));
-    setIsEditingRoomName(false);
   };
 
   // Fonction de traitement asynchrone d'une photo
@@ -336,19 +485,24 @@ export default function Home() {
   };
 
   const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('🎯 onFileSelect appelée', e.target.files);
     const files = Array.from(e.target.files ?? []);
     if (files.length > 0) {
+      console.log('📁 Fichiers sélectionnés:', files.length);
       handleFiles(files);
     }
   };
 
   const handleFiles = (files: File[]) => {
+    console.log('🎯 handleFiles appelée avec', files.length, 'fichiers');
+    
     // Vérifier la limite de 100 photos
     if (currentRoom.photos.length + files.length > 100) {
       alert(`Limite de 100 photos atteinte. Vous ne pouvez ajouter que ${100 - currentRoom.photos.length} photo(s) supplémentaire(s).`);
       return;
     }
     
+    console.log('📸 Ajout des photos au state...');
     setLoading(true);
     
     // Initialiser les photos avec statut 'uploaded' immédiatement
@@ -603,257 +757,308 @@ export default function Home() {
 
         {/* Étape 2 - Valider l'inventaire */}
         {currentStep === 2 && (
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white p-8 rounded-lg border border-gray-200">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center justify-between">
-                <div className="flex items-center">
-                  <span className="text-3xl mr-3">🔍</span>
-                  Valider l'inventaire
-                </div>
-                <div className="flex items-center space-x-2">
-                  {isEditingRoomName ? (
-                    <input
-                      type="text"
-                      value={currentRoom.name}
-                      onChange={(e) => setCurrentRoom(prev => ({ ...prev, name: e.target.value }))}
-                      onBlur={(e) => handleRoomNameChange(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleRoomNameChange(e.currentTarget.value)}
-                      className="px-2 py-1 border border-gray-300 rounded text-sm"
-                      autoFocus
-                    />
-                  ) : (
-                    <button
-                      onClick={() => setIsEditingRoomName(true)}
-                      className="text-sm text-blue-600 hover:text-blue-800 underline"
-                    >
-                      Renommer la pièce
-                    </button>
-                  )}
-                </div>
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Vérifiez et validez les objets dans {currentRoom.name} détectés par l'IA dans vos photos.
-              </p>
+          <div className="max-w-6xl mx-auto px-4">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               
-              {/* Interface des onglets photos */}
-              <div className="mb-6">
-                <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
-                  <button
-                    onClick={() => setActivePhotoTab('upload')}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                      activePhotoTab === 'upload'
-                        ? 'bg-white text-gray-900 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    Charger des photos
-                  </button>
-                  <button
-                    onClick={() => setActivePhotoTab('inventory')}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                      activePhotoTab === 'inventory'
-                        ? 'bg-white text-gray-900 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    Valider l'inventaire
-                  </button>
-                </div>
-              </div>
 
-              {/* Contenu des onglets */}
-              {activePhotoTab === 'upload' && (
-                <div className="space-y-6">
-                  {/* Zone de drop */}
-                  <div
-                    onDrop={onDrop}
-                    onDragOver={onDragOver}
-                    onDragLeave={onDragLeave}
-                    className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                      isDragOver
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  >
-                    <div className="text-gray-500">
-                      <div className="text-4xl mb-4">📸</div>
-                      <p className="text-lg mb-2">Glissez-déposez vos photos ici</p>
-                      <p className="text-sm">ou cliquez pour sélectionner</p>
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={onFileSelect}
-                        multiple
-                        accept="image/*"
-                        className="hidden"
-                      />
+              <div className="p-6">
+                {currentRoom.photos.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                    <h4 className="text-lg font-medium text-gray-900 mb-2">Aucune photo chargée</h4>
+                    <p className="text-gray-600 mb-4">Retournez à l'étape précédente pour charger des photos.</p>
                       <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      onClick={() => setCurrentStep(1)}
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
                       >
-                        Sélectionner des photos
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                      Retour aux photos
                       </button>
                     </div>
-                  </div>
-
-                  {/* Photos chargées */}
-                  {currentRoom.photos.length > 0 && (
-                    <div>
-                      <h4 className="text-lg font-semibold text-gray-900 mb-4">
-                        Photos chargées ({currentRoom.photos.length}/100)
-                      </h4>
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                ) : (
+                  <div className="space-y-6">
+                    {/* Liste des photos avec leurs objets */}
                         {currentRoom.photos.map((photo, photoIndex) => (
-                          <div key={photoIndex} className="relative group">
-                            <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                      <div key={photoIndex} className="bg-gray-50 rounded-xl p-6">
+                        <div className="flex items-start space-x-6">
+                          {/* Photo plus grande à gauche */}
+                          <div className="flex-shrink-0">
                               <img
                                 src={photo.fileUrl || URL.createObjectURL(photo.file)}
                                 alt={`Photo ${photoIndex + 1}`}
-                                className="w-full h-full object-cover"
+                              className="w-64 h-64 object-cover rounded-lg shadow-sm"
                               />
                             </div>
                             
-                            {/* Bouton de suppression - toujours visible */}
+                          {/* Contenu à droite */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-4">
+                              <h4 className="text-lg font-medium text-gray-900">
+                                {photo.roomName || `Photo ${photoIndex + 1}`}
+                              </h4>
                             <button
                               onClick={() => deletePhoto(photoIndex)}
-                              className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors z-10"
+                                  className="p-1 text-gray-400 hover:text-red-500 transition-colors"
                               title="Supprimer cette photo"
                             >
-                              ×
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
                             </button>
-                            
-                            {/* Statut en bas à gauche - toujours visible */}
-                            <div className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs">
-                              {photo.status === 'uploaded' && 'En attente'}
-                              {photo.status === 'processing' && 'Analyse...'}
-                              {photo.status === 'completed' && 'Terminé'}
-                              {photo.status === 'error' && 'Erreur'}
                             </div>
                             
-                            {/* Barre de progression - toujours visible si en cours */}
-                            {photo.status === 'processing' && (
-                              <div className="absolute bottom-0 left-0 right-0 bg-gray-300 h-1 rounded-b-lg">
-                                <div 
-                                  className="bg-blue-500 h-1 rounded-b-lg transition-all duration-500" 
-                                  style={{ width: `${photo.progress || 0}%` }}
-                                ></div>
-                              </div>
-                            )}
-                            
-                            {/* Message d'erreur */}
-                            {photo.status === 'error' && (
-                              <div className="absolute bottom-0 left-0 right-0 bg-red-500 text-white text-xs p-2 rounded-b-lg">
-                                {photo.error}
+                            {/* Inventaire simplifié par blocs */}
+                            {photo.analysis?.items && photo.analysis.items.length > 0 ? (
+                              <div className="space-y-6">
+                                {/* Séparer les objets volumineux et petits objets */}
+                                {(() => {
+                                  const grosObjets = photo.analysis.items.filter((item: any) => !item.is_small_object);
+                                  const petitsObjets = photo.analysis.items.filter((item: any) => item.is_small_object);
+                                  
+                                  return (
+                                    <>
+                                      {/* Bloc Objets volumineux */}
+                                      {grosObjets.length > 0 && (
+                                        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                                          <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                                            <div className="flex items-center justify-between">
+                                              <h4 className="text-sm font-semibold text-gray-900">🏠 Objets volumineux</h4>
+                                              <div className="flex space-x-2">
                                 <button
-                                  onClick={() => retryPhotoAnalysis(photoIndex)}
-                                  className="ml-2 underline hover:no-underline"
-                                >
-                                  Réessayer
+                                                  onClick={() => {
+                                                    // Sélectionner tous les gros objets
+                                                    grosObjets.forEach((_: any, index: number) => {
+                                                      const originalIndex = photo.analysis.items.findIndex((item: any) => item === grosObjets[index]);
+                                                      if (!isObjectSelected(photo.photoId || `photo-${photoIndex}`, originalIndex)) {
+                                                        toggleObjectSelection(photo.photoId || `photo-${photoIndex}`, originalIndex);
+                                                      }
+                                                    });
+                                                  }}
+                                                  className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                                                >
+                                                  Tout sélectionner
+                                                </button>
+                                                <span className="text-gray-300">|</span>
+                                                <button
+                                                  onClick={() => {
+                                                    // Désélectionner tous les gros objets
+                                                    grosObjets.forEach((_: any, index: number) => {
+                                                      const originalIndex = photo.analysis.items.findIndex((item: any) => item === grosObjets[index]);
+                                                      if (isObjectSelected(photo.photoId || `photo-${photoIndex}`, originalIndex)) {
+                                                        toggleObjectSelection(photo.photoId || `photo-${photoIndex}`, originalIndex);
+                                                      }
+                                                    });
+                                                  }}
+                                                  className="text-xs text-gray-500 hover:text-gray-700 font-medium"
+                                                >
+                                                  Tout désélectionner
                                 </button>
                               </div>
+                                            </div>
+                                          </div>
+                                          <div className="divide-y divide-gray-200">
+                                            {grosObjets.map((item: any, itemIndex: number) => {
+                                              const originalIndex = photo.analysis.items.findIndex((originalItem: any) => originalItem === item);
+                                              return (
+                                              <div key={itemIndex} className="px-4 py-3 hover:bg-gray-50 transition-colors">
+                                                <div className="flex items-center justify-between">
+                                                  <div className="flex items-center space-x-3">
+                                                    {/* Checkbox de sélection */}
+                                                    <input
+                                                      type="checkbox"
+                                                      checked={isObjectSelected(photo.photoId || `photo-${photoIndex}`, originalIndex)}
+                                                      onChange={(e) => {
+                                                        e.stopPropagation();
+                                                        toggleObjectSelection(photo.photoId || `photo-${photoIndex}`, originalIndex);
+                                                      }}
+                                                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                                      title={isObjectSelected(photo.photoId || `photo-${photoIndex}`, originalIndex) ? "Désélectionner cet objet" : "Sélectionner cet objet"}
+                                                    />
+                                                    <span className={`text-sm font-medium ${isObjectSelected(photo.photoId || `photo-${photoIndex}`, originalIndex) ? 'text-gray-900' : 'text-gray-400 line-through'}`}>
+                                                      {item.label}
+                                                    </span>
+                                                    <span className="text-xs text-gray-500">{item.volume_m3}m³</span>
+                                                    {item.packaging_display && (
+                                                      <span 
+                                                        className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full cursor-help hover:bg-blue-100 transition-colors"
+                                                        title={getPackagingDetails(item)}
+                                                      >
+                                                        📦 {item.packaging_display}
+                                                      </span>
                             )}
+                                                    <DismountableToggle
+                                                      item={item}
+                                                      onToggle={(isDismountable) => 
+                                                        handleDismountableToggle(photo.photoId || `photo-${photoIndex}`, originalIndex, isDismountable)
+                                                      }
+                                                      className="ml-2"
+                                                    />
                           </div>
-                        ))}
+                                                  <button
+                                                    onClick={() => {
+                                                      // TODO: Implémenter l'édition de description
+                                                    }}
+                                                    className="p-1 text-gray-400 hover:text-blue-500 transition-colors"
+                                                    title="Modifier la description"
+                                                  >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                    </svg>
+                                                  </button>
                       </div>
                     </div>
-                  )}
+                                              );
+                                            })}
+                                          </div>
                 </div>
               )}
 
-              {activePhotoTab === 'inventory' && (
-                <div className="space-y-6">
-                  {/* Boutons de navigation */}
-                  <div className="flex justify-between items-center">
+                                      {/* Bloc Petits objets */}
+                                      {petitsObjets.length > 0 && (
+                                        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                                          <div 
+                                            className="bg-gray-50 px-4 py-3 border-b border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
+                                            onClick={() => setIsSmallObjectsExpanded(!isSmallObjectsExpanded)}
+                                          >
+                                            <div className="flex items-center justify-between">
+                                              <h4 className="text-sm font-semibold text-gray-900">
+                                                📦 Petits objets (cartons) - {Math.ceil(petitsObjets.reduce((total: number, item: any) => total + (item.packaged_volume_m3 || 0), 0) / 0.06)} cartons
+                                              </h4>
+                                              <div className="flex items-center space-x-3">
+                                                <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
                     <button
-                      onClick={() => setActivePhotoTab('upload')}
-                      className="px-4 py-2 text-gray-600 hover:text-gray-800 flex items-center space-x-2"
-                    >
-                      <span>←</span>
-                      <span>Retour aux photos</span>
+                                                    onClick={() => {
+                                                      // Sélectionner tous les petits objets
+                                                      petitsObjets.forEach((_: any, index: number) => {
+                                                        const originalIndex = photo.analysis.items.findIndex((item: any) => item === petitsObjets[index]);
+                                                        if (!isObjectSelected(photo.photoId || `photo-${photoIndex}`, originalIndex)) {
+                                                          toggleObjectSelection(photo.photoId || `photo-${photoIndex}`, originalIndex);
+                                                        }
+                                                      });
+                                                    }}
+                                                    className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                                                  >
+                                                    Tout sélectionner
                     </button>
-                    
+                                                  <span className="text-gray-300">|</span>
                     <button
-                      onClick={() => setCurrentStep(3)}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-                    >
-                      <span>Préparer la demande</span>
-                      <span>→</span>
+                                                    onClick={() => {
+                                                      // Désélectionner tous les petits objets
+                                                      petitsObjets.forEach((_: any, index: number) => {
+                                                        const originalIndex = photo.analysis.items.findIndex((item: any) => item === petitsObjets[index]);
+                                                        if (isObjectSelected(photo.photoId || `photo-${photoIndex}`, originalIndex)) {
+                                                          toggleObjectSelection(photo.photoId || `photo-${photoIndex}`, originalIndex);
+                                                        }
+                                                      });
+                                                    }}
+                                                    className="text-xs text-gray-500 hover:text-gray-700 font-medium"
+                                                  >
+                                                    Tout désélectionner
                     </button>
                   </div>
-
-                  {/* Inventaire IA */}
-                  <div className="bg-gray-50 p-6 rounded-lg">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4">
-                      Inventaire IA ({currentRoom.photos.filter(p => p.analysis).length} photos analysées)
-                    </h4>
-                    
-                    {currentRoom.photos.some(p => p.analysis?.items && p.analysis.items.length > 0) ? (
-                      <div className="space-y-4">
-                        {currentRoom.photos.map((photo, photoIndex) => (
-                          photo.analysis?.items && photo.analysis.items.length > 0 && (
-                            <div key={photoIndex} className="bg-white p-4 rounded-lg border">
-                              <div className="flex items-center space-x-3 mb-3">
-                                <img
-                                  src={photo.fileUrl || URL.createObjectURL(photo.file)}
-                                  alt={`Photo ${photoIndex + 1}`}
-                                  className="w-16 h-16 object-cover rounded"
-                                />
-                                <div>
-                                  <h5 className="font-medium text-gray-900">Photo {photoIndex + 1}</h5>
-                                  <p className="text-sm text-gray-500">
-                                    {photo.analysis.items.length} objet(s) dans {photo.roomName || currentRoom.name}
-                                  </p>
+                                                <svg 
+                                                  className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isSmallObjectsExpanded ? 'rotate-180' : ''}`} 
+                                                  fill="none" 
+                                                  stroke="currentColor" 
+                                                  viewBox="0 0 24 24"
+                                                >
+                                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                              </div>
                                 </div>
                               </div>
                               
-                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {photo.analysis.items.map((item: TInventoryItem, itemIndex: number) => (
-                                  <div key={itemIndex} className="bg-gray-50 p-3 rounded border">
-                                    <div className="flex items-center justify-between mb-2">
-                                      <h6 className="font-medium text-gray-900">{item.label}</h6>
-                                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                        {Math.round((item.confidence || 0) * 100)}%
+                                          <AnimatePresence>
+                                            {isSmallObjectsExpanded && (
+                                              <motion.div 
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: "auto", opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                transition={{ duration: 0.2 }}
+                                                className="overflow-hidden"
+                                              >
+                                                <div className="divide-y divide-gray-200">
+                                                  {petitsObjets.map((item: any, itemIndex: number) => {
+                                                    const originalIndex = photo.analysis.items.findIndex((originalItem: any) => originalItem === item);
+                                                    return (
+                                                    <div key={itemIndex} className="px-4 py-3 hover:bg-gray-50 transition-colors">
+                                                      <div className="flex items-center justify-between">
+                                                        <div className="flex items-center space-x-3">
+                                                          {/* Checkbox de sélection */}
+                                                          <input
+                                                            type="checkbox"
+                                                            checked={isObjectSelected(photo.photoId || `photo-${photoIndex}`, originalIndex)}
+                                                            onChange={(e) => {
+                                                              e.stopPropagation();
+                                                              toggleObjectSelection(photo.photoId || `photo-${photoIndex}`, originalIndex);
+                                                            }}
+                                                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                                            title={isObjectSelected(photo.photoId || `photo-${photoIndex}`, originalIndex) ? "Désélectionner cet objet" : "Sélectionner cet objet"}
+                                                          />
+                                                          <span className={`text-sm font-medium ${isObjectSelected(photo.photoId || `photo-${photoIndex}`, originalIndex) ? 'text-gray-900' : 'text-gray-400 line-through'}`}>
+                                                            {item.label}
                                       </span>
+                                                          <span className="text-xs text-gray-500">{item.volume_m3}m³</span>
+                                                          {item.packaging_display && (
+                                                            <span 
+                                                              className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full cursor-help hover:bg-green-100 transition-colors"
+                                                              title={getPackagingDetails(item)}
+                                                            >
+                                                              📦 {item.packaging_display}
+                                                            </span>
+                                                          )}
+                                                          <DismountableToggle
+                                                            item={item}
+                                                            onToggle={(isDismountable) => 
+                                                              handleDismountableToggle(photo.photoId || `photo-${photoIndex}`, originalIndex, isDismountable)
+                                                            }
+                                                            className="ml-2"
+                                                          />
                                     </div>
-                                    <div className="text-sm text-gray-600 space-y-1">
-                                      <div>Catégorie: {item.category}</div>
-                                      <div>Volume: {item.volume_m3}m³</div>
-                                      {item.fragile && <div className="text-red-600">⚠️ Fragile</div>}
-                                      {item.stackable && <div className="text-green-600">📦 Empilable</div>}
+                                                        <button
+                                                          onClick={() => {
+                                                            // TODO: Implémenter l'édition de description
+                                                          }}
+                                                          className="p-1 text-gray-400 hover:text-blue-500 transition-colors"
+                                                          title="Modifier la description"
+                                                        >
+                                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                          </svg>
+                                                        </button>
                                     </div>
                                   </div>
-                                ))}
+                                                    );
+                                                  })}
                               </div>
+                                              </motion.div>
+                                            )}
+                                          </AnimatePresence>
                             </div>
-                          )
-                        ))}
+                                      )}
+                                    </>
+                                  );
+                                })()}
                       </div>
                     ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        <div className="text-4xl mb-4">🔍</div>
-                        <p>Aucun objet dans {currentRoom.name} pour le moment</p>
-                        <p className="text-sm">L'analyse des photos est en cours...</p>
+                              <div className="text-sm text-gray-500">
+                                {photo.status === 'processing' ? 'Analyse en cours...' : 'Aucun objet détecté'}
                       </div>
                     )}
                   </div>
                 </div>
-              )}
+                      </div>
+                    ))}
 
-              {/* Boutons de navigation */}
-              <div className="flex justify-between mt-8">
-                <button
-                  onClick={() => setCurrentStep(1)}
-                  className="px-6 py-2 text-gray-600 hover:text-gray-800 flex items-center space-x-2"
-                >
-                  <span>←</span>
-                  <span>Précédent</span>
-                </button>
-                <button
-                  onClick={() => setCurrentStep(3)}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Continuer
-                </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -869,556 +1074,466 @@ export default function Home() {
         )}
 
 
-      {currentRoom.photos.some(p => p.status === 'processing') && (
-        <div className="mb-6 p-6 bg-blue-50 rounded-lg border border-blue-200">
-          <div className="flex items-center space-x-3">
-            <div className="animate-spin text-blue-600 text-xl">🔄</div>
-            <div>
-              <h4 className="text-lg font-semibold text-blue-800">Traitement en cours...</h4>
-              <p className="text-base text-blue-600">
-                {currentRoom.photos.filter(p => p.status === 'completed').length}/{currentRoom.photos.length} photo(s) analysée(s)
-              </p>
-              <p className="text-sm text-blue-500 mt-1">
-                {currentRoom.photos.filter(p => p.status === 'processing').length} photo(s) en cours d'analyse
-              </p>
+
+
+        {/* Étape 1 - Charger des photos */}
+        {currentStep === 1 && (
+          <div className="max-w-6xl mx-auto px-4">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              
+
+              <div className="p-6">
+                {/* Zone d'upload principale (visible seulement si aucune photo) */}
+                <AnimatePresence>
+                  {currentRoom.photos.length === 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.4, ease: "easeOut" }}
+                      onDrop={onDrop}
+                      onDragOver={onDragOver}
+                      onDragLeave={onDragLeave}
+                      onClick={() => {
+                        console.log('🎯 Zone drag & drop cliquée');
+                        fileInputRef.current?.click();
+                      }}
+                      className={`relative border-2 border-dashed rounded-xl p-12 text-center transition-all duration-300 cursor-pointer ${
+                        isDragOver
+                          ? 'border-blue-400 bg-blue-50 scale-[1.02]'
+                          : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="max-w-md mx-auto">
+                        <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
+                          <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                          </svg>
             </div>
-          </div>
-        </div>
-      )}
-
-
-      {/* Interface par onglet */}
-      {activePhotoTab === 'upload' && (
-        <div className="space-y-6">
-          {/* Bouton pour aller à l'inventaire si on a des photos */}
-          {currentRoom.photos.length > 0 && (
-            <div className="flex justify-end">
+                        
+                        <h4 className="text-xl font-semibold text-gray-900 mb-2">
+                          Ajoutez vos photos d'inventaire
+                        </h4>
+                        <p className="text-gray-600 mb-6">
+                          Glissez-déposez vos photos ici ou cliquez pour sélectionner.<br />
+                          <span className="text-sm text-gray-500">Formats acceptés : JPG, PNG, WEBP</span>
+                        </p>
+                        
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          onChange={onFileSelect}
+                          multiple
+                          accept="image/*"
+                          className="hidden"
+                        />
               <button
-                onClick={() => setActivePhotoTab('inventory')}
-                className="flex items-center space-x-2 px-4 py-2 bg-[var(--mz-teal)] text-white rounded-lg hover:bg-[var(--mz-teal)]/90 transition-colors"
-              >
-                <span>Voir l'inventaire</span>
-                <span>→</span>
+                          onClick={(e) => {
+                            e.stopPropagation(); // Empêcher la propagation vers la zone drag & drop
+                            fileInputRef.current?.click();
+                          }}
+                          className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                        >
+                          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          Sélectionner des photos
               </button>
             </div>
-          )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
-          {/* Zone d'upload */}
-          <div className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-8 text-center hover:border-[var(--mz-teal)] transition-colors">
-            <div className="space-y-4">
-              <div className="text-6xl">📸</div>
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Charger des photos</h3>
-                <p className="text-gray-600 mb-4">
-                  Sélectionnez jusqu'à {100 - currentRoom.photos.length} photo(s) de vos pièces
-                </p>
-                <p className="text-sm text-gray-500">
-                  Formats acceptés : JPG, PNG, WebP • Taille max : 10MB par photo
-                </p>
-              </div>
+                {/* Grille des photos */}
+                <AnimatePresence>
+                  {currentRoom.photos.length > 0 && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.4, ease: "easeOut" }}
+                      className="space-y-6"
+                    >
+                      {/* Bouton d'ajout compact */}
               <div className="flex justify-center">
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={(e) => {
+                            e.stopPropagation(); // Empêcher la propagation vers la zone drag & drop
+                            fileInputRef.current?.click();
+                          }}
+                          className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-all duration-200"
+                        >
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                          </svg>
+                          Ajouter des photos
+                        </motion.button>
                 <input 
                   type="file" 
+                          ref={fileInputRef}
+                          onChange={onFileSelect}
                   multiple 
                   accept="image/*" 
-                  onChange={onUpload}
-                  disabled={loading || currentRoom.photos.length >= 100}
-                  className="block text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-[var(--mz-teal)] file:text-white hover:file:opacity-90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-              </div>
-              {currentRoom.photos.length > 0 && (
-                <p className="text-sm text-blue-600">
-                  {currentRoom.photos.length}/100 photos chargées
-                </p>
-              )}
-            </div>
+                          className="hidden"
+                        />
           </div>
 
-          {/* Liste des photos uploadées */}
-          {currentRoom.photos.length > 0 && (
-            <div className="bg-white rounded-lg border p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Photos chargées</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {/* Grille responsive */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                        <AnimatePresence>
                 {currentRoom.photos.map((photo, photoIndex) => (
-                  <div key={photoIndex} className="relative group">
-                    <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                      <img 
-                        src={URL.createObjectURL(photo.file)} 
+                            <motion.div 
+                              key={photoIndex}
+                              initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.8, y: -20 }}
+                              transition={{ 
+                                duration: 0.3, 
+                                ease: "easeOut",
+                                delay: photoIndex * 0.05 
+                              }}
+                              layout
+                              className="group relative bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200"
+                            >
+                              {/* Image */}
+                              <div className="aspect-square bg-gray-100 relative">
+                                <img
+                                  src={photo.fileUrl || URL.createObjectURL(photo.file)}
                         alt={`Photo ${photoIndex + 1}`}
                         className="w-full h-full object-cover"
                       />
-                    </div>
-                    
-                    {/* Bouton de suppression - toujours visible */}
-                    <button
-                      onClick={() => deletePhoto(photoIndex)}
-                      className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors z-10"
-                      title="Supprimer cette photo"
-                    >
-                      ×
-                    </button>
-                    
-                    {/* Statut en bas à gauche - toujours visible */}
-                    <div className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs">
-                      {photo.status === 'uploaded' && 'En attente'}
-                      {photo.status === 'processing' && 'Analyse...'}
-                      {photo.status === 'completed' && 'Terminé'}
-                      {photo.status === 'error' && 'Erreur'}
-                    </div>
-                    
-                    {/* Barre de progression - toujours visible si en cours */}
+                                
+                                {/* Overlay de chargement */}
                     {photo.status === 'processing' && (
-                      <div className="absolute bottom-0 left-0 right-0 bg-gray-300 h-1 rounded-b-lg">
-                        <div 
-                          className="bg-blue-500 h-1 rounded-b-lg transition-all duration-500" 
-                          style={{ width: `${photo.progress || 0}%` }}
-                        ></div>
+                                  <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                                    <div className="text-center text-white">
+                                      <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                                      <div className="text-xs">Analyse...</div>
+                                    </div>
                       </div>
                     )}
                     
-                    {/* Message d'erreur */}
+                                {/* Overlay d'erreur */}
                     {photo.status === 'error' && (
-                      <div className="absolute bottom-0 left-0 right-0 bg-red-500 text-white text-xs p-2 rounded-b-lg">
-                        {photo.error}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                                  <div className="absolute inset-0 bg-red-500 bg-opacity-90 flex items-center justify-center">
+                                    <div className="text-center text-white p-2">
+                                      <svg className="w-6 h-6 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                      </svg>
+                                      <div className="text-xs">Erreur</div>
               </div>
             </div>
           )}
         </div>
-      )}
-
-      {activePhotoTab === 'inventory' && (currentStep === 1 || currentStep === 2) && (
-        <div className="space-y-8">
-          {/* Bouton de retour */}
-          <div className="flex justify-between items-center">
+                              
+                              {/* Statut et actions */}
+                              <div className="p-3">
+                                {/* Statut */}
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center space-x-2">
+                                    {photo.status === 'uploaded' && (
+                                      <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                                    )}
+                                    {photo.status === 'processing' && (
+                                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                                    )}
+                                    {photo.status === 'completed' && (
+                                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                    )}
+                                    {photo.status === 'error' && (
+                                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                    )}
+                                    <span className="text-xs font-medium text-gray-600">
+                                      {photo.status === 'uploaded' && 'En attente'}
+                                      {photo.status === 'processing' && 'Analyse...'}
+                                      {photo.status === 'completed' && 'Terminé'}
+                                      {photo.status === 'error' && 'Erreur'}
+                                    </span>
+                                  </div>
+                                  
+                                  {/* Bouton de suppression */}
             <button
-              onClick={() => setActivePhotoTab('upload')}
-              className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                                    onClick={() => deletePhoto(photoIndex)}
+                                    className="opacity-0 group-hover:opacity-100 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-all duration-200"
+                                    title="Supprimer cette photo"
             >
-              <span>←</span>
-              <span>Retour aux photos</span>
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
             </button>
-            <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-600">
-                {currentRoom.photos.length} photo{currentRoom.photos.length > 1 ? 's' : ''} chargée{currentRoom.photos.length > 1 ? 's' : ''}
-              </div>
-              {currentStep === 1 && currentRoom.photos.some(p => p.status === 'completed') && (
-                <button
-                  onClick={() => setCurrentStep(2)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <span>Valider l'inventaire</span>
-                  <span>→</span>
-                </button>
-              )}
-            </div>
           </div>
 
-          {currentRoom.photos.length === 0 ? (
-            <div className="bg-gray-50 rounded-lg border p-8 text-center">
-              <div className="text-4xl mb-4">📸</div>
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">Aucune photo chargée</h3>
-              <p className="text-gray-600">Chargez des photos pour commencer l'analyse</p>
-            </div>
-          ) : (
-            currentRoom.photos.map((photo, photoIndex) => (
-              <div key={photoIndex} className="border rounded-xl p-6 bg-white shadow-sm">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  
-                  {/* Côté gauche - Image */}
-                  <div className="lg:col-span-1 space-y-4">
-                    <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
-                      {photo.status === 'completed' ? (
-                        <img 
-                          src={photo.fileUrl || URL.createObjectURL(photo.file)} 
-                          alt={`Photo ${photoIndex + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="text-center text-gray-400">
-                          <div className="text-4xl mb-2">{getStatusIcon(photo.status)}</div>
-                          <div className="text-sm text-gray-600 mb-3">
-                            {photo.status === 'uploaded' && 'Photo uploadée'}
-                            {photo.status === 'processing' && 'Analyse en cours...'}
-                            {photo.status === 'error' && photo.error}
-                          </div>
-                          
-                          {/* Barre de progression pour le statut processing */}
+                                {/* Barre de progression */}
                           {photo.status === 'processing' && (
-                            <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                                  <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
                               <div 
-                                className="bg-blue-600 h-2 rounded-full transition-all duration-500 ease-out" 
+                                      className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-500" 
                                 style={{ width: `${photo.progress || 0}%` }}
-                              ></div>
+                                    />
                             </div>
                           )}
                           
-                          {/* Texte de progression */}
-                          {photo.status === 'processing' && (
-                            <div className="text-xs text-blue-600 font-medium">
-                              {Math.round(photo.progress || 0)}% terminé
-                            </div>
-                          )}
-                        </div>
+                                {/* Bouton de retry pour les erreurs */}
+                                {photo.status === 'error' && (
+                            <button
+                                    onClick={() => retryPhotoAnalysis(photoIndex)}
+                                    className="w-full mt-2 px-3 py-1.5 bg-red-50 text-red-600 text-xs font-medium rounded-lg hover:bg-red-100 transition-colors"
+                            >
+                                    Réessayer
+                            </button>
                       )}
                     </div>
-                  </div>
-
-                  {/* Côté droit - Tableau de données */}
-                  <div className="lg:col-span-2 space-y-6">
-                    <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm">
-                      <h3 className="text-xl font-bold text-gray-800">Objets dans {photo.roomName || currentRoom.name}</h3>
-                      {photo.status === 'completed' && (
-                        <div className="flex items-center space-x-3">
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => selectAllItems(photoIndex)}
-                              className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 transition-colors"
-                            >
-                              Tout sélectionner
-                            </button>
-                            <button
-                              onClick={() => deselectAllItems(photoIndex)}
-                              className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200 transition-colors"
-                            >
-                              Tout désélectionner
-                            </button>
-                          </div>
-                          <span className="text-base font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
-                            {photo.analysis?.items?.length || 0} objet(s) dans {photo.roomName || currentRoom.name}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {photo.status === 'completed' && photo.analysis ? (
-                      <>
-                        {/* Version desktop - Tableau */}
-                        <div className="hidden lg:block overflow-x-auto">
-                          <table className="min-w-full text-base border-collapse bg-white rounded-lg shadow-sm">
-                            <thead>
-                              <tr className="border-b-2 border-gray-200 bg-gray-50">
-                                <th className="text-center p-3 font-semibold text-gray-700 w-16">Sélectionner</th>
-                                <th className="text-left p-3 font-semibold text-gray-700 w-24">Type</th>
-                                <th className="text-left p-3 font-semibold text-gray-700 min-w-40">Description</th>
-                                <th className="text-left p-3 font-semibold text-gray-700 w-32">Mesures</th>
-                                <th className="text-left p-3 font-semibold text-gray-700 w-20">m³</th>
-                                <th className="text-left p-3 font-semibold text-gray-700 w-32">Notes</th>
-                                <th className="text-left p-3 font-semibold text-gray-700 w-24">Confiance</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {photo.analysis.items?.map((item: TInventoryItem, itemIndex: number) => {
-                                // Générer les notes avec fragile si applicable
-                                const notes = getEnrichedNotes(item);
-                                
-                                // Vérifier si l'objet est sélectionné
-                                const isSelected = isItemSelected(photo, itemIndex);
-                                
-                                return (
-                                  <tr key={itemIndex} className={`border-b border-gray-100 hover:bg-blue-50 transition-colors ${!isSelected ? 'opacity-50 bg-gray-50' : ''}`}>
-                                    <td className="p-3 text-center">
-                                      <input
-                                        type="checkbox"
-                                        checked={isSelected}
-                                        onChange={() => toggleItemSelection(photoIndex, itemIndex)}
-                                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                                      />
-                                    </td>
-                                    <td className="p-3">
-                                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                        item.category === 'furniture' ? 'bg-blue-100 text-blue-800' :
-                                        item.category === 'appliance' ? 'bg-green-100 text-green-800' :
-                                        item.category === 'box' ? 'bg-yellow-100 text-yellow-800' :
-                                        item.category === 'art' ? 'bg-purple-100 text-purple-800' :
-                                        'bg-gray-100 text-gray-800'
-                                      }`}>
-                                        {translateCategory(item.category)}
-                                      </span>
-                                    </td>
-                                    <td className="p-3">
-                                      <span className="font-semibold text-gray-900 text-sm">{enrichDescription(item)}</span>
-                                    </td>
-                                    <td className="p-3">
-                                      {item.dimensions_cm ? (
-                                        <span className="text-xs text-gray-700 font-mono">
-                                          {(() => {
-                                            const dims = [item.dimensions_cm.length, item.dimensions_cm.width, item.dimensions_cm.height];
-                                            const validDims = dims.filter(d => d && d > 0);
-                                            if (validDims.length === 3) {
-                                              return `${dims[0]} × ${dims[1]} × ${dims[2]} cm`;
-                                            } else if (validDims.length > 0) {
-                                              return `${validDims.join(' × ')} cm`;
-                                            } else {
-                                              return 'Dimensions non disponibles';
-                                            }
-                                          })()}
-                                        </span>
-                                      ) : (
-                                        <span className="text-xs text-gray-500 italic">Non mesuré</span>
-                                      )}
-                                    </td>
-                                    <td className="p-3">
-                                      <span className="text-sm font-bold text-blue-600">{roundUpVolume(item.volume_m3 || 0)}</span>
-                                    </td>
-                                    <td className="p-3">
-                                      <span className="text-xs text-gray-600">{notes || '-'}</span>
-                                    </td>
-                                    <td className="p-3">
-                                      <div className="flex items-center space-x-2">
-                                        <div className="w-16 bg-gray-200 rounded-full h-2">
-                                          <div 
-                                            className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                                            style={{ width: `${(item.confidence || 0) * 100}%` }}
-                                          ></div>
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
                                         </div>
-                                        <span className="text-xs font-semibold text-gray-700">{Math.round((item.confidence || 0) * 100)}%</span>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                              
-                            </tbody>
-                          </table>
-                        </div>
 
-                        {/* Version mobile - Cards optimisées pour une ligne */}
-                        <div className="lg:hidden space-y-2">
-                          {photo.analysis.items?.map((item: TInventoryItem, itemIndex: number) => {
-                            // Vérifier si l'objet est sélectionné
-                            const isSelected = isItemSelected(photo, itemIndex);
-                            
-                            return (
-                              <div key={itemIndex} className={`bg-white p-3 rounded-lg border shadow-sm ${!isSelected ? 'opacity-50 bg-gray-50' : ''}`}>
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center space-x-3 flex-1">
-                                    <input
-                                      type="checkbox"
-                                      checked={isSelected}
-                                      onChange={() => toggleItemSelection(photoIndex, itemIndex)}
-                                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                                    />
-                                    <div className="flex-1">
-                                      <h4 className="font-semibold text-gray-900 text-sm">{enrichDescription(item)}</h4>
+                      {/* Bouton continuer */}
+                      <div className="text-center">
+                        <p className="text-sm text-blue-600 mb-4">
+                          {currentRoom.photos.length}/100 photos chargées
+                        </p>
+                            {/* Bouton supprimé - maintenant géré par le bouton en haut */}
+                        </div>
+                    </motion.div>
+                      )}
+                </AnimatePresence>
                                     </div>
                                   </div>
-                                  <div className="flex items-center space-x-2">
-                                    <span className="text-sm font-bold text-blue-600">{roundUpVolume(item.volume_m3 || 0)} m³</span>
-                                    <span className="text-xs font-semibold text-gray-700">{Math.round((item.confidence || 0) * 100)}%</span>
                                   </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                          
-                        </div>
+        )}
 
-                      </>
-                    ) : photo.status === 'error' ? (
-                      <div className="p-6 bg-red-50 rounded-lg border border-red-200">
-                        <div className="flex items-center space-x-3">
-                          <span className="text-2xl">❌</span>
-                          <div>
-                            <h4 className="text-lg font-semibold text-red-800">Erreur d'analyse</h4>
-                            <p className="text-base text-red-600 mt-1">{photo.error}</p>
+        {/* Navigation entre étapes - structure identique au bouton du haut */}
+        <div className="max-w-4xl mx-auto px-4 mt-8">
+          <div className="flex justify-between items-center">
+            {/* Bouton Précédent - à gauche */}
+            {currentStep > 1 ? (
+              <button
+                onClick={() => setCurrentStep(currentStep - 1)}
+                className="inline-flex items-center px-4 py-2 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 hover:border-gray-300 transition-all duration-200"
+              >
+                <svg className="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Précédent
+              </button>
+            ) : (
+              <div></div>
+            )}
+            
+            {/* Bouton Étape suivante - EXACTEMENT identique au bouton du haut */}
+            {currentStep < 4 ? (
                             <button
-                              onClick={() => processPhotoAsync(photoIndex, photo.file, photo.photoId!)}
-                              className="mt-2 text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 transition-colors"
-                            >
-                              Réessayer
+                onClick={() => {
+                  console.log('🎯 Bouton "Étape suivante" cliqué, passage à l\'étape', currentStep + 1);
+                  setCurrentStep(currentStep + 1);
+                }}
+                disabled={
+                  (currentStep === 1 && currentRoom.photos.length === 0) ||
+                  (currentStep === 2 && !currentRoom.photos.some(p => p.status === 'completed')) ||
+                  (currentStep === 3 && !quoteFormData)
+                }
+                className="inline-flex items-center px-4 py-2 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:text-gray-400 disabled:bg-gray-50"
+              >
+                Étape suivante
+                <svg className="w-3 h-3 ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
                             </button>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="p-6 bg-gray-50 rounded-lg border border-gray-200 text-center">
-                        <div className="flex flex-col items-center space-y-3">
-                          <span className="text-4xl">{getStatusIcon(photo.status)}</span>
-                          <div>
-                            <h4 className="text-lg font-semibold text-gray-700">
-                              {photo.status === 'uploaded' ? 'Photo uploadée' : 
-                               photo.status === 'processing' ? 'Analyse en cours...' : 
-                               'En attente d\'analyse...'}
-                            </h4>
-                            <p className="text-base text-gray-600 mt-1">
-                              {photo.status === 'uploaded' ? 'L\'image sera analysée automatiquement' :
-                               photo.status === 'processing' ? 'L\'IA détecte les objets...' :
-                               'L\'image sera analysée automatiquement'}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
+            ) : (
+              <div></div>
                     )}
                   </div>
                 </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
 
-
-
-        {/* Étape 4 - Envoyer le devis */}
+        {/* Étape 4 - Envoyer mon dossier gratuitement */}
         {currentStep === 4 && (
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white p-8 rounded-lg border border-gray-200">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                <span className="text-3xl mr-3">📤</span>
-                Envoyer votre demande de devis
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Votre demande est prête ! Vérifiez les informations ci-dessous avant d'envoyer votre demande de devis.
-              </p>
+          <div className="max-w-6xl mx-auto px-4">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               
-              {/* Volume à déménager */}
-              <div className="bg-blue-50 p-6 rounded-lg mb-6">
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">📦 Volume à déménager</h4>
-                <div className="text-center text-gray-500">
-                  <p className="text-sm">Contenu à définir</p>
+              {/* Header */}
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-b border-gray-100">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Envoyer mon dossier gratuitement</h3>
+                    <p className="text-sm text-gray-600">
+                      Téléchargez votre inventaire ou envoyez-le par email
+                    </p>
+              </div>
                 </div>
               </div>
 
-              {/* Volume prévu après emballage */}
-              <div className="bg-orange-50 p-6 rounded-lg mb-6">
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">📋 Volume prévu après emballage</h4>
-                <div className="text-center text-gray-500">
-                  <p className="text-sm">Contenu à définir</p>
-                </div>
-              </div>
-
-              {/* Récapitulatif des données du formulaire */}
-              <div className="bg-gray-50 p-6 rounded-lg mb-6">
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">📝 Récapitulatif des informations du formulaire</h4>
-                {quoteFormData ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium">Nom :</span> {quoteFormData.firstName} {quoteFormData.lastName}
+              <div className="p-6">
+                {/* Résumé des volumes */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                  {/* Volume brut */}
+                  <div className="bg-blue-50 rounded-xl p-6">
+                    <div className="flex items-center space-x-3 mb-4">
+                      <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
                     </div>
                     <div>
-                      <span className="font-medium">Email :</span> {quoteFormData.email}
+                        <h4 className="text-lg font-semibold text-gray-900">Volume brut</h4>
+                        <p className="text-sm text-gray-600">Volume total des objets</p>
                     </div>
-                    <div>
-                      <span className="font-medium">Téléphone :</span> {quoteFormData.phone}
                     </div>
-                    <div>
-                      <span className="font-medium">Date de déménagement :</span> {quoteFormData.movingDate ? 
-                        new Date(quoteFormData.movingDate).toLocaleDateString('fr-FR') : 
-                        'Non renseignée'
-                      }
-                      {quoteFormData.flexibleDate && (
-                        <span className="ml-2 text-sm text-blue-600">(± 3 jours)</span>
-                      )}
-                    </div>
-                    <div>
-                      <span className="font-medium">Départ :</span> {quoteFormData.departureCity || 'Non renseigné'}
-                    </div>
-                    <div>
-                      <span className="font-medium">Arrivée :</span> {quoteFormData.arrivalCity || 'Non renseigné'}
-                    </div>
-                    {quoteFormData.distance && (
-                      <div>
-                        <span className="font-medium">Distance :</span> {quoteFormData.distance} km
-                      </div>
-                    )}
-                    <div>
-                      <span className="font-medium">Offre choisie :</span> {quoteFormData.selectedOffer ? 
-                        (() => {
-                          const offers: { [key: string]: string } = {
-                            'economique': '1. Économique 💰',
-                            'standard': '2. Standard ⭐',
-                            'premium': '3. Premium 👑'
-                          };
-                          return offers[quoteFormData.selectedOffer] || 'Non renseignée';
-                        })() : 
-                        'Non renseignée'
-                      }
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center text-gray-500">
-                    <p className="text-sm">Aucune information de formulaire disponible</p>
-                  </div>
-                )}
-              </div>
-              
-              {/* Récapitulatif de l'inventaire */}
-              {currentRoom.photos.some(p => p.status === 'completed') && (
-                <div className="bg-blue-50 p-6 rounded-lg mb-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4">Inventaire détecté</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium">Nombre d'objets :</span> {totalVolumeSelected.totalItems}
-                    </div>
-                    <div>
-                      <span className="font-medium">Volume total :</span> {totalVolumeSelected.totalVolume} m³
-                    </div>
-                    <div>
-                      <span className="font-medium">Photos analysées :</span> {currentRoom.photos.filter(p => p.status === 'completed').length}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Estimation de prix */}
-              {quoteFormData && quoteFormData.selectedOffer && totalVolumeSelected.totalVolume > 0 && (
-                <div className="bg-green-50 p-6 rounded-lg mb-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4">Estimation de prix</h4>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-green-600 mb-2">
+                    <div className="text-2xl font-bold text-blue-600">
                       {(() => {
-                        const basePrice = totalVolumeSelected.totalVolume * 50; // 50€/m³ de base
-                        const offerMultiplier: { [key: string]: number } = {
-                          'economique': 1,
-                          'standard': 1.3,
-                          'premium': 1.6
-                        };
-                        const distanceMultiplier = quoteFormData.distance ? Math.max(1, quoteFormData.distance / 100) : 1;
-                        const finalPrice = Math.round(basePrice * (offerMultiplier[quoteFormData.selectedOffer] || 1) * distanceMultiplier);
-                        return `${finalPrice}€`;
+                        const totalVolume = currentRoom.photos
+                          .filter(p => p.analysis?.items)
+                          .reduce((sum, photo) => 
+                            sum + (photo.analysis?.items?.reduce((itemSum: number, item: any) => itemSum + item.volume_m3, 0) || 0), 0);
+                        return `${totalVolume.toFixed(1)} m³`;
                       })()}
                     </div>
-                    <p className="text-sm text-gray-600">
-                      Estimation basée sur {totalVolumeSelected.totalVolume} m³ et l'offre {quoteFormData.selectedOffer === 'economique' ? 'Économique' : quoteFormData.selectedOffer === 'standard' ? 'Standard' : 'Premium'}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-2">
-                      * Prix indicatif - devis personnalisé après validation
-                    </p>
+                    </div>
+
+                  {/* Volume emballé */}
+                  <div className="bg-orange-50 rounded-xl p-6">
+                    <div className="flex items-center space-x-3 mb-4">
+                      <div className="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                    </div>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900">Volume emballé</h4>
+                        <p className="text-sm text-gray-600">Avec emballage et cartons</p>
+                      </div>
+                    </div>
+                    <div className="text-2xl font-bold text-orange-600">
+                      {(() => {
+                        const totalPackagedVolume = currentRoom.photos
+                          .filter(p => p.analysis?.items)
+                          .reduce((sum, photo) => 
+                            sum + (photo.analysis?.items?.reduce((itemSum: number, item: any) => itemSum + (item.packaged_volume_m3 || item.volume_m3), 0) || 0), 0);
+                        return `${totalPackagedVolume.toFixed(1)} m³`;
+                      })()}
+                  </div>
+                  </div>
+              </div>
+              
+                {/* Récapitulatif des informations */}
+                {quoteFormData && (
+                  <div className="bg-gray-50 rounded-xl p-6 mb-8">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <svg className="w-5 h-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Récapitulatif de votre demande
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                    <div>
+                        <h5 className="font-semibold text-gray-700 mb-3">👤 Informations personnelles</h5>
+                        <div className="space-y-2 text-gray-600">
+                          <p><span className="font-medium">Nom :</span> {quoteFormData.firstName} {quoteFormData.lastName}</p>
+                          <p><span className="font-medium">Email :</span> {quoteFormData.email}</p>
+                          <p><span className="font-medium">Téléphone :</span> {quoteFormData.phone}</p>
+                    </div>
+                    </div>
+                      
+                    <div>
+                        <h5 className="font-semibold text-gray-700 mb-3">🏠 Détails du déménagement</h5>
+                        <div className="space-y-2 text-gray-600">
+                          <p><span className="font-medium">Départ :</span> {quoteFormData.departureCity} ({quoteFormData.departurePostalCode})</p>
+                          <p><span className="font-medium">Arrivée :</span> {quoteFormData.arrivalCity} ({quoteFormData.arrivalPostalCode})</p>
+                          <p><span className="font-medium">Date :</span> {quoteFormData.movingDate}</p>
+                          <p><span className="font-medium">Formule :</span> <span className="capitalize">{quoteFormData.selectedOffer}</span></p>
+                    </div>
+                  </div>
                   </div>
                 </div>
               )}
               
-              {/* Boutons d'action */}
-              <div className="flex justify-between pt-6">
+                {/* Options d'export et d'envoi */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Téléchargement */}
+                  <div className="bg-white border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-400 transition-colors">
+                    <div className="w-12 h-12 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center">
+                      <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-2">Télécharger votre dossier</h4>
+                    <p className="text-gray-600 mb-4">Obtenez votre inventaire dans différents formats</p>
+                    <div className="space-y-2">
                 <button
-                  onClick={() => setCurrentStep(3)}
-                  disabled={isSubmittingQuote}
-                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  ← Modifier la demande
+                        onClick={() => {
+                          // TODO: Implémenter l'export CSV
+                          alert('Export CSV à implémenter');
+                        }}
+                        className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+                      >
+                        📊 Télécharger en CSV
                 </button>
-                
+                      <button
+                        onClick={() => {
+                          // TODO: Implémenter l'export Excel
+                          alert('Export Excel à implémenter');
+                        }}
+                        className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+                      >
+                        📋 Télécharger en Excel
+                      </button>
+                      <button
+                        onClick={() => {
+                          // TODO: Implémenter l'export PDF
+                          alert('Export PDF à implémenter');
+                        }}
+                        className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+                      >
+                        📄 Télécharger en PDF
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Envoi par email */}
+                  <div className="bg-white border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-green-400 transition-colors">
+                    <div className="w-12 h-12 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
+                      <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-2">Envoyer par email</h4>
+                    <p className="text-gray-600 mb-4">Recevez votre dossier directement par email</p>
+                    <div className="space-y-3">
+                      <input
+                        type="email"
+                        placeholder="Votre adresse email"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      />
                 <button
-                  onClick={handleSubmitQuote}
-                  disabled={isSubmittingQuote}
-                  className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                >
-                  {isSubmittingQuote ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Envoi en cours...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>📤</span>
-                      <span>Envoyer la demande de devis</span>
-                    </>
-                  )}
+                        onClick={() => {
+                          // TODO: Implémenter l'envoi par email
+                          alert('Envoi par email à implémenter');
+                        }}
+                        className="w-full px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors"
+                      >
+                        📧 Envoyer par email
                 </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Message final */}
+                <div className="mt-8 text-center">
+                  <div className="inline-flex items-center px-6 py-3 bg-green-50 text-green-700 rounded-xl">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="font-medium">Votre inventaire est prêt ! Vous pouvez maintenant demander des devis.</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1439,9 +1554,6 @@ export default function Home() {
                     <span className="text-white font-bold text-lg">M</span>
                   </div>
                   <div>
-                    <h1 className="text-2xl font-bold text-[var(--mz-navy)]">
-                      Inventaire IA
-                    </h1>
                     <p className="text-sm text-gray-600">
                       Analyse automatique pour déménagement
                     </p>
@@ -1518,11 +1630,59 @@ export default function Home() {
 
       {/* Étapes du workflow - seulement si pas en mode embed et onglet tests */}
       {!isEmbedded && activeTab === 'tests' && (
+        <>
         <WorkflowSteps 
           currentStep={currentStep}
           onStepChange={handleStepChange}
           steps={workflowSteps}
         />
+          
+          {/* Boutons de navigation en haut */}
+          <div className="bg-white border-b border-gray-100">
+            <div className="max-w-4xl mx-auto px-4 py-2">
+              <div className="flex justify-between">
+                {/* Bouton Précédent - à gauche */}
+                {currentStep > 1 ? (
+                  <button
+                    onClick={() => {
+                      console.log('🎯 Bouton "Précédent" cliqué, retour à l\'étape', currentStep - 1);
+                      setCurrentStep(currentStep - 1);
+                    }}
+                    className="inline-flex items-center px-4 py-2 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 hover:border-gray-300 transition-all duration-200"
+                  >
+                    <svg className="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Précédent
+                  </button>
+                ) : (
+                  <div></div>
+                )}
+                
+                {/* Bouton Étape suivante - à droite */}
+                {currentStep < 4 && (
+                  <button
+                    onClick={() => {
+                      console.log('🎯 Bouton "Étape suivante" cliqué, passage à l\'étape', currentStep + 1);
+                      setCurrentStep(currentStep + 1);
+                    }}
+                    disabled={
+                      (currentStep === 1 && currentRoom.photos.length === 0) ||
+                      (currentStep === 2 && !currentRoom.photos.some(p => p.status === 'completed')) ||
+                      (currentStep === 3 && !quoteFormData)
+                    }
+                    className="inline-flex items-center px-4 py-2 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:text-gray-400 disabled:bg-gray-50"
+                  >
+                    Étape suivante
+                    <svg className="w-3 h-3 ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Contenu selon l'onglet actif */}

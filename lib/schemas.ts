@@ -25,6 +25,15 @@ export const InventoryItem = z.object({
   stackable: z.boolean().default(true),
   notes: z.string().nullable().optional(),
   bounding_boxes: z.array(BoundingBox).optional(),
+  // Nouveaux champs pour l'emballage
+  packaged_volume_m3: z.number().nonnegative().optional(),
+  packaging_display: z.string().optional(),
+  is_small_object: z.boolean().optional(),
+  packaging_calculation_details: z.string().optional(),
+  // Nouveaux champs pour la démontabilité
+  dismountable: z.boolean().optional(),
+  dismountable_confidence: z.number().min(0).max(1).optional(),
+  dismountable_source: z.enum(['database', 'ai', 'hybrid', 'user']).optional(),
 });
 
 export const SpecialRules = z.object({

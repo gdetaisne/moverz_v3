@@ -1,6 +1,22 @@
 import { TPhotoAnalysis } from "@/lib/schemas";
 import { getAISettings } from "@/lib/settings";
 import { optimizeImageForAI } from "@/lib/imageOptimization";
+import { mapToCatalog, volumeFromDims } from "@/lib/normalize";
+import { calculatePackagedVolume } from "@/lib/packaging";
+import { calculateDismountableProbability, requiresVisualCheck } from "@/lib/dismountable";
+
+// Fonction pour estimer les dimensions basées sur la catégorie
+function getEstimatedDimensions(category: string) {
+  const estimates: { [key: string]: { length: number; width: number; height: number } } = {
+    'furniture': { length: 100, width: 50, height: 80 },
+    'appliance': { length: 60, width: 40, height: 50 },
+    'art': { length: 30, width: 20, height: 40 },
+    'box': { length: 40, width: 30, height: 30 },
+    'misc': { length: 25, width: 25, height: 25 }
+  };
+  
+  return estimates[category] || estimates['misc'];
+}
 
 export async function analyzePhotoWithClaude(opts: {
   photoId: string;
@@ -93,6 +109,83 @@ export async function analyzePhotoWithClaude(opts: {
     }
 
     const analysis = JSON.parse(jsonMatch[0]);
+    
+    // Traitement post-IA identique à OpenAI (forcer le calcul du volume)
+    for (const it of analysis.items ?? []) {
+      const cat = mapToCatalog(it.label);
+      
+      // Vérifier si les dimensions sont valides (non nulles, non zéro, non vides)
+      const hasValidDimensions = it.dimensions_cm && 
+        it.dimensions_cm.length && it.dimensions_cm.length > 0 &&
+        it.dimensions_cm.width && it.dimensions_cm.width > 0 &&
+        it.dimensions_cm.height && it.dimensions_cm.height > 0;
+      
+      if (cat && !hasValidDimensions) {
+        it.dimensions_cm = {
+          length: cat.length, width: cat.width, height: cat.height, source: "catalog"
+        };
+      } else if (!hasValidDimensions && !cat) {
+        // Fallback : dimensions estimées basées sur la catégorie
+        const estimatedDims = getEstimatedDimensions(it.category || 'misc');
+        it.dimensions_cm = {
+          length: estimatedDims.length,
+          width: estimatedDims.width, 
+          height: estimatedDims.height,
+          source: "estimated"
+        };
+      }
+      if (!it.category && cat) it.category = cat.category;
+      
+      // TOUJOURS calculer le volume nous-mêmes à partir des dimensions (plus fiable)
+      it.volume_m3 = cat?.volume_m3 ?? volumeFromDims(
+        it.dimensions_cm?.length, it.dimensions_cm?.width, it.dimensions_cm?.height
+      );
+      
+      // Enrichir avec les propriétés du catalogue
+      if (cat) {
+        if (it.fragile === undefined) it.fragile = cat.fragile ?? false;
+        if (it.stackable === undefined) it.stackable = cat.stackable ?? true;
+      }
+      // Valeurs par défaut
+      if (it.fragile === undefined) it.fragile = false;
+      if (it.stackable === undefined) it.stackable = true;
+      
+      // Calculer le volume emballé
+      const packagingInfo = calculatePackagedVolume(
+        it.volume_m3,
+        it.fragile,
+        it.category,
+        it.dimensions_cm
+      );
+      it.packaged_volume_m3 = packagingInfo.packagedVolumeM3;
+      it.packaging_display = packagingInfo.displayValue;
+      it.is_small_object = packagingInfo.isSmallObject;
+      it.packaging_calculation_details = packagingInfo.calculationDetails;
+      
+      // Calculer la démontabilité (approche hybride)
+      const dismountableResult = calculateDismountableProbability(
+        it.label,
+        it.dismountable,
+        it.dismountable_confidence
+      );
+      it.dismountable = dismountableResult.isDismountable;
+      it.dismountable_confidence = dismountableResult.confidence;
+      it.dismountable_source = dismountableResult.source;
+    }
+
+    // Recalculer les totaux avec les volumes corrects
+    const items = analysis.items ?? [];
+    analysis.totals = {
+      count_items: items.reduce((s:number,i:any)=> s + (i.quantity ?? 1), 0),
+      volume_m3: Number(items.reduce((s:number,i:any)=> s + (i.volume_m3 ?? 0)*(i.quantity ?? 1), 0).toFixed(3)),
+    };
+    
+    // Gérer les special_rules pour "autres objets"
+    if (analysis.special_rules?.autres_objets?.present) {
+      // Ajouter le volume des autres objets au total
+      analysis.totals.volume_m3 = Number((analysis.totals.volume_m3 + (analysis.special_rules.autres_objets.volume_m3 || 0)).toFixed(3));
+      analysis.totals.count_items += analysis.special_rules.autres_objets.listed_items?.length || 0;
+    }
     
     // Valider et formater la réponse
     const formattedAnalysis: TPhotoAnalysis = {

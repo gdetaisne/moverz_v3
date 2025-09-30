@@ -85,7 +85,7 @@ const FRENCH_CITIES = Array.from(new Set([
 ])).sort();
 
 export default function QuoteForm({ onNext, onPrevious, initialData = {} }: QuoteFormProps) {
-  console.log('🔄 [QUOTEFORM] Composant rendu avec props:', { onNext: !!onNext, onPrevious: !!onPrevious, initialData });
+  // console.log('🔄 [QUOTEFORM] Composant rendu avec props:', { onNext: !!onNext, onPrevious: !!onPrevious, initialData });
   // const [isAuthenticated, setIsAuthenticated] = useState(false);
   // const [user, setUser] = useState<User | null>(null);
   // const [authError, setAuthError] = useState<string | null>(null);
@@ -511,11 +511,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
 
   return (
     <div className="max-w-2xl mx-auto px-4">
-      {/* En-tête simple */}
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Demande de devis</h2>
-        <p className="text-gray-600">Remplissez les informations ci-dessous</p>
-      </div>
+      {/* En-tête supprimé - on sait pourquoi on est là */}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Email */}

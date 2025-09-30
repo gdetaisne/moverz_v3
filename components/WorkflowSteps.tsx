@@ -15,71 +15,48 @@ interface WorkflowStepsProps {
 
 export default function WorkflowSteps({ currentStep, onStepChange, steps }: WorkflowStepsProps) {
   return (
-    <div className="bg-gray-50 border-b">
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        {/* En-tête simple */}
-        <div className="text-center mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Demande de devis</h2>
-          <div className="text-sm text-gray-600">
-            Étape {currentStep} sur {steps.length}
-          </div>
-        </div>
-        
-        {/* Étapes simplifiées */}
-        <div className="relative">
-          {/* Ligne de progression */}
-          <div className="absolute top-4 left-0 right-0 h-0.5 bg-gray-300">
-            <div 
-              className="h-full bg-blue-500 transition-all duration-300"
-              style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
-            />
-          </div>
-          
-          {/* Étapes */}
-          <div className="flex justify-between">
-            {steps.map((step, index) => (
-              <div key={step.id} className="flex flex-col items-center">
-                {/* Cercle de l'étape */}
-                <div
-                  className={`relative w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold cursor-pointer transition-all z-10 ${
-                    step.completed
-                      ? 'bg-green-500 text-white'
-                      : currentStep === step.id
-                      ? 'bg-blue-500 text-white'
-                      : step.disabled
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-gray-400 text-white hover:bg-blue-400'
-                  }`}
-                  onClick={() => !step.disabled && onStepChange(step.id)}
-                >
-                  {step.completed ? (
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  ) : (
-                    step.id
-                  )}
-                </div>
-                
-                {/* Titre de l'étape */}
-                <div className="mt-2 text-center">
-                  <div className={`text-xs font-medium ${
-                    step.completed ? 'text-green-600' : 
-                    currentStep === step.id ? 'text-blue-600' : 
-                    step.disabled ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                    {step.title}
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {step.id === 1 && '15 min'}
-                    {step.id === 2 && '5 min'}
-                    {step.id === 3 && '5 min'}
-                    {step.id === 4 && '1 min'}
-                  </div>
-                </div>
+    <div className="bg-white border-b border-gray-200">
+      <div className="max-w-4xl mx-auto px-4 py-3">
+        {/* Étapes ultra-simplifiées */}
+        <div className="flex justify-center space-x-8">
+          {steps.map((step) => (
+            <div key={step.id} className="flex items-center space-x-2">
+              {/* Cercle de l'étape avec états visuels clairs */}
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-200 ${
+                  step.completed
+                    ? 'bg-green-500 text-white cursor-pointer hover:bg-green-600 shadow-md' // ✅ Terminé : cercle vert avec ✓
+                    : currentStep === step.id
+                    ? 'bg-blue-600 text-white cursor-pointer hover:bg-blue-700 shadow-lg ring-2 ring-blue-200' // 🎯 En cours : cercle bleu accentué
+                    : step.disabled
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed' // 🔒 Verrouillé : cercle gris clair
+                    : 'bg-gray-400 text-white cursor-pointer hover:bg-gray-500 hover:shadow-md' // ⏳ Futur : cercle gris moyen
+                }`}
+                onClick={() => {
+                  console.log('🎯 Clic sur étape', step.id, 'disabled:', step.disabled);
+                  if (!step.disabled) {
+                    onStepChange(step.id);
+                  }
+                }}
+                title={step.disabled ? 'Étape verrouillée' : `Aller à l'étape ${step.id}: ${step.title}`}
+              >
+                {step.completed ? '✓' : step.id}
               </div>
-            ))}
-          </div>
+              
+              {/* Titre avec styles de police selon l'état */}
+              <span className={`text-sm font-medium transition-all duration-200 ${
+                step.completed 
+                  ? 'text-green-600 font-semibold' // ✅ Terminé : texte vert, police accentuée
+                  : currentStep === step.id 
+                  ? 'text-gray-900 font-bold' // 🎯 En cours : texte foncé, police très accentuée
+                  : step.disabled 
+                  ? 'text-gray-400 font-normal' // 🔒 Verrouillé : texte gris clair, police normale
+                  : 'text-gray-500 font-medium' // ⏳ Futur : texte gris moyen, police légèrement accentuée
+              }`}>
+                {step.title}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
     </div>

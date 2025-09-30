@@ -4,6 +4,8 @@ import { mapToCatalog, volumeFromDims } from "@/lib/normalize";
 import { getCachedAnalysis, setCachedAnalysis } from "@/lib/cache";
 import { optimizeImageForAI } from "@/lib/imageOptimization";
 import { getAISettings } from "@/lib/settings";
+import { calculatePackagedVolume } from "@/lib/packaging";
+import { calculateDismountableProbability, requiresVisualCheck } from "@/lib/dismountable";
 
 // Fonction pour estimer les dimensions basées sur la catégorie
 function getEstimatedDimensions(category: string) {
@@ -239,11 +241,11 @@ export async function originalAnalyzePhotoWithVision(opts: {
       };
     }
     if (!it.category && cat) it.category = cat.category;
-    if (!it.volume_m3 || it.volume_m3 === 0) {
-      it.volume_m3 = cat?.volume_m3 ?? volumeFromDims(
-        it.dimensions_cm?.length, it.dimensions_cm?.width, it.dimensions_cm?.height
-      );
-    }
+    
+    // TOUJOURS calculer le volume nous-mêmes à partir des dimensions (plus fiable)
+    it.volume_m3 = cat?.volume_m3 ?? volumeFromDims(
+      it.dimensions_cm?.length, it.dimensions_cm?.width, it.dimensions_cm?.height
+    );
     // Enrichir avec les propriétés du catalogue
     if (cat) {
       if (it.fragile === undefined) it.fragile = cat.fragile ?? false;
@@ -252,6 +254,28 @@ export async function originalAnalyzePhotoWithVision(opts: {
     // Valeurs par défaut
     if (it.fragile === undefined) it.fragile = false;
     if (it.stackable === undefined) it.stackable = true;
+    
+    // Calculer le volume emballé
+    const packagingInfo = calculatePackagedVolume(
+      it.volume_m3,
+      it.fragile,
+      it.category,
+      it.dimensions_cm
+    );
+    it.packaged_volume_m3 = packagingInfo.packagedVolumeM3;
+    it.packaging_display = packagingInfo.displayValue;
+    it.is_small_object = packagingInfo.isSmallObject;
+    it.packaging_calculation_details = packagingInfo.calculationDetails;
+    
+    // Calculer la démontabilité (approche hybride)
+    const dismountableResult = calculateDismountableProbability(
+      it.label,
+      it.dismountable,
+      it.dismountable_confidence
+    );
+    it.dismountable = dismountableResult.isDismountable;
+    it.dismountable_confidence = dismountableResult.confidence;
+    it.dismountable_source = dismountableResult.source;
   }
 
   const items = parsed.items ?? [];

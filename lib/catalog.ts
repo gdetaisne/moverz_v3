@@ -15,9 +15,17 @@ export const CATALOG: CatalogRow[] = [
     length:220,width:90,height:80, category:"furniture",
     volume_m3: cm3_to_m3(220,90,80), fragile: false, stackable: false
   },
-  { key:"lit-double", aliases:["lit double","queen bed","bed 140","bed 160"],
+  { key:"lit-double", aliases:["lit double","queen bed","bed 140","bed 160","lit"],
     length:200,width:160,height:40, category:"furniture",
     volume_m3: cm3_to_m3(200,160,40), fragile: false, stackable: false
+  },
+  { key:"matelas", aliases:["matelas","mattress"],
+    length:190,width:150,height:20, category:"furniture",
+    volume_m3: cm3_to_m3(190,150,20), fragile: false, stackable: true
+  },
+  { key:"tete-de-lit", aliases:["tête de lit","headboard","tete de lit"],
+    length:200,width:10,height:120, category:"furniture",
+    volume_m3: cm3_to_m3(200,10,120), fragile: false, stackable: true
   },
   { key:"table-basse", aliases:["table basse","coffee table"],
     length:110,width:60,height:45, category:"furniture",
