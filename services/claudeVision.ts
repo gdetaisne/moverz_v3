@@ -155,7 +155,8 @@ export async function analyzePhotoWithClaude(opts: {
         it.volume_m3,
         it.fragile,
         it.category,
-        it.dimensions_cm
+        it.dimensions_cm,
+        it.dismountable
       );
       it.packaged_volume_m3 = packagingInfo.packagedVolumeM3;
       it.packaging_display = packagingInfo.displayValue;

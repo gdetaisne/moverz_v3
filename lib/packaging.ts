@@ -13,7 +13,7 @@ export const CARTON_CONFIG = {
   }
 } as const;
 
-// Règles d'emballage
+  // Règles d'emballage
 export const PACKAGING_RULES = {
   // Petits objets non fragiles : +10% de volume
   SMALL_NON_FRAGILE_INCREASE: 0.10,
@@ -23,6 +23,9 @@ export const PACKAGING_RULES = {
   
   // Objets fragiles : double le volume
   FRAGILE_MULTIPLIER: 2.0,
+  
+  // Objets démontables : -30% de volume emballé
+  DISMOUNTABLE_REDUCTION: 0.30,
   
   // Seuil pour considérer un objet comme "petit" (rentre dans un carton)
   SMALL_OBJECT_THRESHOLD_M3: CARTON_CONFIG.STANDARD_VOLUME_M3
@@ -56,7 +59,8 @@ export function calculatePackagedVolume(
   originalVolumeM3: number,
   isFragile: boolean,
   category: string,
-  dimensionsCm?: { length: number | null; width: number | null; height: number | null }
+  dimensionsCm?: { length: number | null; width: number | null; height: number | null },
+  isDismountable?: boolean
 ): {
   packagedVolumeM3: number;
   isSmallObject: boolean;
@@ -94,6 +98,16 @@ export function calculatePackagedVolume(
     // Meubles non fragiles : +5%
     packagedVolumeM3 = originalVolumeM3 * (1 + PACKAGING_RULES.FURNITURE_NON_FRAGILE_INCREASE);
     calculationDetails += `Meuble non fragile → Volume + ${(PACKAGING_RULES.FURNITURE_NON_FRAGILE_INCREASE * 100)}%`;
+  }
+
+  // 2.5. RÈGLE DÉMONTABILITÉ (si applicable)
+  if (isDismountable) {
+    const volumeBeforeDismountable = packagedVolumeM3;
+    packagedVolumeM3 = packagedVolumeM3 * (1 - PACKAGING_RULES.DISMOUNTABLE_REDUCTION);
+    calculationDetails += `\n\n🔧 RÈGLE DÉMONTABILITÉ\n`;
+    calculationDetails += `Objet démontable → Volume - ${(PACKAGING_RULES.DISMOUNTABLE_REDUCTION * 100)}%\n`;
+    calculationDetails += `Volume avant: ${volumeBeforeDismountable.toFixed(3)} m³\n`;
+    calculationDetails += `Volume après: ${packagedVolumeM3.toFixed(3)} m³`;
   }
   
   // 3. RÈGLE DU CARTON
@@ -165,6 +179,11 @@ export function getPackagingRulesForDisplay() {
         description: "Objets fragiles",
         multiplier: `${PACKAGING_RULES.FRAGILE_MULTIPLIER}x`,
         destination: "Emballage renforcé"
+      },
+      dismountable: {
+        description: "Objets démontables",
+        reduction: `-${(PACKAGING_RULES.DISMOUNTABLE_REDUCTION * 100)}%`,
+        destination: "Volume optimisé"
       }
     },
     threshold: {

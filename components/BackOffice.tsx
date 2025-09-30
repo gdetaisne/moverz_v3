@@ -399,7 +399,7 @@ export default function BackOffice() {
             {/* Règles d'emballage */}
             <div className="mt-6">
               <h3 className="font-semibold text-gray-800 mb-4">📋 Règles d'Emballage</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 
                 {/* Petits objets non fragiles */}
                 <div className="bg-green-50 p-4 rounded-lg border border-green-200">
@@ -439,6 +439,19 @@ export default function BackOffice() {
                     <div><strong>Destination:</strong> {getPackagingRulesForDisplay().rules.fragile.destination}</div>
                   </div>
                 </div>
+
+                {/* Objets démontables */}
+                <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-200">
+                  <div className="flex items-center mb-2">
+                    <span className="text-2xl mr-2">🔧</span>
+                    <h4 className="font-semibold text-emerald-800">Objets Démontables</h4>
+                  </div>
+                  <div className="text-sm space-y-1">
+                    <div><strong>Condition:</strong> {getPackagingRulesForDisplay().rules.dismountable.description}</div>
+                    <div><strong>Réduction:</strong> {getPackagingRulesForDisplay().rules.dismountable.reduction}</div>
+                    <div><strong>Destination:</strong> {getPackagingRulesForDisplay().rules.dismountable.destination}</div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -447,8 +460,9 @@ export default function BackOffice() {
               <h3 className="font-semibold text-gray-800 mb-3">🧮 Exemples de Calcul</h3>
               <div className="text-sm space-y-2">
                 <div><strong>Petit objet (0.03 M³, non fragile):</strong> 0.03 × 1.10 = 0.033 M³ → "55% d'un carton"</div>
-                <div><strong>Meuble (0.5 M³, non fragile):</strong> 0.5 × 1.05 = 0.525 M³ → "0.5 M³ emballés"</div>
+                <div><strong>Meuble (0.5 M³, non fragile):</strong> 0.5 × 1.05 = 0.525 M³ → "0.525 M³ emballés"</div>
                 <div><strong>Vase (0.02 M³, fragile):</strong> 0.02 × 2.0 = 0.04 M³ → "66.7% d'un carton"</div>
+                <div><strong>Armoire (1.0 M³, démontable):</strong> 1.0 × 1.05 × 0.7 = 0.735 M³ → "0.735 M³ emballés"</div>
               </div>
             </div>
           </div>

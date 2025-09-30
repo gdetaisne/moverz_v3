@@ -197,7 +197,8 @@ function mergeItems(items1: any[], items2: any[]): any[] {
         item.volume_m3 || 0,
         item.fragile || false,
         item.category || 'misc',
-        item.dimensions_cm
+        item.dimensions_cm,
+        item.dismountable
       );
       item.packaged_volume_m3 = packagingInfo.packagedVolumeM3;
       item.packaging_display = packagingInfo.displayValue;
