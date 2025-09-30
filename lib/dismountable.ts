@@ -190,6 +190,15 @@ export function calculateDismountableProbability(
 ): { isDismountable: boolean; confidence: number; source: 'database' | 'ai' | 'hybrid' } {
   const config = getDismountableConfig(label);
   
+  // Si pas de config trouvée, utiliser les valeurs par défaut
+  if (!config) {
+    return {
+      isDismountable: false,
+      confidence: 0.5,
+      source: 'database'
+    };
+  }
+  
   // Si pas d'analyse IA ou confiance faible, utiliser la base de données
   if (!aiDismountable || aiConfidence === undefined || aiConfidence < 0.6) {
     return {
