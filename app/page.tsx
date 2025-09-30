@@ -1139,7 +1139,7 @@ export default function Home() {
                         </h4>
                         <p className="text-gray-600 mb-6">
                           Glissez-déposez vos photos ici ou cliquez pour sélectionner.<br />
-                          <span className="text-sm text-gray-500">Formats acceptés : JPG, PNG, WEBP</span>
+                          <span className="text-sm text-gray-500">Formats acceptés : JPG, PNG, WEBP, HEIC</span>
                         </p>
                         
                         <input
@@ -1147,7 +1147,7 @@ export default function Home() {
                           ref={fileInputRef}
                           onChange={onFileSelect}
                           multiple
-                          accept="image/*"
+                          accept="image/*,.heic,.heif"
                           className="hidden"
                         />
               <button
@@ -1199,7 +1199,7 @@ export default function Home() {
                           ref={fileInputRef}
                           onChange={onFileSelect}
                   multiple 
-                  accept="image/*" 
+                            accept="image/*,.heic,.heif"
                           className="hidden"
                         />
           </div>
