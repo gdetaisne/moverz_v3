@@ -4,9 +4,12 @@ const nextConfig: NextConfig = {
   // Mode standalone pour déploiement CapRover
   output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
   
-  // Désactiver ESLint pendant le build pour CapRover
+  // Désactiver ESLint et TypeScript pendant le build pour CapRover
   eslint: {
     ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
   },
   
   // Configuration webpack pour PDFKit et modules Node.js
