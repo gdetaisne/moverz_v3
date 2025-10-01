@@ -1,10 +1,9 @@
 // Section header du PDF
 import PDFDocument from 'pdfkit';
-import type { PDFDocument as PDFDocumentType } from 'pdfkit';
 import { COLORS, FONTS, SPACING, PDF_CONFIG } from '../styles';
 
 export function addHeader(
-  doc: PDFDocumentType,
+  doc: typeof PDFDocument,
   referenceNumber: string,
   generatedDate: string
 ): void {
@@ -71,7 +70,7 @@ export function addHeader(
 }
 
 export function addPageNumber(
-  doc: PDFDocument,
+  doc: typeof PDFDocument,
   pageNumber: number,
   totalPages: number
 ): void {

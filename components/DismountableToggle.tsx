@@ -18,7 +18,7 @@ export default function DismountableToggle({ item, onToggle, className = "" }: D
   const source = item.dismountable_source ?? 'database';
 
   // Ne pas afficher pour les objets qui ne sont clairement pas démontables
-  if (item.category === 'misc' && !item.label.toLowerCase().includes('lampe')) {
+  if (item.category === 'misc' && !item.label?.toLowerCase().includes('lampe')) {
     return null;
   }
 

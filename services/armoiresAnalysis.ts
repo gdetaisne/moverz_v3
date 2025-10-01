@@ -86,11 +86,10 @@ async function analyzeArmoiresWithClaude(opts: { imageUrl: string }): Promise<TP
   try {
     const settings = SPECIALIZED_AI_SETTINGS.armoires;
     
-    const analysis = await analyzePhotoWithClaude(
-      opts.imageUrl,
-      settings.systemPrompt,
-      settings.userPrompt
-    );
+    const analysis = await analyzePhotoWithClaude({
+      photoId: 'armoire-analysis',
+      imageUrl: opts.imageUrl
+    });
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('🤖 RÉPONSE BRUTE CLAUDE ARMOIRES:');
@@ -110,11 +109,10 @@ async function analyzeArmoiresWithClaude(opts: { imageUrl: string }): Promise<TP
 async function analyzeArmoiresWithOpenAI(opts: { imageUrl: string }): Promise<TPhotoAnalysis> {
   const settings = SPECIALIZED_AI_SETTINGS.armoires;
   
-  const analysis = await originalAnalyzePhotoWithVision(
-    opts.imageUrl,
-    settings.systemPrompt,
-    settings.userPrompt
-  );
+  const analysis = await originalAnalyzePhotoWithVision({
+    photoId: 'armoire-analysis',
+    imageUrl: opts.imageUrl
+  });
 
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('🤖 RÉPONSE BRUTE OPENAI ARMOIRES:');
@@ -137,7 +135,7 @@ function mergeArmoiresResults(
   console.log('OpenAI items:', JSON.stringify(openaiResults?.items, null, 2));
 
   if (!claudeResults && !openaiResults) {
-    return { items: [], totals: { total_volume_m3: 0, total_items: 0 } };
+    return { items: [], totals: { volume_m3: 0, count_items: 0 } };
   }
 
   if (!claudeResults) return openaiResults!;

@@ -67,11 +67,12 @@ export async function POST(req: NextRequest) {
     });
   } catch (e: unknown) {
     console.error("API Error:", e);
-    console.error("Stack:", e.stack);
+    const error = e as Error;
+    console.error("Stack:", error.stack);
     return NextResponse.json({ 
-      error: e.message ?? "internal_error",
-      stack: e.stack,
-      details: e.toString()
+      error: error.message ?? "internal_error",
+      stack: error.stack,
+      details: error.toString()
     }, { status: 500 });
   }
 }

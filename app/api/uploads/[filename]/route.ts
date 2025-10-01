@@ -42,7 +42,8 @@ export async function GET(
       }
     });
   } catch (error: unknown) {
-    if (error.code === 'ENOENT') {
+    const err = error as NodeJS.ErrnoException;
+    if (err.code === 'ENOENT') {
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
     console.error('Error serving file:', error);

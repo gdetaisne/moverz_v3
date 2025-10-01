@@ -7,6 +7,12 @@ import QuoteForm from "@/components/QuoteForm";
 import DismountableToggle from "@/components/DismountableToggle";
 import FragileToggle from "@/components/FragileToggle";
 import ContinuationModal from "@/components/ContinuationModal";
+import { PhotoCard } from "@/components/PhotoCard";
+import { InventoryItemCard } from "@/components/InventoryItemCard";
+import { InventorySummaryCard } from "@/components/InventorySummaryCard";
+import { PhotoUploadZone } from "@/components/PhotoUploadZone";
+import { useInventoryCalculations } from "@/hooks/useInventoryCalculations";
+import { useWorkflowSteps } from "@/hooks/useWorkflowSteps";
 import { getBuildInfo } from "@/lib/buildInfo";
 import { TInventoryItem } from "@/lib/schemas";
 import { clearCache } from "@/lib/cache";
@@ -62,40 +68,7 @@ export default function Home() {
   const isStep3Completed = currentStep > 3 && quoteFormData !== null;
   const isStep4Completed = false; // Toujours false car c'est la dernière étape
   
-  const workflowSteps = [
-    {
-      id: 1,
-      title: "Charger des photos",
-      description: "Uploadez vos photos de pièces",
-      icon: "📸",
-      completed: isStep1Completed,
-      disabled: false
-    },
-    {
-      id: 2,
-      title: "Valider l'inventaire",
-      description: "Vérifiez les objets dans la pièce",
-      icon: "🔍",
-      completed: isStep2Completed,
-      disabled: !isStep1Completed
-    },
-    {
-      id: 3,
-      title: "Préparer la demande",
-      description: "Renseignez vos informations",
-      icon: "📋",
-      completed: isStep3Completed,
-      disabled: false // Toujours accessible
-    },
-    {
-      id: 4,
-      title: "Envoyer le devis",
-      description: "Finalisez votre demande",
-      icon: "📤",
-      completed: isStep4Completed,
-      disabled: !isStep3Completed
-    }
-  ];
+  // Les workflowSteps sont maintenant gérés par le hook useWorkflowSteps
 
   // Fonction pour changer d'étape
   const handleStepChange = (step: number) => {
@@ -918,33 +891,11 @@ export default function Home() {
   }
 
 
-  const totalVolumeSelected = useMemo(() => {
-    let totalVolume = 0;
-    let totalItems = 0;
-
-    currentRoom.photos.forEach(photo => {
-      if (photo.status === 'completed' && photo.analysis?.items) {
-        // Objets normaux
-        photo.analysis.items.forEach((item: TInventoryItem, itemIndex: number) => {
-          // Vérifier si l'objet est sélectionné
-          // Par défaut, si le Set est vide, tous les objets sont sélectionnés
-          const isSelected = photo.selectedItems.size === 0 || photo.selectedItems.has(itemIndex);
-          if (isSelected) {
-            totalVolume += (item.volume_m3 || 0) * (item.quantity || 1);
-            totalItems += item.quantity || 1;
-          }
-        });
-        
-        // Autres objets (toujours sélectionnés par défaut)
-        if (photo.analysis.special_rules?.autres_objets?.present) {
-          totalVolume += photo.analysis.special_rules.autres_objets.volume_m3 || 0;
-          totalItems += photo.analysis.special_rules.autres_objets.listed_items?.length || 0;
-        }
-      }
-    });
-
-    return { totalVolume: roundUpVolume(totalVolume), totalItems };
-  }, [currentRoom.photos]);
+  // Utiliser le hook pour les calculs d'inventaire
+  const inventoryCalculations = useInventoryCalculations(currentRoom.photos);
+  
+  // Utiliser le hook pour les étapes du workflow
+  const workflowSteps = useWorkflowSteps(currentStep, currentRoom.photos, quoteFormData);
 
   const toggleItemSelection = (photoIndex: number, itemIndex: number) => {
     setCurrentRoom(prev => ({

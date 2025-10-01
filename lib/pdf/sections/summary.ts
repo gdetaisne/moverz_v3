@@ -1,10 +1,9 @@
 // Section récapitulatif de l'inventaire
 import PDFDocument from 'pdfkit';
-import type { PDFDocument as PDFDocumentType } from 'pdfkit';
 import { COLORS, FONTS, SPACING, PDF_CONFIG } from '../styles';
 import { PDFSummary } from '../types';
 
-export function addSummary(doc: PDFDocumentType, summary: PDFSummary): void {
+export function addSummary(doc: typeof PDFDocument, summary: PDFSummary): void {
   const { margins, contentWidth } = PDF_CONFIG;
   
   // Titre de section
@@ -118,7 +117,7 @@ export function addSummary(doc: PDFDocumentType, summary: PDFSummary): void {
 }
 
 function addTag(
-  doc: PDFDocument,
+  doc: typeof PDFDocument,
   text: string,
   x: number,
   y: number,

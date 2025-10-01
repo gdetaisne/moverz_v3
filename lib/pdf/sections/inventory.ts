@@ -1,11 +1,10 @@
 // Section détails de l'inventaire avec photos
 import PDFDocument from 'pdfkit';
-import type { PDFDocument as PDFDocumentType } from 'pdfkit';
 import { COLORS, FONTS, SPACING, PDF_CONFIG } from '../styles';
 import { PDFRoomData, PDFInventoryItem } from '../types';
 
 export function addInventoryDetails(
-  doc: PDFDocumentType,
+  doc: typeof PDFDocument,
   rooms: PDFRoomData[]
 ): void {
   const { margins, contentWidth } = PDF_CONFIG;
@@ -54,7 +53,7 @@ export function addInventoryDetails(
   });
 }
 
-function addRoomTitle(doc: PDFDocument, roomName: string, roomNumber: number): void {
+function addRoomTitle(doc: typeof PDFDocument, roomName: string, roomNumber: number): void {
   const { margins, contentWidth } = PDF_CONFIG;
   
   // Titre de pièce moderne avec bandeau
@@ -83,7 +82,7 @@ function addRoomTitle(doc: PDFDocument, roomName: string, roomNumber: number): v
 }
 
 function addPhotoSection(
-  doc: PDFDocument,
+  doc: typeof PDFDocument,
   photo: any,
   photoNumber: number,
   roomName: string
@@ -150,7 +149,7 @@ function addPhotoSection(
 }
 
 function addPhotoPlaceholder(
-  doc: PDFDocument,
+  doc: typeof PDFDocument,
   x: number,
   y: number,
   width: number,
@@ -178,7 +177,7 @@ function addPhotoPlaceholder(
 }
 
 function addItemsList(
-  doc: PDFDocument,
+  doc: typeof PDFDocument,
   items: PDFInventoryItem[],
   x: number,
   width: number
@@ -319,7 +318,7 @@ function addItemsList(
 }
 
 // Fonction pour afficher le total d'une photo
-function addPhotoTotal(doc: PDFDocument, totalVolume: number, totalCartons: number): void {
+function addPhotoTotal(doc: typeof PDFDocument, totalVolume: number, totalCartons: number): void {
   const { margins, contentWidth } = PDF_CONFIG;
   
   // Encadré subtil pour le total
@@ -349,7 +348,7 @@ function addPhotoTotal(doc: PDFDocument, totalVolume: number, totalCartons: numb
 }
 
 // Fonction pour afficher le total d'une pièce
-function addRoomTotal(doc: PDFDocument, totalVolume: number, totalCartons: number): void {
+function addRoomTotal(doc: typeof PDFDocument, totalVolume: number, totalCartons: number): void {
   const { margins, contentWidth } = PDF_CONFIG;
   
   doc.moveDown(0.5);

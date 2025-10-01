@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
 
     console.error('❌ Erreur send-continuation-link:', error);
     return NextResponse.json(
-      { error: error.message || 'Erreur serveur' },
+      { error: (error as Error).message || 'Erreur serveur' },
       { status: 500 }
     );
   }

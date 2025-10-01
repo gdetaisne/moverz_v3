@@ -35,7 +35,7 @@ export default function ContinuationModal({
         setEmail("");
       }, 2000);
     } catch (err: unknown) {
-      setError(err.message || "Erreur lors de l'envoi de l'email");
+      setError((err as Error).message || "Erreur lors de l'envoi de l'email");
     } finally {
       setIsLoading(false);
     }

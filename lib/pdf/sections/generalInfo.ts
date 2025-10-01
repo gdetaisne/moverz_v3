@@ -1,10 +1,9 @@
 // Section informations générales du PDF
 import PDFDocument from 'pdfkit';
-import type { PDFDocument as PDFDocumentType } from 'pdfkit';
 import { COLORS, FONTS, SPACING, PDF_CONFIG } from '../styles';
 import { PDFFormData } from '../types';
 
-export function addGeneralInfo(doc: PDFDocumentType, formData: PDFFormData): void {
+export function addGeneralInfo(doc: typeof PDFDocument, formData: PDFFormData): void {
   const { margins, contentWidth } = PDF_CONFIG;
   
   // Titre de section moderne
@@ -118,7 +117,7 @@ export function addGeneralInfo(doc: PDFDocumentType, formData: PDFFormData): voi
   doc.moveDown(0.5);
 }
 
-function addSectionTitle(doc: PDFDocument, title: string): void {
+function addSectionTitle(doc: typeof PDFDocument, title: string): void {
   doc
     .fontSize(FONTS.sizes.h2)
     .fillColor(COLORS.primary)
@@ -128,7 +127,7 @@ function addSectionTitle(doc: PDFDocument, title: string): void {
   doc.moveDown(0.5);
 }
 
-function addSubSection(doc: PDFDocument, title: string, x?: number): void {
+function addSubSection(doc: typeof PDFDocument, title: string, x?: number): void {
   const xPos = x || PDF_CONFIG.margins.left;
   doc
     .fontSize(FONTS.sizes.body)
@@ -139,7 +138,7 @@ function addSubSection(doc: PDFDocument, title: string, x?: number): void {
   doc.moveDown(0.3);
 }
 
-function addInfoLineCompact(doc: PDFDocument, label: string, value: string, x: number, width: number): void {
+function addInfoLineCompact(doc: typeof PDFDocument, label: string, value: string, x: number, width: number): void {
   const labelWidth = 80;
   
   doc

@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
   } catch (error: unknown) {
     console.error('[GET /api/projects] Error:', error);
     return NextResponse.json(
-      { error: error.message || 'Internal error' },
+      { error: (error as Error).message || 'Internal error' },
       { status: 500 }
     );
   }
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: error.message || 'Internal error' },
+      { error: (error as Error).message || 'Internal error' },
       { status: 500 }
     );
   }

@@ -118,7 +118,7 @@ export class AmazonRekognitionService {
     
     // AMÉLIORATION : Utiliser la DB de profondeurs au lieu de 0.6 fixe
     const estimatedDepth = calculateSmartDepth(
-      objectLabel,
+      targetLabel,
       estimatedWidth,
       estimatedHeight
     );

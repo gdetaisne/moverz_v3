@@ -42,8 +42,9 @@ export async function GET(
   } catch (error: unknown) {
     const { id } = await params;
     console.error(`[GET /api/projects/${id}] Error:`, error);
+    const err = error as Error;
     return NextResponse.json(
-      { error: error.message || 'Internal error' },
+      { error: err.message || 'Internal error' },
       { status: 500 }
     );
   }
@@ -100,7 +101,7 @@ export async function PUT(
     }
 
     return NextResponse.json(
-      { error: error.message || 'Internal error' },
+      { error: (error as Error).message || 'Internal error' },
       { status: 500 }
     );
   }
@@ -139,7 +140,7 @@ export async function DELETE(
     const { id } = await params;
     console.error(`[DELETE /api/projects/${id}] Error:`, error);
     return NextResponse.json(
-      { error: error.message || 'Internal error' },
+      { error: (error as Error).message || 'Internal error' },
       { status: 500 }
     );
   }
