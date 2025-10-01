@@ -41,3 +41,4 @@ Image → [Google Vision] → [Amazon Rekognition] → [Fusion Logic] → [Résu
       objets               objets               des dimensions
 ```
 
+

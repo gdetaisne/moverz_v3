@@ -35,3 +35,4 @@ curl -X POST -F "file=@test-image.jpg" http://localhost:3001/api/photos/analyze
 - Object Detection: $0.20/1000 détections
 - Total pour 1000 photos/mois: ~$17
 
+
