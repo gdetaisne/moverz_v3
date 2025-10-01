@@ -59,9 +59,7 @@ export class GoogleVisionService {
         return this.getFallbackDimensions(objectLabel);
       }
       
-      // TEMPORAIRE: Code commenté pour faire passer le build
-      /*
-      // 1. Détection d'objets
+      // 1. Détection d'objets avec Google Vision
       const result = await this.performObjectLocalization(imageUrl);
 
       // 2. Extraction des dimensions depuis les bounding boxes
@@ -73,13 +71,17 @@ export class GoogleVisionService {
       // 3. Validation et correction
       const validatedDimensions = this.validateDimensions(dimensions, objectLabel);
 
+      const confidence = this.calculateConfidence(result.localizedObjectAnnotations || []);
+      const reasoning = `Google Vision: Détection basée sur ${result.localizedObjectAnnotations?.length || 0} objets`;
+
+      loggingService.info(`Mesure ${objectLabel} terminée: ${validatedDimensions.length}x${validatedDimensions.width}x${validatedDimensions.height}cm (confiance: ${confidence.toFixed(2)})`, 'GoogleVisionService');
+
       return {
         dimensions: validatedDimensions,
-        confidence: this.calculateConfidence(result.localizedObjectAnnotations || []),
-        reasoning: `Google Vision: Détection basée sur ${result.localizedObjectAnnotations?.length || 0} objets`,
+        confidence,
+        reasoning,
         boundingBox: result.localizedObjectAnnotations?.[0]?.boundingPoly
       };
-      */
 
     } catch (error) {
       loggingService.error('Erreur Google Vision', 'GoogleVisionService', error);
@@ -91,11 +93,45 @@ export class GoogleVisionService {
 
   /**
    * Effectue la localisation d'objets avec le client Google Vision
-   * TEMPORAIRE: Désactivé pour le build
    */
   private async performObjectLocalization(imageUrl: string) {
-    // TEMPORAIRE: Désactivé pour faire passer le build
-    throw new Error('Google Vision temporairement désactivé');
+    if (!this.client) {
+      throw new Error('Client Google Vision non initialisé');
+    }
+
+    try {
+      // Préparer l'image pour Google Vision
+      let imageBuffer: Buffer;
+      
+      if (imageUrl.startsWith('data:')) {
+        // Image en base64
+        const base64Data = imageUrl.split(',')[1];
+        imageBuffer = Buffer.from(base64Data, 'base64');
+      } else if (imageUrl.startsWith('http')) {
+        // Image via URL
+        const response = await fetch(imageUrl);
+        const arrayBuffer = await response.arrayBuffer();
+        imageBuffer = Buffer.from(arrayBuffer);
+      } else {
+        throw new Error('Format d\'image non supporté pour Google Vision');
+      }
+
+      // Appel API Google Vision pour localisation d'objets
+      const [result] = await this.client.objectLocalization({
+        image: { content: imageBuffer }
+      });
+
+      loggingService.info(
+        `Google Vision: Détecté ${result.localizedObjectAnnotations?.length || 0} objets`,
+        'GoogleVisionService'
+      );
+
+      return result;
+
+    } catch (error) {
+      loggingService.error('Erreur lors de la localisation d\'objets Google Vision', 'GoogleVisionService', error);
+      throw error;
+    }
   }
 
   /**

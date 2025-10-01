@@ -10,6 +10,7 @@ import { addHeader } from './sections/header';
 import { addGeneralInfo } from './sections/generalInfo';
 import { addSummary } from './sections/summary';
 import { addInventoryDetails } from './sections/inventory';
+import { addRecapTables } from './sections/tables';
 
 /**
  * Génère un PDF de devis de déménagement
@@ -53,6 +54,9 @@ export async function generateMovingQuotePDF(
       addGeneralInfo(doc, data.formData);
       addSummary(doc, summary);
       addInventoryDetails(doc, data.rooms);
+      
+      // Ajouter les tableaux récapitulatifs en page 2
+      addRecapTables(doc, data.rooms);
 
       // Finaliser le document
       doc.end();
@@ -103,13 +107,8 @@ function calculateSummary(rooms: PDFRoomData[]): PDFSummary {
  * Génère un numéro de référence unique
  */
 export function generateReferenceNumber(): string {
-  const date = new Date();
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-  
-  return `DEV-${year}${month}${day}-${random}`;
+  // Référence à compléter par le déménageur
+  return 'A COMPLETER';
 }
 
 /**

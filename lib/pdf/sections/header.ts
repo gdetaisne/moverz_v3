@@ -9,34 +9,64 @@ export function addHeader(
 ): void {
   const { margins, contentWidth } = PDF_CONFIG;
   
-  // Logo / Titre principal
+  // Bandeau bleu en haut
+  doc
+    .rect(0, 0, PDF_CONFIG.pageWidth, 80)
+    .fillColor(COLORS.primary)
+    .fill();
+  
+  // Titre principal en blanc
   doc
     .fontSize(FONTS.sizes.h1)
-    .fillColor(COLORS.primary)
+    .fillColor('#FFFFFF')
     .font('Helvetica-Bold')
-    .text('DEVIS DÉMÉNAGEMENT', margins.left, margins.top);
+    .text('RÉCAPITULATIF DE DEMANDE DE DEVIS', margins.left, margins.top - 15);
   
-  // Numéro de référence
+  // Sous-titre
+  doc
+    .fontSize(FONTS.sizes.small)
+    .fillColor('#FFFFFF')
+    .fillOpacity(0.9)
+    .font('Helvetica')
+    .text('Document pour établissement du devis de déménagement', margins.left, doc.y + 5);
+  
+  doc.fillOpacity(1); // Reset opacity
+  
+  // Zone info sur fond blanc
+  const infoY = 90;
+  doc.y = infoY;
+  
+  // Numéro de référence (gauche)
   doc
     .fontSize(FONTS.sizes.body)
-    .fillColor(COLORS.text.medium)
+    .fillColor(COLORS.text.dark)
+    .font('Helvetica-Bold')
+    .text('Référence:', margins.left, infoY, { continued: true })
     .font('Helvetica')
-    .text(`Référence: ${referenceNumber}`, margins.left, doc.y + SPACING.sm);
+    .fillColor(COLORS.text.medium)
+    .text(` ${referenceNumber}`);
   
-  // Date de génération
+  // Date de génération (droite)
   doc
-    .text(`Généré le: ${generatedDate}`, margins.left, doc.y + SPACING.xs);
+    .fontSize(FONTS.sizes.body)
+    .fillColor(COLORS.text.dark)
+    .font('Helvetica-Bold')
+    .text('Généré le:', margins.left + contentWidth / 2, infoY, { continued: true })
+    .font('Helvetica')
+    .fillColor(COLORS.text.medium)
+    .text(` ${generatedDate}`);
   
-  // Ligne de séparation
+  // Ligne de séparation élégante
+  doc.y = infoY + 20;
   doc
-    .strokeColor(COLORS.border)
-    .lineWidth(1)
-    .moveTo(margins.left, doc.y + SPACING.md)
-    .lineTo(margins.left + contentWidth, doc.y + SPACING.md)
+    .strokeColor(COLORS.primary)
+    .lineWidth(2)
+    .moveTo(margins.left, doc.y)
+    .lineTo(margins.left + contentWidth, doc.y)
     .stroke();
   
   // Espace après header
-  doc.moveDown(2);
+  doc.moveDown(1.5);
 }
 
 export function addPageNumber(

@@ -1,8 +1,66 @@
 import { randomUUID } from "crypto";
 import { File } from "node:buffer";
 import { optimizeImageForAI } from "@/lib/imageOptimization";
+import { prisma } from "@/lib/db";
+import fs from 'fs/promises';
+import path from 'path';
 
-// Stockage Base64 optimisé - compatible local + production
+// Configuration
+const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads');
+const UPLOADS_URL = process.env.UPLOADS_URL || '/api/uploads';
+
+/**
+ * Sauvegarde une photo sur le disque (VPS local)
+ */
+export async function savePhotoToFile(file: any, photoId?: string) {
+  const id = photoId || randomUUID();
+  
+  // Normaliser l'objet file
+  let normalizedFile: File;
+  
+  if (file instanceof File) {
+    normalizedFile = file;
+  } else {
+    const name = file.name || 'image.jpg';
+    const type = file.type || 'image/jpeg';
+    normalizedFile = new File([file], name, { type });
+  }
+  
+  const ext = (normalizedFile.name.split(".").pop() || "jpg").toLowerCase();
+  
+  // Convertir en Buffer
+  const arrayBuffer = await normalizedFile.arrayBuffer();
+  const originalBuffer = Buffer.from(arrayBuffer);
+  
+  // Optimiser l'image pour l'IA
+  const optimized = await optimizeImageForAI(originalBuffer);
+  
+  // Créer le dossier si nécessaire
+  await fs.mkdir(UPLOADS_DIR, { recursive: true });
+  
+  // Nom du fichier
+  const filename = `${id}.${ext}`;
+  const filePath = path.join(UPLOADS_DIR, filename);
+  
+  // Sauvegarder sur disque
+  await fs.writeFile(filePath, optimized.buffer);
+  
+  // URL publique
+  const url = `${UPLOADS_URL}/${filename}`;
+  
+  console.log(`💾 Photo sauvegardée: ${filePath} (${optimized.buffer.length} bytes)`);
+  
+  return {
+    id,
+    filename,
+    filePath: filePath,  // Chemin absolu disque pour référence
+    url,  // URL publique (/api/uploads/xxx.jpg)
+    size: optimized.buffer.length,
+    originalSize: originalBuffer.length
+  };
+}
+
+// Stockage Base64 optimisé - compatible local + production (LEGACY)
 export async function saveAsBase64(file: any){
   const id = randomUUID();
   
@@ -50,4 +108,61 @@ export async function saveAsBase64(file: any){
     originalSize: originalBuffer.length,
     optimizedSize: optimized.buffer.length
   };
+}
+
+/**
+ * Sauvegarde une photo dans la DB (crée un projet par défaut si nécessaire)
+ */
+export async function savePhotoToDatabase(params: {
+  userId: string;
+  photoId: string;
+  filename: string;
+  filePath: string;  // Chemin relatif (/uploads/xxx.jpg)
+  url: string;       // URL publique
+  roomType?: string;
+  analysis?: any;
+}): Promise<{ photoId: string; projectId: string }> {
+  const { userId, photoId, filename, filePath, url, roomType, analysis } = params;
+
+  // 1. Récupérer ou créer un projet par défaut pour cet utilisateur
+  let project = await prisma.project.findFirst({
+    where: { userId: userId, name: "Projet Moverz" },
+    select: { id: true }
+  });
+
+  if (!project) {
+    project = await prisma.project.create({
+      data: {
+        userId: userId,
+        name: "Projet Moverz",
+        currentStep: 1
+      },
+      select: { id: true }
+    });
+  }
+
+  // 2. Créer ou mettre à jour la photo en DB
+  const photo = await prisma.photo.upsert({
+    where: { id: photoId },
+    update: {
+      filename: filename,
+      filePath: filePath,  // Chemin fichier
+      url: url,            // URL publique
+      roomType: roomType,
+      analysis: analysis
+    },
+    create: {
+      id: photoId,
+      projectId: project.id,
+      filename: filename,
+      filePath: filePath,  // Chemin fichier
+      url: url,            // URL publique
+      roomType: roomType,
+      analysis: analysis
+    }
+  });
+
+  console.log(`📸 Photo DB: ${photo.id} → ${photo.url} (${project.id})`);
+
+  return { photoId: photo.id, projectId: project.id };
 }

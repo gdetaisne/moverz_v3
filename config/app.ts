@@ -15,6 +15,7 @@ const envSchema = z.object({
   // Cloud APIs
   GOOGLE_CLOUD_PROJECT_ID: z.string().optional(),
   GOOGLE_APPLICATION_CREDENTIALS: z.string().optional(),
+  GOOGLE_VISION_API_KEY: z.string().optional(),
   AWS_ACCESS_KEY_ID: z.string().optional(),
   AWS_SECRET_ACCESS_KEY: z.string().optional(),
   AWS_REGION: z.string().default('us-east-1'),
@@ -64,7 +65,8 @@ export const config = {
   google: {
     projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
     credentialsPath: process.env.GOOGLE_APPLICATION_CREDENTIALS,
-    enabled: !!(process.env.GOOGLE_CLOUD_PROJECT_ID && process.env.GOOGLE_APPLICATION_CREDENTIALS)
+    apiKey: process.env.GOOGLE_VISION_API_KEY,
+    enabled: !!(process.env.GOOGLE_CLOUD_PROJECT_ID && process.env.GOOGLE_VISION_API_KEY)
   },
   
   aws: {
@@ -147,4 +149,5 @@ export function getApiConfig(api: 'openai' | 'claude') {
       throw new Error(`API non supportée: ${api}`);
   }
 }
+
 

@@ -6,10 +6,12 @@ import WorkflowSteps from "@/components/WorkflowSteps";
 import QuoteForm from "@/components/QuoteForm";
 import DismountableToggle from "@/components/DismountableToggle";
 import FragileToggle from "@/components/FragileToggle";
+import ContinuationModal from "@/components/ContinuationModal";
 import { getBuildInfo } from "@/lib/buildInfo";
 import { TInventoryItem } from "@/lib/schemas";
 import { clearCache } from "@/lib/cache";
 import { calculatePackagedVolume } from "@/lib/packaging";
+import { smartDuplicateDetectionService } from "@/services/smartDuplicateDetectionService";
 
 interface RoomData {
   id: string;
@@ -44,7 +46,13 @@ export default function Home() {
   const [isSubmittingQuote, setIsSubmittingQuote] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isSmallObjectsExpanded, setIsSmallObjectsExpanded] = useState(false);
+  const [isMeublesExpanded, setIsMeublesExpanded] = useState(false);
+  const [isMobilierFragileExpanded, setIsMobilierFragileExpanded] = useState(false);
+  const [isCategoryDetailsExpanded, setIsCategoryDetailsExpanded] = useState(false);
   const [selectedObjects, setSelectedObjects] = useState<Map<string, Set<number>>>(new Map()); // photoId -> Set<itemIndex>
+  const [showContinuationModal, setShowContinuationModal] = useState(false);
+  const [hasShownContinuationModal, setHasShownContinuationModal] = useState(false);
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Configuration des étapes du workflow
@@ -229,6 +237,80 @@ export default function Home() {
     }));
   }, []);
 
+  // Fonction pour télécharger le PDF
+  const handleDownloadPDF = useCallback(async () => {
+    try {
+      setLoading(true);
+      
+      // Détecter le nom réel de la pièce depuis les photos
+      const detectedRoomName = currentRoom.photos.find(photo => photo.roomName)?.roomName || 'Pièce';
+      
+      // Préparer les données des pièces avec les items sélectionnés
+      const rooms = [{
+        id: currentRoom.id,
+        name: detectedRoomName,
+        photos: currentRoom.photos
+          .filter(photo => photo.status === 'completed' && photo.analysis?.items)
+          .map(photo => ({
+            fileUrl: photo.fileUrl,
+            photoData: photo.fileUrl, // On pourrait convertir en base64 si nécessaire
+            items: photo.analysis.items
+              .map((item: any, idx: number) => {
+                if (isObjectSelected(photo.photoId || `photo-${currentRoom.photos.indexOf(photo)}`, idx)) {
+                  return {
+                    label: item.label,
+                    category: item.category,
+                    quantity: item.quantity || 1,
+                    dimensions_cm: item.dimensions_cm,
+                    volume_m3: item.volume_m3 || 0,
+                    fragile: item.fragile || false,
+                    dismountable: item.dismountable || false,
+                    notes: item.notes,
+                  };
+                }
+                return null;
+              })
+              .filter((item: any) => item !== null),
+          }))
+          .filter(photo => photo.items.length > 0),
+      }];
+
+      // Appeler l'API pour générer le PDF
+      const response = await fetch('/api/pdf/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          formData: quoteFormData,
+          rooms: rooms,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la génération du PDF');
+      }
+
+      // Télécharger le PDF
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `devis-demenagement-${new Date().getTime()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      console.log('✅ PDF téléchargé avec succès');
+    } catch (error) {
+      console.error('❌ Erreur lors du téléchargement du PDF:', error);
+      alert('Une erreur est survenue lors de la génération du PDF. Veuillez réessayer.');
+    } finally {
+      setLoading(false);
+    }
+  }, [currentRoom, quoteFormData, isObjectSelected]);
+
   // Fonction pour obtenir les détails de calcul d'emballage
   const getPackagingDetails = useCallback((item: any) => {
     if (item.packaging_calculation_details) {
@@ -350,6 +432,50 @@ export default function Home() {
     }
   };
 
+  // Afficher le modal de continuation quand on arrive sur l'étape 2
+  useEffect(() => {
+    if (currentStep === 2 && currentRoom.photos.length > 0 && !hasShownContinuationModal) {
+      // Afficher le modal après 5 secondes
+      const timer = setTimeout(() => {
+        setShowContinuationModal(true);
+        setHasShownContinuationModal(true);
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [currentStep, currentRoom.photos.length, hasShownContinuationModal]);
+
+  // Handler pour envoyer l'email de continuation
+  const handleSendContinuationLink = async (email: string) => {
+    try {
+      const response = await fetch('/api/send-continuation-link', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Erreur lors de l\'envoi');
+      }
+
+      const data = await response.json();
+      console.log('✅ Lien de continuation envoyé:', data);
+
+      // En dev, logger l'URL debug
+      if (data.debugUrl) {
+        console.log('🔗 URL debug:', data.debugUrl);
+      }
+    } catch (error) {
+      console.error('❌ Erreur envoi lien:', error);
+      throw error;
+    }
+  };
+
   // Persistance automatique des données
   useEffect(() => {
     const saveData = () => {
@@ -371,6 +497,67 @@ export default function Home() {
 
     return () => clearInterval(interval);
   }, [currentRoom, currentStep, quoteFormData, inventoryValidated]);
+
+  // ✨ NOUVEAU: Sauvegarde automatique en DB avec recalcul des volumes (debounce 3s)
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      // Pour chaque photo avec un photoId et une analyse
+      for (const photo of currentRoom.photos) {
+        if (photo.photoId && photo.analysis) {
+          try {
+            // Recalculer les volumes emballés pour chaque item
+            const updatedItems = photo.analysis.items?.map((item: any) => {
+              const packagingInfo = calculatePackagedVolume(
+                item.volume_m3,
+                item.fragile,
+                item.category,
+                item.dimensions_cm,
+                item.dismountable
+              );
+              
+              return {
+                ...item,
+                packaged_volume_m3: packagingInfo.packagedVolumeM3,
+                packaging_display: packagingInfo.displayValue,
+                is_small_object: packagingInfo.isSmallObject,
+                packaging_calculation_details: packagingInfo.calculationDetails
+              };
+            }) || [];
+
+            // Recalculer les totaux
+            const totalVolumeM3 = updatedItems.reduce((sum: number, item: any) => sum + item.volume_m3, 0);
+            const totalPackagedM3 = updatedItems.reduce((sum: number, item: any) => sum + item.packaged_volume_m3, 0);
+
+            const updatedAnalysis = {
+              ...photo.analysis,
+              items: updatedItems,
+              totals: {
+                total_volume_m3: totalVolumeM3,
+                total_packaged_m3: totalPackagedM3,
+                total_items: updatedItems.length
+              }
+            };
+
+            // Sauvegarder en DB
+            await fetch(`/api/photos/${photo.photoId}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                analysis: updatedAnalysis,
+                roomType: photo.roomName
+              })
+            });
+
+            console.log(`✅ Photo ${photo.photoId} auto-sauvegardée (${updatedItems.length} items)`);
+          } catch (error) {
+            console.error(`❌ Erreur auto-sauvegarde photo ${photo.photoId}:`, error);
+          }
+        }
+      }
+    }, 3000); // Debounce de 3 secondes
+
+    return () => clearTimeout(timer);
+  }, [currentRoom.photos]);
 
   // Charger les données sauvegardées au démarrage
   useEffect(() => {
@@ -436,6 +623,73 @@ export default function Home() {
       name: newName || 'Pièce sans nom'
     }));
   };
+
+  // Fonction de détection de doublons
+  const detectDuplicates = useCallback(async () => {
+    try {
+      console.log('🔍 Lancement détection doublons...');
+      
+      // Préparer les données pour le service
+      const photosWithAnalysis = currentRoom.photos.map((photo, idx) => ({
+        photoIndex: idx,
+        photoId: photo.photoId || `photo-${idx}`,
+        roomName: photo.roomName,
+        analysis: photo.analysis,
+        fileUrl: photo.fileUrl,
+        file: photo.file
+      }));
+
+      // Détecter les doublons
+      const duplicatesMap = await smartDuplicateDetectionService.detectDuplicates(photosWithAnalysis);
+      
+      if (duplicatesMap.size === 0) {
+        console.log('✅ Aucun doublon détecté');
+        return;
+      }
+
+      console.log(`⚠️  ${duplicatesMap.size} doublon(s) potentiel(s) détecté(s)`);
+
+      // Enrichir les items avec les infos de doublons
+      const enrichedPhotos = smartDuplicateDetectionService.enrichItemsWithDuplicates(
+        photosWithAnalysis,
+        duplicatesMap
+      );
+
+      // Mettre à jour le state avec les items enrichis
+      setCurrentRoom(prev => ({
+        ...prev,
+        photos: prev.photos.map((photo, idx) => ({
+          ...photo,
+          analysis: enrichedPhotos[idx].analysis
+        }))
+      }));
+
+      // Auto-désélectionner les doublons haute confiance
+      enrichedPhotos.forEach((photo, photoIdx) => {
+        photo.analysis?.items.forEach((item: any, itemIdx) => {
+          if (item.shouldAutoDeselect) {
+            console.log(`🔴 Auto-désélection doublon: Photo ${photoIdx + 1}, ${item.label}`);
+            // Désélectionner l'item
+            setCurrentRoom(prev => ({
+              ...prev,
+              photos: prev.photos.map((p, pIdx) => {
+                if (pIdx === photoIdx) {
+                  const selectedItems = new Set(p.selectedItems);
+                  selectedItems.delete(itemIdx);
+                  return { ...p, selectedItems };
+                }
+                return p;
+              })
+            }));
+          }
+        });
+      });
+
+      console.log('✅ Détection doublons terminée');
+    } catch (error) {
+      console.error('❌ Erreur détection doublons:', error);
+    }
+  }, [currentRoom.photos]);
 
   // Fonction de traitement asynchrone d'une photo
   const processPhotoAsync = async (photoIndex: number, file: File, photoId: string) => {
@@ -505,10 +759,17 @@ export default function Home() {
               status: 'completed', 
               analysis: result,
               fileUrl: result.file_url,
+              photoId: result.photo_id || photo.photoId, // ✨ Sauvegarder le photoId de la DB
               progress: 100
             } : photo
           )
         }));
+
+        // ✅ NOUVEAU : Détecter les doublons après l'analyse réussie
+        // Attendre un court instant pour s'assurer que le state est mis à jour
+        setTimeout(() => {
+          detectDuplicates();
+        }, 500);
       } else {
         throw new Error(result.error || 'Erreur inconnue');
       }
@@ -771,6 +1032,22 @@ export default function Home() {
     }
   };
 
+  // Nouvelle logique de classification : basée sur is_small_object et fragile
+  const getNewCategory = (item: any): string => {
+    // Règle 1 : Tous les petits objets → Cartons (peu importe la fragilité)
+    if (item.is_small_object) {
+      return 'Cartons';
+    }
+    
+    // Règle 2 : Objets volumineux fragiles → Mobilier fragile
+    if (item.fragile) {
+      return 'Mobilier fragile';
+    }
+    
+    // Règle 3 : Objets volumineux non fragiles → Meubles
+    return 'Meubles';
+  };
+
   const translateCategory = (category: string) => {
     switch (category) {
       case 'furniture': return 'Meuble';
@@ -815,6 +1092,66 @@ export default function Home() {
     }
     
     return description;
+  };
+
+  // Fonction pour rendre le badge de doublon
+  const renderDuplicateBadge = (item: any) => {
+    if (!item.isPotentialDuplicate || !item.duplicateInfo) return null;
+
+    const { confidence, reasons, similarity, sourcePhotoIndex } = item.duplicateInfo;
+    
+    // Couleurs et icônes selon la confiance
+    const badgeStyles = {
+      high: {
+        bg: 'bg-red-100',
+        text: 'text-red-800',
+        border: 'border-red-400',
+        icon: '🔴',
+        label: 'DOUBLON'
+      },
+      medium: {
+        bg: 'bg-yellow-100',
+        text: 'text-yellow-800',
+        border: 'border-yellow-400',
+        icon: '🟡',
+        label: 'Doublon probable'
+      },
+      low: {
+        bg: 'bg-blue-100',
+        text: 'text-blue-700',
+        border: 'border-blue-300',
+        icon: '⚪',
+        label: 'Possible doublon'
+      }
+    };
+
+    const style = badgeStyles[confidence] || badgeStyles.low;
+
+    return (
+      <div className={`mt-2 p-2 rounded border ${style.border} ${style.bg}`}>
+        <div className="flex items-center gap-2">
+          <span className={`text-xs font-semibold ${style.text} px-2 py-0.5 rounded-full ${style.bg}`}>
+            {style.icon} {style.label}
+          </span>
+          <span className="text-xs text-gray-600">
+            ({Math.round(similarity * 100)}% similaire)
+          </span>
+        </div>
+        <div className={`mt-1 text-xs ${style.text}`}>
+          ↪ Ressemble à {item.label} de Photo {sourcePhotoIndex + 1}
+        </div>
+        {reasons && reasons.length > 0 && (
+          <div className="mt-1 space-y-0.5">
+            {reasons.slice(0, 3).map((reason: string, idx: number) => (
+              <div key={idx} className="flex items-start gap-1 text-xs text-gray-700">
+                <span>✓</span>
+                <span>{reason}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   const renderTestsInterface = () => (
@@ -946,10 +1283,14 @@ export default function Home() {
                                                       className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                                                       title={isObjectSelected(photo.photoId || `photo-${photoIndex}`, originalIndex) ? "Désélectionner cet objet" : "Sélectionner cet objet"}
                                                     />
-                                                    <span className={`text-sm font-medium ${isObjectSelected(photo.photoId || `photo-${photoIndex}`, originalIndex) ? 'text-gray-900' : 'text-gray-400 line-through'}`}>
-                                                      {item.label}
-                                                    </span>
-                                                    <span className="text-xs text-gray-500">{item.volume_m3}m³</span>
+                                                    <div className="flex-1">
+                                                      <span className={`text-sm font-medium ${isObjectSelected(photo.photoId || `photo-${photoIndex}`, originalIndex) ? 'text-gray-900' : 'text-gray-400 line-through'}`}>
+                                                        {item.quantity > 1 ? `${item.label} (×${item.quantity})` : item.label}
+                                                      </span>
+                                                      <span className="text-xs text-gray-500 ml-2">{item.volume_m3}m³</span>
+                                                      {/* Badge doublon */}
+                                                      {renderDuplicateBadge(item)}
+                                                    </div>
                                                     <div className="flex items-center space-x-2">
                                                       <FragileToggle
                                                         item={item}
@@ -1076,10 +1417,14 @@ export default function Home() {
                                                             className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                                                             title={isObjectSelected(photo.photoId || `photo-${photoIndex}`, originalIndex) ? "Désélectionner cet objet" : "Sélectionner cet objet"}
                                                           />
-                                                          <span className={`text-sm font-medium ${isObjectSelected(photo.photoId || `photo-${photoIndex}`, originalIndex) ? 'text-gray-900' : 'text-gray-400 line-through'}`}>
-                                                            {item.label}
-                                      </span>
-                                                          <span className="text-xs text-gray-500">{item.volume_m3}m³</span>
+                                                          <div className="flex-1">
+                                                            <span className={`text-sm font-medium ${isObjectSelected(photo.photoId || `photo-${photoIndex}`, originalIndex) ? 'text-gray-900' : 'text-gray-400 line-through'}`}>
+                                                              {item.quantity > 1 ? `${item.label} (×${item.quantity})` : item.label}
+                                                            </span>
+                                                            <span className="text-xs text-gray-500 ml-2">{item.volume_m3}m³</span>
+                                                            {/* Badge doublon */}
+                                                            {renderDuplicateBadge(item)}
+                                                          </div>
                                                           <div className="flex items-center space-x-2">
                                                             <FragileToggle
                                                               item={item}
@@ -1432,189 +1777,750 @@ export default function Home() {
                   </div>
                 </div>
 
-        {/* Étape 4 - Envoyer mon dossier gratuitement */}
+        {/* Étape 4 - Envoyer un devis */}
         {currentStep === 4 && (
-          <div className="max-w-6xl mx-auto px-4">
+          <div className="max-w-7xl mx-auto px-4">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               
               {/* Header */}
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-b border-gray-100">
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Envoyer mon dossier gratuitement</h3>
-                    <p className="text-sm text-gray-600">
-                      Téléchargez votre inventaire ou envoyez-le par email
-                    </p>
-              </div>
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-5 border-b border-gray-100">
+                <div className="text-center">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">📋 État Synthétique de votre Déménagement</h3>
+                  <p className="text-sm text-gray-600">
+                    Toutes vos informations en un coup d'œil
+                  </p>
                 </div>
               </div>
 
-              <div className="p-6">
-                {/* Résumé des volumes */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                  {/* Volume brut */}
-                  <div className="bg-blue-50 rounded-xl p-6">
-                    <div className="flex items-center space-x-3 mb-4">
-                      <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                        </svg>
+              <div className="p-6 lg:p-8">
+                {/* Section 1 : Résumé des Volumes */}
+                <div className="mb-8">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                    📦 Inventaire et Volumes
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    {/* Nombre de photos */}
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-5 border border-purple-200">
+                      <div className="text-sm text-purple-700 font-medium mb-1">Photos analysées</div>
+                      <div className="text-3xl font-bold text-purple-900">
+                        {currentRoom.photos.filter(p => p.status === 'completed').length}
+                      </div>
+                      <div className="text-xs text-purple-600 mt-1">pièces documentées</div>
                     </div>
-                    <div>
-                        <h4 className="text-lg font-semibold text-gray-900">Volume brut</h4>
-                        <p className="text-sm text-gray-600">Volume total des objets</p>
+                    
+                    {/* Nombre d'objets */}
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 border border-green-200">
+                      <div className="text-sm text-green-700 font-medium mb-1">Objets détectés</div>
+                      <div className="text-3xl font-bold text-green-900">
+                        {(() => {
+                          let count = 0;
+                          currentRoom.photos.forEach(photo => {
+                            if (photo.analysis?.items) {
+                              photo.analysis.items.forEach((item: any, idx: number) => {
+                                if (isObjectSelected(photo.photoId || `photo-${currentRoom.photos.indexOf(photo)}`, idx)) {
+                                  count += item.quantity || 1;
+                                }
+                              });
+                            }
+                          });
+                          return count;
+                        })()}
+                      </div>
+                      <div className="text-xs text-green-600 mt-1">articles sélectionnés</div>
                     </div>
+
+                    {/* Volume brut */}
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200">
+                      <div className="text-sm text-blue-700 font-medium mb-1">Volume brut</div>
+                      <div className="text-3xl font-bold text-blue-900">
+                        {(() => {
+                          let totalVolume = 0;
+                          currentRoom.photos.forEach(photo => {
+                            if (photo.analysis?.items) {
+                              photo.analysis.items.forEach((item: any, idx: number) => {
+                                if (isObjectSelected(photo.photoId || `photo-${currentRoom.photos.indexOf(photo)}`, idx)) {
+                                  totalVolume += (item.volume_m3 || 0) * (item.quantity || 1);
+                                }
+                              });
+                            }
+                          });
+                          return totalVolume.toFixed(1);
+                        })()} m³
+                      </div>
+                      <div className="text-xs text-blue-600 mt-1">avant emballage et démontage</div>
                     </div>
-                    <div className="text-2xl font-bold text-blue-600">
+
+                    {/* Volume emballé */}
+                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-5 border border-orange-200">
+                      <div className="text-sm text-orange-700 font-medium mb-1">Volume emballé</div>
+                      <div className="text-3xl font-bold text-orange-900">
+                        {(() => {
+                          let totalPackagedVolume = 0;
+                          currentRoom.photos.forEach(photo => {
+                            if (photo.analysis?.items) {
+                              photo.analysis.items.forEach((item: any, idx: number) => {
+                                if (isObjectSelected(photo.photoId || `photo-${currentRoom.photos.indexOf(photo)}`, idx)) {
+                                  totalPackagedVolume += (item.packaged_volume_m3 || item.volume_m3 || 0) * (item.quantity || 1);
+                                }
+                              });
+                            }
+                          });
+                          return totalPackagedVolume.toFixed(1);
+                        })()} m³
+                      </div>
+                      <div className="text-xs text-orange-600 mt-1">avec emballage et démontage</div>
+                    </div>
+                  </div>
+
+                  {/* Liste détaillée des objets par catégorie */}
+                  <div className="bg-gray-50 rounded-xl p-5">
+                    <h5 className="font-semibold text-gray-900 mb-3 text-sm">📊 Répartition par catégorie</h5>
+                    <div className="grid grid-cols-3 gap-4 text-sm mb-4">
                       {(() => {
-                        const totalVolume = currentRoom.photos
-                          .filter(p => p.analysis?.items)
-                          .reduce((sum, photo) => 
-                            sum + (photo.analysis?.items?.reduce((itemSum: number, item: any) => itemSum + item.volume_m3, 0) || 0), 0);
-                        return `${totalVolume.toFixed(1)} m³`;
+                        // Regrouper par catégorie avec liste d'objets
+                        const categories: { 
+                          [key: string]: { 
+                            count: number; 
+                            volume: number; 
+                            volumeEmballe: number;
+                            items: Array<{ label: string; quantity: number; volumeEmballe: number }>;
+                          } 
+                        } = {};
+                        
+                        currentRoom.photos.forEach(photo => {
+                          if (photo.analysis?.items) {
+                            photo.analysis.items.forEach((item: any, idx: number) => {
+                              if (isObjectSelected(photo.photoId || `photo-${currentRoom.photos.indexOf(photo)}`, idx)) {
+                                const cat = getNewCategory(item);
+                                if (!categories[cat]) categories[cat] = { count: 0, volume: 0, volumeEmballe: 0, items: [] };
+                                categories[cat].count += item.quantity || 1;
+                                categories[cat].volume += (item.volume_m3 || 0) * (item.quantity || 1);
+                                categories[cat].volumeEmballe += (item.packaged_volume_m3 || item.volume_m3 || 0) * (item.quantity || 1);
+                                categories[cat].items.push({
+                                  label: item.label,
+                                  quantity: item.quantity || 1,
+                                  volumeEmballe: (item.packaged_volume_m3 || item.volume_m3 || 0) * (item.quantity || 1)
+                                });
+                              }
+                            });
+                          }
+                        });
+                        
+                        // Ordre d'affichage : Meubles, Mobilier fragile, Cartons
+                        const orderedCategories = ['Meubles', 'Mobilier fragile', 'Cartons'];
+                        
+                        return orderedCategories
+                          .filter(cat => categories[cat] && categories[cat].count > 0)
+                          .map(cat => {
+                            const data = categories[cat];
+                            
+                            // Affichage selon la catégorie
+                            if (cat === 'Meubles') {
+                              // MEUBLES : affichage simple sans flèche
+                              return (
+                                <div key={cat} className="rounded-lg p-4 border-2 border-blue-300 bg-blue-50">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center">
+                                      <span className="text-2xl mr-2">🪑</span>
+                                      <div className="font-semibold text-gray-900">{cat}</div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="text-lg font-bold text-blue-900">{data.volumeEmballe.toFixed(2)} m³</div>
+                                      <div className="text-xs text-blue-700">volume emballé</div>
+                                    </div>
+                                  </div>
+                                  <div className="text-xs text-gray-600">
+                                    {data.count} objet{data.count > 1 ? 's' : ''}
+                                  </div>
+                                </div>
+                              );
+                            } else if (cat === 'Cartons') {
+                              // CARTONS : nombre de cartons complets + volume
+                              const CARTON_STANDARD_M3 = 0.06;
+                              const nbCartons = Math.ceil(data.volumeEmballe / CARTON_STANDARD_M3);
+                              return (
+                                <div key={cat} className="rounded-lg p-4 border-2 border-green-300 bg-green-50">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center">
+                                      <span className="text-2xl mr-2">📦</span>
+                                      <div className="font-semibold text-gray-900">{cat}</div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="text-lg font-bold text-green-900">{nbCartons} carton{nbCartons > 1 ? 's' : ''}</div>
+                                      <div className="text-xs text-green-700">{data.volumeEmballe.toFixed(2)} m³</div>
+                                    </div>
+                                  </div>
+                                  <div className="text-xs text-gray-600">
+                                    {data.count} objet{data.count > 1 ? 's' : ''} • {CARTON_STANDARD_M3} m³/carton
+                                  </div>
+                                </div>
+                              );
+                            } else {
+                              // MOBILIER FRAGILE : affichage simple sans flèche
+                              return (
+                                <div key={cat} className="rounded-lg p-4 border-2 border-orange-300 bg-orange-50">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center">
+                                      <span className="text-2xl mr-2">⚠️</span>
+                                      <div className="font-semibold text-gray-900">{cat}</div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="text-lg font-bold text-orange-900">{data.volumeEmballe.toFixed(2)} m³</div>
+                                      <div className="text-xs text-orange-700">volume total</div>
+                                    </div>
+                                  </div>
+                                  <div className="text-xs text-gray-600">
+                                    {data.count} objet{data.count > 1 ? 's' : ''}
+                                  </div>
+                                </div>
+                              );
+                            }
+                          });
                       })()}
                     </div>
-                    </div>
+                    
+                    {/* Bouton Détails global */}
+                    <button
+                      onClick={() => setIsCategoryDetailsExpanded(!isCategoryDetailsExpanded)}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all"
+                    >
+                      <span className="font-semibold text-gray-700">Détails</span>
+                      <svg 
+                        className={`w-5 h-5 text-gray-600 transition-transform duration-200 ${isCategoryDetailsExpanded ? 'rotate-180' : ''}`} 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    
+                    {/* Panel de détails expandable */}
+                    <AnimatePresence>
+                      {isCategoryDetailsExpanded && (
+                        <motion.div 
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="mt-4 pt-4 border-t border-gray-200">
+                            {(() => {
+                              // Regrouper par catégorie avec données complètes
+                              const categories: { 
+                                [key: string]: { 
+                                  count: number; 
+                                  volume: number; 
+                                  volumeEmballe: number;
+                                  items: Array<{ photoId: string; itemIndex: number; item: any; roomName: string }>;
+                                } 
+                              } = {};
+                              
+                              currentRoom.photos.forEach(photo => {
+                                if (photo.analysis?.items) {
+                                  const roomName = photo.roomName || 'Pièce non identifiée';
+                                  photo.analysis.items.forEach((item: any, idx: number) => {
+                                    if (isObjectSelected(photo.photoId || `photo-${currentRoom.photos.indexOf(photo)}`, idx)) {
+                                      const cat = getNewCategory(item);
+                                      if (!categories[cat]) categories[cat] = { count: 0, volume: 0, volumeEmballe: 0, items: [] };
+                                      categories[cat].count += item.quantity || 1;
+                                      categories[cat].volume += (item.volume_m3 || 0) * (item.quantity || 1);
+                                      categories[cat].volumeEmballe += (item.packaged_volume_m3 || item.volume_m3 || 0) * (item.quantity || 1);
+                                      categories[cat].items.push({
+                                        photoId: photo.photoId || `photo-${currentRoom.photos.indexOf(photo)}`,
+                                        itemIndex: idx,
+                                        item: item,
+                                        roomName: roomName
+                                      });
+                                    }
+                                  });
+                                }
+                              });
+                              
+                              const orderedCategories = ['Meubles', 'Mobilier fragile', 'Cartons'];
+                              
+                              return orderedCategories
+                                .filter(cat => categories[cat] && categories[cat].count > 0)
+                                .map(cat => {
+                                  const data = categories[cat];
+                                  
+                                  // Regrouper les items par pièce
+                                  const itemsByRoom: { [roomName: string]: typeof data.items } = {};
+                                  data.items.forEach(itemData => {
+                                    if (!itemsByRoom[itemData.roomName]) {
+                                      itemsByRoom[itemData.roomName] = [];
+                                    }
+                                    itemsByRoom[itemData.roomName].push(itemData);
+                                  });
+                                  
+                                  if (cat === 'Meubles') {
+                                    return (
+                                      <div key={cat} className="mb-4 bg-blue-50 rounded-lg p-4 border border-blue-200">
+                                        <h6 className="font-semibold text-blue-900 mb-3 flex items-center">
+                                          <span className="text-lg mr-2">🪑</span>
+                                          {cat}
+                                        </h6>
+                                        <div className="text-xs text-gray-600 mb-2 italic">
+                                          💡 Cliquez sur → pour considérer comme fragile
+                                        </div>
+                                        <div className="space-y-3">
+                                          {Object.entries(itemsByRoom).map(([roomName, items]) => (
+                                            <div key={roomName} className="space-y-1">
+                                              <div className="text-xs font-semibold text-blue-700 uppercase tracking-wide px-2">
+                                                {roomName}
+                                              </div>
+                                              {items.map((itemData, displayIdx) => (
+                                                <div key={displayIdx} className="flex justify-between items-center text-xs bg-white rounded px-2 py-1.5 hover:bg-blue-50 transition-colors">
+                                                  <span className="text-gray-900 font-medium flex-1">
+                                                    {itemData.item.quantity > 1 && `${itemData.item.quantity}× `}{itemData.item.label}
+                                                  </span>
+                                                  <button
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      handleFragileToggle(itemData.photoId, itemData.itemIndex, true);
+                                                    }}
+                                                    className="ml-2 px-3 py-1 text-orange-600 hover:bg-orange-100 rounded transition-colors font-bold text-base"
+                                                    title="Considérer comme fragile"
+                                                  >
+                                                    →
+                                                  </button>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    );
+                                  } else if (cat === 'Mobilier fragile') {
+                                    return (
+                                      <div key={cat} className="mb-4 bg-orange-50 rounded-lg p-4 border border-orange-200">
+                                        <h6 className="font-semibold text-orange-900 mb-3 flex items-center">
+                                          <span className="text-lg mr-2">⚠️</span>
+                                          {cat}
+                                        </h6>
+                                        <div className="text-xs text-gray-600 mb-2 italic">
+                                          💡 Cliquez sur ← pour considérer comme non-fragile
+                                        </div>
+                                        <div className="space-y-3">
+                                          {Object.entries(itemsByRoom).map(([roomName, items]) => (
+                                            <div key={roomName} className="space-y-1">
+                                              <div className="text-xs font-semibold text-orange-700 uppercase tracking-wide px-2">
+                                                {roomName}
+                                              </div>
+                                              {items.map((itemData, displayIdx) => (
+                                                <div key={displayIdx} className="flex justify-between items-center text-xs bg-white rounded px-2 py-1.5 hover:bg-orange-50 transition-colors">
+                                                  <button
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      handleFragileToggle(itemData.photoId, itemData.itemIndex, false);
+                                                    }}
+                                                    className="mr-2 px-3 py-1 text-blue-600 hover:bg-blue-100 rounded transition-colors font-bold text-base"
+                                                    title="Considérer comme non-fragile"
+                                                  >
+                                                    ←
+                                                  </button>
+                                                  <span className="text-gray-900 font-medium flex-1">
+                                                    {itemData.item.quantity > 1 && `${itemData.item.quantity}× `}{itemData.item.label}
+                                                  </span>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                });
+                            })()}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </div>
 
-                  {/* Volume emballé */}
-                  <div className="bg-orange-50 rounded-xl p-6">
-                    <div className="flex items-center space-x-3 mb-4">
-                      <div className="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center">
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                        </svg>
-                    </div>
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-900">Volume emballé</h4>
-                        <p className="text-sm text-gray-600">Avec emballage et cartons</p>
+                {/* Section 2 : Détails du Déménagement */}
+                {quoteFormData && (
+                  <div className="mb-8">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      🚚 Détails du Déménagement
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Départ */}
+                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-5 border border-green-200">
+                        <h5 className="font-semibold text-green-900 mb-3 flex items-center">
+                          <span className="text-xl mr-2">🏠</span>
+                          Adresse de départ
+                        </h5>
+                        <div className="space-y-2 text-sm text-gray-700">
+                          <div><span className="font-medium">Ville :</span> {quoteFormData.departureCity}</div>
+                          <div><span className="font-medium">Code postal :</span> {quoteFormData.departurePostalCode}</div>
+                          {quoteFormData.departureFloor && (
+                            <div><span className="font-medium">Étage :</span> {quoteFormData.departureFloor}</div>
+                          )}
+                          {quoteFormData.departureElevator && (
+                            <div className="text-green-600 text-xs">✓ Ascenseur disponible</div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Arrivée */}
+                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200">
+                        <h5 className="font-semibold text-blue-900 mb-3 flex items-center">
+                          <span className="text-xl mr-2">🎯</span>
+                          Adresse d'arrivée
+                        </h5>
+                        <div className="space-y-2 text-sm text-gray-700">
+                          <div><span className="font-medium">Ville :</span> {quoteFormData.arrivalCity}</div>
+                          <div><span className="font-medium">Code postal :</span> {quoteFormData.arrivalPostalCode}</div>
+                          {quoteFormData.arrivalFloor && (
+                            <div><span className="font-medium">Étage :</span> {quoteFormData.arrivalFloor}</div>
+                          )}
+                          {quoteFormData.arrivalElevator && (
+                            <div className="text-green-600 text-xs">✓ Ascenseur disponible</div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="text-2xl font-bold text-orange-600">
-                      {(() => {
-                        const totalPackagedVolume = currentRoom.photos
-                          .filter(p => p.analysis?.items)
-                          .reduce((sum, photo) => 
-                            sum + (photo.analysis?.items?.reduce((itemSum: number, item: any) => itemSum + (item.packaged_volume_m3 || item.volume_m3), 0) || 0), 0);
-                        return `${totalPackagedVolume.toFixed(1)} m³`;
-                      })()}
-                  </div>
-                  </div>
-              </div>
-              
-                {/* Récapitulatif des informations */}
-                {quoteFormData && (
-                  <div className="bg-gray-50 rounded-xl p-6 mb-8">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                      <svg className="w-5 h-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Récapitulatif de votre demande
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-                    <div>
-                        <h5 className="font-semibold text-gray-700 mb-3">👤 Informations personnelles</h5>
-                        <div className="space-y-2 text-gray-600">
-                          <p><span className="font-medium">Nom :</span> {quoteFormData.firstName} {quoteFormData.lastName}</p>
-                          <p><span className="font-medium">Email :</span> {quoteFormData.email}</p>
-                          <p><span className="font-medium">Téléphone :</span> {quoteFormData.phone}</p>
-                    </div>
-                    </div>
+                    
+                    {/* Date et offre */}
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <div className="text-sm font-medium text-gray-700 mb-1">📅 Date de déménagement</div>
+                        <div className="text-lg font-semibold text-gray-900">
+                          {new Date(quoteFormData.movingDate).toLocaleDateString('fr-FR', {
+                            day: '2-digit',
+                            month: 'long',
+                            year: 'numeric'
+                          })}
+                        </div>
+                      </div>
                       
-                    <div>
-                        <h5 className="font-semibold text-gray-700 mb-3">🏠 Détails du déménagement</h5>
-                        <div className="space-y-2 text-gray-600">
-                          <p><span className="font-medium">Départ :</span> {quoteFormData.departureCity} ({quoteFormData.departurePostalCode})</p>
-                          <p><span className="font-medium">Arrivée :</span> {quoteFormData.arrivalCity} ({quoteFormData.arrivalPostalCode})</p>
-                          <p><span className="font-medium">Date :</span> {quoteFormData.movingDate}</p>
-                          <p><span className="font-medium">Formule :</span> <span className="capitalize">{quoteFormData.selectedOffer}</span></p>
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <div className="text-sm font-medium text-gray-700 mb-1">💼 Offre choisie</div>
+                        <div className="text-lg font-semibold text-gray-900 capitalize">
+                          {quoteFormData.selectedOffer}
+                        </div>
+                      </div>
                     </div>
                   </div>
+                )}
+
+                {/* Divider */}
+                <div className="border-t border-gray-200 my-8"></div>
+
+                {/* Section 3 : CTA Principaux */}
+                {quoteFormData && (
+                  <div className="mb-8">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      🚚 Détails du Déménagement
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Départ */}
+                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-5 border border-green-200">
+                        <h5 className="font-semibold text-green-900 mb-3 flex items-center">
+                          <span className="text-xl mr-2">🏠</span>
+                          Adresse de départ
+                        </h5>
+                        <div className="space-y-2 text-sm text-gray-700">
+                          <div><span className="font-medium">Ville :</span> {quoteFormData.departureCity}</div>
+                          <div><span className="font-medium">Code postal :</span> {quoteFormData.departurePostalCode}</div>
+                          {quoteFormData.departureFloor && (
+                            <div><span className="font-medium">Étage :</span> {quoteFormData.departureFloor}</div>
+                          )}
+                          {quoteFormData.departureArea && (
+                            <div><span className="font-medium">Superficie :</span> {quoteFormData.departureArea}</div>
+                          )}
+                          <div className="pt-2 border-t border-green-200">
+                            <div className="flex flex-wrap gap-2">
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                quoteFormData.departureElevator 
+                                  ? 'bg-white text-green-700' 
+                                  : 'bg-gray-200 text-gray-500'
+                              }`}>
+                                {quoteFormData.departureElevator ? '✓' : '✗'} Ascenseur
+                              </span>
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                quoteFormData.departureTruckAccess 
+                                  ? 'bg-white text-green-700' 
+                                  : 'bg-gray-200 text-gray-500'
+                              }`}>
+                                {quoteFormData.departureTruckAccess ? '✓' : '✗'} Accès camion
+                              </span>
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                quoteFormData.departureMonteCharge 
+                                  ? 'bg-white text-green-700' 
+                                  : 'bg-gray-200 text-gray-500'
+                              }`}>
+                                {quoteFormData.departureMonteCharge ? '✓' : '✗'} Monte-charge
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Arrivée */}
+                      <div className="bg-gradient-to-br from-blue-50 to-sky-50 rounded-xl p-5 border border-blue-200">
+                        <h5 className="font-semibold text-blue-900 mb-3 flex items-center">
+                          <span className="text-xl mr-2">🎯</span>
+                          Adresse d'arrivée
+                        </h5>
+                        <div className="space-y-2 text-sm text-gray-700">
+                          <div><span className="font-medium">Ville :</span> {quoteFormData.arrivalCity}</div>
+                          <div><span className="font-medium">Code postal :</span> {quoteFormData.arrivalPostalCode}</div>
+                          {quoteFormData.arrivalFloor && (
+                            <div><span className="font-medium">Étage :</span> {quoteFormData.arrivalFloor}</div>
+                          )}
+                          {quoteFormData.arrivalArea && (
+                            <div><span className="font-medium">Superficie :</span> {quoteFormData.arrivalArea}</div>
+                          )}
+                          <div className="pt-2 border-t border-blue-200">
+                            <div className="flex flex-wrap gap-2">
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                quoteFormData.arrivalElevator 
+                                  ? 'bg-white text-blue-700' 
+                                  : 'bg-gray-200 text-gray-500'
+                              }`}>
+                                {quoteFormData.arrivalElevator ? '✓' : '✗'} Ascenseur
+                              </span>
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                quoteFormData.arrivalTruckAccess 
+                                  ? 'bg-white text-blue-700' 
+                                  : 'bg-gray-200 text-gray-500'
+                              }`}>
+                                {quoteFormData.arrivalTruckAccess ? '✓' : '✗'} Accès camion
+                              </span>
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                quoteFormData.arrivalMonteCharge 
+                                  ? 'bg-white text-blue-700' 
+                                  : 'bg-gray-200 text-gray-500'
+                              }`}>
+                                {quoteFormData.arrivalMonteCharge ? '✓' : '✗'} Monte-charge
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Informations complémentaires */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                      <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                        <div className="text-sm text-gray-600 mb-1">📅 Date souhaitée</div>
+                        <div className="font-semibold text-gray-900">
+                          {new Date(quoteFormData.movingDate).toLocaleDateString('fr-FR', { 
+                            weekday: 'long', 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                          })}
+                        </div>
+                        <div className="text-xs text-gray-600 mt-1">
+                          Dates flexibles : <span className="font-medium">{quoteFormData.flexibleDate ? 'Oui (± 3 jours)' : 'Non'}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                        <div className="text-sm text-gray-600 mb-1">🕐 Heure préférée</div>
+                        <div className="font-semibold text-gray-900">{quoteFormData.movingTime}</div>
+                      </div>
+                      
+                      <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                        <div className="text-sm text-gray-600 mb-1">📦 Formule choisie</div>
+                        <div className="font-semibold text-gray-900 capitalize mb-1">{quoteFormData.selectedOffer}</div>
+                        <div className="text-xs text-gray-600">
+                          {quoteFormData.selectedOffer === 'economique' && 'Transport simple A → B'}
+                          {quoteFormData.selectedOffer === 'standard' && 'Avec démontage et cartons'}
+                          {quoteFormData.selectedOffer === 'premium' && 'Clé en main complet'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Section 3 : Informations Client */}
+                {quoteFormData && (
+                  <div className="mb-8">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <svg className="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      👤 Vos Informations
+                    </h4>
+                    
+                    <div className="bg-purple-50 rounded-xl p-5 border border-purple-200">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        {quoteFormData.email && (
+                          <div>
+                            <div className="text-purple-700 font-medium mb-1">📧 Email</div>
+                            <div className="text-gray-900">{quoteFormData.email}</div>
+                          </div>
+                        )}
+                        {quoteFormData.phone && (
+                          <div>
+                            <div className="text-purple-700 font-medium mb-1">📱 Téléphone</div>
+                            <div className="text-gray-900">{quoteFormData.phone}</div>
+                          </div>
+                        )}
+                        {(quoteFormData.firstName || quoteFormData.lastName) && (
+                          <div>
+                            <div className="text-purple-700 font-medium mb-1">👤 Nom</div>
+                            <div className="text-gray-900">{quoteFormData.firstName} {quoteFormData.lastName}</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Divider */}
+                <div className="border-t border-gray-200 my-8"></div>
+
+                {/* Section 4 : CTA Principaux */}
+                <div className="space-y-4">
+                  <h4 className="text-lg font-semibold text-gray-900 text-center mb-6">
+                    Que souhaitez-vous faire maintenant ?
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* CTA 1 : Télécharger mon dossier */}
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl p-8 border-2 border-blue-300 hover:border-blue-400 transition-all duration-200 hover:shadow-lg">
+                      <div className="text-center">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                          <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Télécharger mon dossier</h3>
+                        <p className="text-sm text-gray-600 mb-6">
+                          Récupérez l'inventaire complet au format PDF, Excel ou CSV
+                        </p>
+                        <div className="space-y-2">
+                          <button
+                            onClick={handleDownloadPDF}
+                            disabled={loading || !quoteFormData}
+                            className="w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {loading ? '⏳ Génération...' : '📄 PDF Complet'}
+                          </button>
+                          <button
+                            onClick={() => {
+                              // TODO: Implémenter l'export Excel
+                              alert('Export Excel en cours de développement');
+                            }}
+                            className="w-full px-6 py-3 bg-white text-blue-600 font-semibold rounded-xl hover:bg-gray-50 transition-colors border-2 border-blue-200"
+                          >
+                            📊 Excel
+                          </button>
+                          <button
+                            onClick={() => {
+                              // TODO: Implémenter l'export CSV
+                              alert('Export CSV en cours de développement');
+                            }}
+                            className="w-full px-6 py-3 bg-white text-blue-600 font-semibold rounded-xl hover:bg-gray-50 transition-colors border-2 border-blue-200"
+                          >
+                            📋 CSV
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* CTA 2 : Demander des devis (gratuit) */}
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl p-8 border-2 border-green-300 hover:border-green-400 transition-all duration-200 hover:shadow-lg">
+                      <div className="text-center">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-green-600 rounded-2xl flex items-center justify-center shadow-lg">
+                          <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">
+                          Demander des devis
+                          <span className="ml-2 inline-block px-3 py-1 bg-green-600 text-white text-xs font-bold rounded-full">
+                            GRATUIT
+                          </span>
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Recevez jusqu'à 5 devis de déménageurs professionnels
+                        </p>
+                        
+                        {/* Explication détaillée du service */}
+                        <div className="bg-white rounded-xl p-4 mb-6 text-left border border-green-200">
+                          <h4 className="font-semibold text-gray-900 mb-3 text-sm flex items-center">
+                            <svg className="w-4 h-4 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Ce qui va se passer ensuite :
+                          </h4>
+                          <div className="space-y-2 text-xs text-gray-700">
+                            <div className="flex items-start">
+                              <span className="font-bold text-green-600 mr-2">✓</span>
+                              <span>Votre dossier envoyé <strong>100% anonyme</strong> aux pros</span>
+                            </div>
+                            <div className="flex items-start">
+                              <span className="font-bold text-green-600 mr-2">✓</span>
+                              <span>Entre <strong>3 et 5 devis personnalisés</strong> collectés</span>
+                            </div>
+                            <div className="flex items-start">
+                              <span className="font-bold text-green-600 mr-2">✓</span>
+                              <span><strong>Vous choisissez</strong> le meilleur pour vous</span>
+                            </div>
+                            <div className="flex items-start">
+                              <span className="font-bold text-green-600 mr-2">✓</span>
+                              <span><strong>Aucun engagement</strong> de votre part</span>
+                            </div>
+                          </div>
+                          <div className="mt-3 pt-3 border-t border-green-100">
+                            <div className="flex items-start bg-green-50 rounded-lg p-2 -mx-1 mb-2">
+                              <span className="font-bold text-green-600 mr-2">⏱️</span>
+                              <span className="font-semibold"><strong>3 à 5 jours</strong> en moyenne (max 7j)</span>
+                            </div>
+                            <div className="flex items-start bg-blue-50 rounded-lg p-2 -mx-1">
+                              <span className="font-bold text-blue-600 mr-2">🛡️</span>
+                              <span className="font-semibold text-blue-900"><strong>Zéro effort</strong> de votre côté !</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <button
+                          onClick={() => {
+                            // TODO: Implémenter l'envoi de demande de devis
+                            alert('Envoi de la demande de devis en cours de développement');
+                          }}
+                          className="w-full px-8 py-4 bg-green-600 text-white font-bold text-lg rounded-xl hover:bg-green-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                        >
+                          📨 Envoyer ma demande
+                        </button>
+                        <p className="text-xs text-gray-500 mt-4">
+                          ✓ Sans engagement • ✓ Réponse sous 24h • ✓ Déménageurs certifiés
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              )}
-              
-                {/* Options d'export et d'envoi */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Téléchargement */}
-                  <div className="bg-white border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-400 transition-colors">
-                    <div className="w-12 h-12 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center">
-                      <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    </div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-2">Télécharger votre dossier</h4>
-                    <p className="text-gray-600 mb-4">Obtenez votre inventaire dans différents formats</p>
-                    <div className="space-y-2">
-                <button
-                        onClick={() => {
-                          // TODO: Implémenter l'export CSV
-                          alert('Export CSV à implémenter');
-                        }}
-                        className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-                      >
-                        📊 Télécharger en CSV
-                </button>
-                      <button
-                        onClick={() => {
-                          // TODO: Implémenter l'export Excel
-                          alert('Export Excel à implémenter');
-                        }}
-                        className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-                      >
-                        📋 Télécharger en Excel
-                      </button>
-                      <button
-                        onClick={() => {
-                          // TODO: Implémenter l'export PDF
-                          alert('Export PDF à implémenter');
-                        }}
-                        className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-                      >
-                        📄 Télécharger en PDF
-                      </button>
-                    </div>
-                  </div>
 
-                  {/* Envoi par email */}
-                  <div className="bg-white border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-green-400 transition-colors">
-                    <div className="w-12 h-12 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
-                      <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-2">Envoyer par email</h4>
-                    <p className="text-gray-600 mb-4">Recevez votre dossier directement par email</p>
-                    <div className="space-y-3">
-                      <input
-                        type="email"
-                        placeholder="Votre adresse email"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      />
-                <button
-                        onClick={() => {
-                          // TODO: Implémenter l'envoi par email
-                          alert('Envoi par email à implémenter');
-                        }}
-                        className="w-full px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors"
-                      >
-                        📧 Envoyer par email
-                </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Message final */}
+                {/* Info supplémentaire */}
                 <div className="mt-8 text-center">
-                  <div className="inline-flex items-center px-6 py-3 bg-green-50 text-green-700 rounded-xl">
+                  <div className="inline-flex items-center px-6 py-3 bg-blue-50 text-blue-700 rounded-xl border border-blue-200">
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span className="font-medium">Votre inventaire est prêt ! Vous pouvez maintenant demander des devis.</span>
+                    <span className="font-medium text-sm">Vos données sont sauvegardées automatiquement. Vous pouvez revenir à tout moment.</span>
                   </div>
                 </div>
               </div>
@@ -1772,6 +2678,14 @@ export default function Home() {
       <div className={`${isEmbedded ? 'p-4' : 'p-6'} max-w-7xl mx-auto`}>
         {isEmbedded ? renderTestsInterface() : (activeTab === 'tests' ? renderTestsInterface() : <BackOffice />)}
       </div>
+
+      {/* Modal de continuation */}
+      <ContinuationModal
+        isOpen={showContinuationModal}
+        onClose={() => setShowContinuationModal(false)}
+        onSend={handleSendContinuationLink}
+        projectId={currentProjectId || 'temp-project-id'}
+      />
     </main>
   );
 }

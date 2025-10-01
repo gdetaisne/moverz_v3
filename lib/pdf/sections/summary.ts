@@ -11,87 +11,106 @@ export function addSummary(doc: PDFDocument, summary: PDFSummary): void {
     .fontSize(FONTS.sizes.h2)
     .fillColor(COLORS.primary)
     .font('Helvetica-Bold')
-    .text('📊 RÉCAPITULATIF INVENTAIRE', margins.left, doc.y);
+    .text('RÉCAPITULATIF DE L\'INVENTAIRE', margins.left, doc.y);
   
   doc.moveDown(0.5);
   
-  // Cadre avec fond coloré
+  // Cadre avec fond dégradé simulé
   const boxY = doc.y;
-  const boxHeight = 80;
+  const boxHeight = 110;
   
-  // Fond
+  // Fond bleu clair
   doc
-    .rect(margins.left, boxY, contentWidth, boxHeight)
-    .fillColor(COLORS.background.light)
+    .roundedRect(margins.left, boxY, contentWidth, boxHeight, 8)
+    .fillColor(COLORS.background.accent)
     .fill();
   
-  // Bordure
+  // Bordure bleue épaisse
   doc
-    .rect(margins.left, boxY, contentWidth, boxHeight)
-    .strokeColor(COLORS.border)
-    .lineWidth(1)
+    .roundedRect(margins.left, boxY, contentWidth, boxHeight, 8)
+    .strokeColor(COLORS.primary)
+    .lineWidth(2)
     .stroke();
   
-  // Contenu du cadre
-  const boxPadding = SPACING.md;
+  // Contenu du cadre - Layout en 3 colonnes
+  const boxPadding = 20;
+  const colWidth = (contentWidth - boxPadding * 2) / 3;
   let currentX = margins.left + boxPadding;
   const boxContentY = boxY + boxPadding;
   
-  // Volume total
+  // Colonne 1 - Volume total
   doc
-    .fontSize(FONTS.sizes.h1)
+    .fontSize(32)
     .fillColor(COLORS.primary)
     .font('Helvetica-Bold')
-    .text(summary.totalVolume.toFixed(1), currentX, boxContentY, { width: 80 });
+    .text(summary.totalVolume.toFixed(1), currentX, boxContentY, { 
+      width: colWidth, 
+      align: 'center' 
+    });
   
   doc
     .fontSize(FONTS.sizes.body)
     .fillColor(COLORS.text.medium)
     .font('Helvetica')
-    .text('m³ total', currentX, doc.y + SPACING.xs, { width: 80 });
+    .text('m³ total', currentX, doc.y + 4, { 
+      width: colWidth, 
+      align: 'center' 
+    });
   
-  currentX += 100;
+  currentX += colWidth;
   
-  // Nombre d'objets
+  // Colonne 2 - Nombre d'objets
   doc
-    .fontSize(FONTS.sizes.h1)
+    .fontSize(32)
     .fillColor(COLORS.success)
     .font('Helvetica-Bold')
-    .text(summary.totalItems.toString(), currentX, boxContentY, { width: 80 });
+    .text(summary.totalItems.toString(), currentX, boxContentY, { 
+      width: colWidth, 
+      align: 'center' 
+    });
   
   doc
     .fontSize(FONTS.sizes.body)
     .fillColor(COLORS.text.medium)
     .font('Helvetica')
-    .text('objets', currentX, doc.y + SPACING.xs, { width: 80 });
+    .text('objets', currentX, doc.y + 4, { 
+      width: colWidth, 
+      align: 'center' 
+    });
   
-  currentX += 100;
+  currentX += colWidth;
   
-  // Nombre de pièces
+  // Colonne 3 - Nombre de pièces
   doc
-    .fontSize(FONTS.sizes.h1)
+    .fontSize(32)
     .fillColor(COLORS.secondary)
     .font('Helvetica-Bold')
-    .text(summary.roomCount.toString(), currentX, boxContentY, { width: 80 });
+    .text(summary.roomCount.toString(), currentX, boxContentY, { 
+      width: colWidth, 
+      align: 'center' 
+    });
   
   doc
     .fontSize(FONTS.sizes.body)
     .fillColor(COLORS.text.medium)
     .font('Helvetica')
-    .text('pièces', currentX, doc.y + SPACING.xs, { width: 80 });
+    .text('pièces', currentX, doc.y + 4, { 
+      width: colWidth, 
+      align: 'center' 
+    });
   
-  // Tags en bas du cadre
-  const tagsY = boxY + boxHeight - boxPadding - 20;
+  // Tags en bas du cadre - Afficher uniquement si présents
+  const tagsY = boxY + boxHeight - 28;
   currentX = margins.left + boxPadding;
   
-  if (summary.hasFragileItems) {
-    addTag(doc, '⚠️ Objets fragiles', currentX, tagsY, COLORS.warning);
-    currentX += 120;
-  }
+  const tags = [];
+  if (summary.hasFragileItems) tags.push({ text: 'OBJETS FRAGILES', color: COLORS.warning });
+  if (summary.hasDismountableItems) tags.push({ text: 'DÉMONTAGE REQUIS', color: COLORS.secondary });
   
-  if (summary.hasDismountableItems) {
-    addTag(doc, '🔧 Démontage requis', currentX, tagsY, COLORS.secondary);
-  }
+  tags.forEach((tag, index) => {
+    if (index > 0) currentX += 145; // Espacement entre tags
+    addTag(doc, tag.text, currentX, tagsY, tag.color);
+  });
   
   // Position après le cadre
   doc.y = boxY + boxHeight + SPACING.xl;
@@ -104,29 +123,29 @@ function addTag(
   y: number,
   color: string
 ): void {
-  const tagWidth = 110;
-  const tagHeight = 18;
+  const tagWidth = 130;
+  const tagHeight = 22;
   
-  // Fond du tag
+  // Fond du tag - plus opaque
   doc
-    .roundedRect(x, y, tagWidth, tagHeight, 3)
+    .roundedRect(x, y, tagWidth, tagHeight, 4)
     .fillColor(color)
-    .fillOpacity(0.1)
+    .fillOpacity(0.15)
     .fill();
   
-  // Bordure du tag
+  // Bordure du tag - plus épaisse
   doc
-    .roundedRect(x, y, tagWidth, tagHeight, 3)
+    .roundedRect(x, y, tagWidth, tagHeight, 4)
     .strokeColor(color)
-    .lineWidth(1)
+    .lineWidth(1.5)
     .fillOpacity(1)
     .stroke();
   
-  // Texte du tag
+  // Texte du tag - centré
   doc
     .fontSize(FONTS.sizes.small)
     .fillColor(color)
     .font('Helvetica-Bold')
-    .text(text, x + 4, y + 5, { width: tagWidth - 8 });
+    .text(text, x, y + 7, { width: tagWidth, align: 'center' });
 }
 

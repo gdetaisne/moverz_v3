@@ -19,33 +19,36 @@ export const PDF_CONFIG = {
 };
 
 export const COLORS = {
-  primary: '#2563eb',      // Blue 600
-  secondary: '#64748b',    // Slate 500
-  success: '#10b981',      // Green 500
-  danger: '#ef4444',       // Red 500
-  warning: '#f59e0b',      // Amber 500
+  primary: '#0066FF',      // Bleu professionnel éclatant
+  primaryDark: '#0052CC',  // Bleu foncé pour contraste
+  secondary: '#6366f1',    // Indigo moderne
+  success: '#22c55e',      // Vert vif
+  danger: '#ef4444',       // Rouge vif
+  warning: '#f59e0b',      // Orange attention
   
   text: {
-    dark: '#1e293b',       // Slate 800
-    medium: '#475569',     // Slate 600
-    light: '#94a3b8',      // Slate 400
+    dark: '#0f172a',       // Presque noir
+    medium: '#475569',     // Gris moyen
+    light: '#94a3b8',      // Gris clair
   },
   
   background: {
-    light: '#f8fafc',      // Slate 50
-    medium: '#e2e8f0',     // Slate 200
+    light: '#f8fafc',      // Gris très clair
+    medium: '#e0e7ff',     // Bleu très clair
+    accent: '#eff6ff',     // Bleu ultra-clair
   },
   
-  border: '#cbd5e1',       // Slate 300
+  border: '#cbd5e1',       // Bordure standard
+  accent: '#0066FF',       // Accent principal
 };
 
 export const FONTS = {
   sizes: {
-    h1: 24,
-    h2: 18,
-    h3: 14,
-    body: 11,
-    small: 9,
+    h1: 28,    // Plus grand pour impact
+    h2: 16,    // Section headers
+    h3: 13,    // Sous-sections
+    body: 10,  // Texte normal
+    small: 8,  // Petites notes
   },
   
   lineHeights: {

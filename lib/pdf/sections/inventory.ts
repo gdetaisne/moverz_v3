@@ -14,7 +14,7 @@ export function addInventoryDetails(
     .fontSize(FONTS.sizes.h2)
     .fillColor(COLORS.primary)
     .font('Helvetica-Bold')
-    .text('📋 DÉTAIL DE L\'INVENTAIRE', margins.left, doc.y);
+    .text('DÉTAIL DE L\'INVENTAIRE', margins.left, doc.y);
   
   doc.moveDown(1);
   
@@ -28,51 +28,53 @@ export function addInventoryDetails(
     // Titre de la pièce
     addRoomTitle(doc, room.name, roomIndex + 1);
     
+    // Calculer le total de la pièce
+    let roomTotalVolume = 0;
+    let roomTotalCartons = 0;
+    
     // Parcourir les photos de la pièce
     room.photos.forEach((photo, photoIndex) => {
       if (photo.items && photo.items.length > 0) {
         // Vérifier espace disponible
-        if (doc.y > PDF_CONFIG.pageHeight - 250) {
+        if (doc.y > PDF_CONFIG.pageHeight - 300) {
           doc.addPage();
         }
         
-        addPhotoSection(doc, photo, photoIndex + 1, room.name);
+        const photoStats = addPhotoSection(doc, photo, photoIndex + 1, room.name);
+        roomTotalVolume += photoStats.totalVolume;
+        roomTotalCartons += photoStats.totalCartons;
       }
     });
     
-    doc.moveDown(1);
+    // Afficher le total de la pièce
+    addRoomTotal(doc, roomTotalVolume, roomTotalCartons);
+    
+    doc.moveDown(1.5);
   });
 }
 
 function addRoomTitle(doc: PDFDocument, roomName: string, roomNumber: number): void {
   const { margins, contentWidth } = PDF_CONFIG;
   
-  // Fond coloré pour le titre de pièce
+  // Titre de pièce moderne avec bandeau
   const titleY = doc.y;
-  const titleHeight = 30;
+  const titleHeight = 32;
   
+  // Fond bleu avec coins arrondis
   doc
-    .rect(margins.left, titleY, contentWidth, titleHeight)
+    .roundedRect(margins.left, titleY, contentWidth, titleHeight, 6)
     .fillColor(COLORS.primary)
-    .fillOpacity(0.1)
     .fill();
   
+  // Texte du titre en blanc
   doc
-    .rect(margins.left, titleY, contentWidth, titleHeight)
-    .strokeColor(COLORS.primary)
-    .lineWidth(2)
-    .fillOpacity(1)
-    .stroke();
-  
-  // Texte du titre
-  doc
-    .fontSize(FONTS.sizes.h3)
-    .fillColor(COLORS.primary)
+    .fontSize(FONTS.sizes.h3 + 1)
+    .fillColor('#FFFFFF')
     .font('Helvetica-Bold')
     .text(
-      `${roomNumber}. ${roomName}`,
+      `${roomNumber}. ${roomName.toUpperCase()}`,
       margins.left + SPACING.md,
-      titleY + SPACING.sm,
+      titleY + 10,
       { width: contentWidth - SPACING.md * 2 }
     );
   
@@ -84,24 +86,32 @@ function addPhotoSection(
   photo: any,
   photoNumber: number,
   roomName: string
-): void {
+): { totalVolume: number; totalCartons: number } {
   const { margins, contentWidth } = PDF_CONFIG;
   const startY = doc.y;
   
-  // Layout: Photo à gauche (200px), liste à droite
-  const photoWidth = 200;
-  const photoHeight = 150;
-  const listX = margins.left + photoWidth + SPACING.lg;
-  const listWidth = contentWidth - photoWidth - SPACING.lg;
+  // Photo en pleine largeur
+  const photoWidth = contentWidth;
+  const photoHeight = 280; // Plus grande pour mieux voir
+  
+  // Titre photo
+  doc
+    .fontSize(FONTS.sizes.body)
+    .fillColor(COLORS.primary)
+    .font('Helvetica-Bold')
+    .text(`Photo ${photoNumber}`, margins.left, startY);
+  
+  doc.moveDown(0.3);
+  const photoY = doc.y;
   
   // Ajouter la photo si disponible
   if (photo.photoData && typeof photo.photoData === 'string' && photo.photoData.startsWith('data:image')) {
     try {
       // Cadre pour la photo
       doc
-        .rect(margins.left, startY, photoWidth, photoHeight)
+        .roundedRect(margins.left, photoY, photoWidth, photoHeight, 4)
         .strokeColor(COLORS.border)
-        .lineWidth(1)
+        .lineWidth(1.5)
         .stroke();
       
       // Photo en base64
@@ -110,43 +120,32 @@ function addPhotoSection(
         : photo.photoData;
       const imageBuffer = Buffer.from(base64Data, 'base64');
       
-      doc.image(imageBuffer, margins.left + 2, startY + 2, {
-        width: photoWidth - 4,
-        height: photoHeight - 4,
-        fit: [photoWidth - 4, photoHeight - 4],
+      doc.image(imageBuffer, margins.left + 3, photoY + 3, {
+        width: photoWidth - 6,
+        height: photoHeight - 6,
+        fit: [photoWidth - 6, photoHeight - 6],
         align: 'center',
         valign: 'center',
       });
-      
-      // Numéro de photo
-      doc
-        .fontSize(FONTS.sizes.small)
-        .fillColor(COLORS.text.light)
-        .font('Helvetica')
-        .text(
-          `Photo ${photoNumber}`,
-          margins.left,
-          startY + photoHeight + SPACING.xs,
-          { width: photoWidth, align: 'center' }
-        );
     } catch (error) {
       console.error('Erreur lors de l\'ajout de la photo:', error);
-      // Placeholder si erreur
-      addPhotoPlaceholder(doc, margins.left, startY, photoWidth, photoHeight);
+      addPhotoPlaceholder(doc, margins.left, photoY, photoWidth, photoHeight);
     }
   } else {
-    // Pas de photo disponible ou format non supporté - afficher placeholder
-    addPhotoPlaceholder(doc, margins.left, startY, photoWidth, photoHeight);
+    addPhotoPlaceholder(doc, margins.left, photoY, photoWidth, photoHeight);
   }
   
-  // Liste des objets à droite
-  doc.y = startY;
-  addItemsList(doc, photo.items, listX, listWidth);
+  doc.y = photoY + photoHeight + SPACING.md;
   
-  // S'assurer qu'on est en dessous de la photo
-  if (doc.y < startY + photoHeight + SPACING.xl) {
-    doc.y = startY + photoHeight + SPACING.xl;
-  }
+  // Liste des objets en dessous de la photo
+  const stats = addItemsList(doc, photo.items, margins.left, contentWidth);
+  
+  // Afficher le total de la photo
+  addPhotoTotal(doc, stats.totalVolume, stats.totalCartons);
+  
+  doc.moveDown(1);
+  
+  return stats;
 }
 
 function addPhotoPlaceholder(
@@ -171,7 +170,7 @@ function addPhotoPlaceholder(
     .fontSize(FONTS.sizes.small)
     .fillColor(COLORS.text.light)
     .font('Helvetica')
-    .text('📷 Photo non incluse', x, y + height / 2 - 10, {
+    .text('[Photo non disponible]', x, y + height / 2 - 10, {
       width: width,
       align: 'center',
     });
@@ -182,9 +181,30 @@ function addItemsList(
   items: PDFInventoryItem[],
   x: number,
   width: number
-): void {
-  items.forEach((item, index) => {
-    // Vérifier si on dépasse la page
+): { totalVolume: number; totalCartons: number } {
+  let totalVolume = 0;
+  let totalCartons = 0;
+  
+  // Séparer petits objets (cartons) et gros meubles
+  const CARTON_THRESHOLD = 0.06; // 0.06m³ = carton standard 50x40x30cm
+  const smallItems: PDFInventoryItem[] = [];
+  const largeItems: PDFInventoryItem[] = [];
+  
+  items.forEach(item => {
+    const itemVolume = item.volume_m3 * (item.quantity || 1);
+    totalVolume += itemVolume;
+    
+    // Petits objets qui vont dans des cartons
+    if (item.volume_m3 <= CARTON_THRESHOLD) {
+      smallItems.push(item);
+      totalCartons += Math.ceil(itemVolume / CARTON_THRESHOLD);
+    } else {
+      largeItems.push(item);
+    }
+  });
+  
+  // Afficher d'abord les gros meubles individuellement
+  largeItems.forEach((item) => {
     if (doc.y > PDF_CONFIG.pageHeight - 100) {
       doc.addPage();
       doc.y = PDF_CONFIG.margins.top;
@@ -192,12 +212,12 @@ function addItemsList(
     
     const itemY = doc.y;
     
-    // Puce
+    // Cercle bleu
+    const circleRadius = 4;
     doc
-      .fontSize(FONTS.sizes.body)
+      .circle(x + circleRadius, itemY + 5, circleRadius)
       .fillColor(COLORS.primary)
-      .font('Helvetica-Bold')
-      .text('•', x, itemY, { width: 10 });
+      .fill();
     
     // Nom de l'objet avec quantité
     const itemName = item.quantity > 1 
@@ -208,11 +228,11 @@ function addItemsList(
       .fontSize(FONTS.sizes.body)
       .fillColor(COLORS.text.dark)
       .font('Helvetica-Bold')
-      .text(itemName, x + 15, itemY, { width: width - 15 });
+      .text(itemName, x + 18, itemY, { width: width - 18 });
     
     doc.moveDown(0.2);
     
-    // Détails sur la ligne suivante
+    // Détails
     const details = [];
     
     if (item.volume_m3 > 0) {
@@ -230,11 +250,11 @@ function addItemsList(
     }
     
     if (item.fragile) {
-      details.push('⚠️ Fragile');
+      details.push('FRAGILE');
     }
     
     if (item.dismountable) {
-      details.push('🔧 Démontable');
+      details.push('DÉMONTABLE');
     }
     
     if (details.length > 0) {
@@ -242,7 +262,7 @@ function addItemsList(
         .fontSize(FONTS.sizes.small)
         .fillColor(COLORS.text.medium)
         .font('Helvetica')
-        .text(details.join(' • '), x + 15, doc.y, { width: width - 15 });
+        .text(details.join(' • '), x + 18, doc.y, { width: width - 18 });
     }
     
     if (item.notes) {
@@ -251,10 +271,124 @@ function addItemsList(
         .fontSize(FONTS.sizes.small)
         .fillColor(COLORS.text.light)
         .font('Helvetica-Oblique')
-        .text(`Note: ${item.notes}`, x + 15, doc.y, { width: width - 15 });
+        .text(`Note: ${item.notes}`, x + 18, doc.y, { width: width - 18 });
     }
     
-    doc.moveDown(0.4);
+    doc.moveDown(0.5);
   });
+  
+  // Afficher le résumé des petits objets en cartons
+  if (smallItems.length > 0) {
+    if (doc.y > PDF_CONFIG.pageHeight - 100) {
+      doc.addPage();
+      doc.y = PDF_CONFIG.margins.top;
+    }
+    
+    const itemY = doc.y;
+    
+    // Cercle bleu
+    const circleRadius = 4;
+    doc
+      .circle(x + circleRadius, itemY + 5, circleRadius)
+      .fillColor(COLORS.secondary)
+      .fill();
+    
+    // Résumé des petits objets
+    const smallItemsVolume = smallItems.reduce((sum, item) => sum + (item.volume_m3 * (item.quantity || 1)), 0);
+    const cartonsCount = Math.ceil(smallItemsVolume / CARTON_THRESHOLD);
+    
+    doc
+      .fontSize(FONTS.sizes.body)
+      .fillColor(COLORS.text.dark)
+      .font('Helvetica-Bold')
+      .text(`Petits objets (${smallItems.length} articles)`, x + 18, itemY, { width: width - 18 });
+    
+    doc.moveDown(0.2);
+    
+    doc
+      .fontSize(FONTS.sizes.small)
+      .fillColor(COLORS.text.medium)
+      .font('Helvetica')
+      .text(`${cartonsCount} carton${cartonsCount > 1 ? 's' : ''} standard${cartonsCount > 1 ? 's' : ''} (50×40×30cm) • ${smallItemsVolume.toFixed(2)}m³`, x + 18, doc.y, { width: width - 18 });
+    
+    doc.moveDown(0.5);
+  }
+  
+  return { totalVolume, totalCartons };
+}
+
+// Fonction pour afficher le total d'une photo
+function addPhotoTotal(doc: PDFDocument, totalVolume: number, totalCartons: number): void {
+  const { margins, contentWidth } = PDF_CONFIG;
+  
+  // Encadré subtil pour le total
+  const boxY = doc.y;
+  const boxHeight = 28;
+  
+  doc
+    .roundedRect(margins.left, boxY, contentWidth, boxHeight, 4)
+    .fillColor(COLORS.background.medium)
+    .fill();
+  
+  doc.y = boxY + 8;
+  
+  // Total sur une ligne
+  const text = `Total photo: ${totalVolume.toFixed(2)}m³ emballés${totalCartons > 0 ? ` • Dont ${totalCartons} carton${totalCartons > 1 ? 's' : ''}` : ''}`;
+  
+  doc
+    .fontSize(FONTS.sizes.body)
+    .fillColor(COLORS.text.dark)
+    .font('Helvetica-Bold')
+    .text(text, margins.left + SPACING.md, doc.y, { 
+      width: contentWidth - SPACING.md * 2,
+      align: 'right'
+    });
+  
+  doc.y = boxY + boxHeight + SPACING.sm;
+}
+
+// Fonction pour afficher le total d'une pièce
+function addRoomTotal(doc: PDFDocument, totalVolume: number, totalCartons: number): void {
+  const { margins, contentWidth } = PDF_CONFIG;
+  
+  doc.moveDown(0.5);
+  
+  // Encadré bleu pour le total de pièce
+  const boxY = doc.y;
+  const boxHeight = 40;
+  
+  doc
+    .roundedRect(margins.left, boxY, contentWidth, boxHeight, 6)
+    .fillColor(COLORS.primary)
+    .fillOpacity(0.1)
+    .fill();
+  
+  doc
+    .roundedRect(margins.left, boxY, contentWidth, boxHeight, 6)
+    .strokeColor(COLORS.primary)
+    .lineWidth(2)
+    .fillOpacity(1)
+    .stroke();
+  
+  doc.y = boxY + 12;
+  
+  // Total en gros
+  doc
+    .fontSize(FONTS.sizes.h3)
+    .fillColor(COLORS.primary)
+    .font('Helvetica-Bold')
+    .text(`TOTAL PIÈCE: ${totalVolume.toFixed(2)}m³`, margins.left + SPACING.md, doc.y);
+  
+  // Nombre de cartons en dessous
+  if (totalCartons > 0) {
+    doc.moveDown(0.3);
+    doc
+      .fontSize(FONTS.sizes.body)
+      .fillColor(COLORS.text.dark)
+      .font('Helvetica')
+      .text(`Dont ${totalCartons} carton${totalCartons > 1 ? 's' : ''} standard${totalCartons > 1 ? 's' : ''} (50×40×30cm)`, margins.left + SPACING.md, doc.y);
+  }
+  
+  doc.y = boxY + boxHeight + SPACING.md;
 }
 

@@ -429,58 +429,51 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
     const newErrors: { [key: string]: string } = {};
     console.log('🔍 [VALIDATION] Début de la validation...');
 
-    // Validation des champs obligatoires
+    // 🚨 TEMPORAIRE : Tous les champs sont maintenant facultatifs pour les tests
+    // 📝 CHAMPS OBLIGATOIRES À REMETTRE :
+    // - email (avec validation format /\S+@\S+\.\S+/)
+    // - departureCity
+    // - departurePostalCode
+    // - arrivalCity
+    // - arrivalPostalCode
+    // - movingDate
+    // - selectedOffer
+    
+    /* CODE ORIGINAL À RESTAURER :
+    
     if (!formData.email.trim()) {
       newErrors.email = 'L\'email est requis';
-      console.log('❌ [VALIDATION] Email manquant');
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email invalide';
-      console.log('❌ [VALIDATION] Email invalide:', formData.email);
-    } else {
-      console.log('✅ [VALIDATION] Email OK:', formData.email);
     }
     
     if (!formData.departureCity.trim()) {
       newErrors.departureCity = 'La ville de départ est requise';
-      console.log('❌ [VALIDATION] Ville de départ manquante');
-    } else {
-      console.log('✅ [VALIDATION] Ville de départ OK:', formData.departureCity);
     }
     
     if (!formData.departurePostalCode.trim()) {
       newErrors.departurePostalCode = 'Le code postal de départ est requis';
-      console.log('❌ [VALIDATION] Code postal départ manquant');
-    } else {
-      console.log('✅ [VALIDATION] Code postal départ OK:', formData.departurePostalCode);
     }
     
     if (!formData.arrivalCity.trim()) {
       newErrors.arrivalCity = 'La ville d\'arrivée est requise';
-      console.log('❌ [VALIDATION] Ville d\'arrivée manquante');
-    } else {
-      console.log('✅ [VALIDATION] Ville d\'arrivée OK:', formData.arrivalCity);
     }
     
     if (!formData.arrivalPostalCode.trim()) {
       newErrors.arrivalPostalCode = 'Le code postal d\'arrivée est requis';
-      console.log('❌ [VALIDATION] Code postal arrivée manquant');
-    } else {
-      console.log('✅ [VALIDATION] Code postal arrivée OK:', formData.arrivalPostalCode);
     }
     
     if (!formData.movingDate) {
       newErrors.movingDate = 'La date de déménagement est requise';
-      console.log('❌ [VALIDATION] Date de déménagement manquante');
-    } else {
-      console.log('✅ [VALIDATION] Date de déménagement OK:', formData.movingDate);
     }
     
     if (!formData.selectedOffer) {
       newErrors.selectedOffer = 'Veuillez choisir une offre';
-      console.log('❌ [VALIDATION] Offre non sélectionnée');
-    } else {
-      console.log('✅ [VALIDATION] Offre OK:', formData.selectedOffer);
     }
+    
+    */
+
+    console.log('✅ [VALIDATION] Formulaire toujours valide (champs facultatifs)');
 
     console.log('📊 [VALIDATION] Résultat final:', {
       erreurs: Object.keys(newErrors),
@@ -488,7 +481,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
     });
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return true; // Toujours valide (temporaire)
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -514,10 +507,10 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
       {/* En-tête supprimé - on sait pourquoi on est là */}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Email */}
+        {/* Email - 🚨 OBLIGATOIRE (ajouter * après Email) */}
         <div className="bg-white p-4 rounded-lg shadow-sm border">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Email *
+            Email {/* Ajouter * ici */}
           </label>
           <input
             type="email"
@@ -537,7 +530,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ville *
+                Ville {/* 🚨 OBLIGATOIRE - ajouter * */}
               </label>
               <select
                 value={formData.departureCity}
@@ -556,7 +549,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
             
             <div className="relative postal-code-field">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Code postal *
+                Code postal {/* 🚨 OBLIGATOIRE - ajouter * */}
               </label>
               <input
                 type="text"
@@ -677,7 +670,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ville *
+                Ville {/* 🚨 OBLIGATOIRE - ajouter * */}
               </label>
               <select
                 value={formData.arrivalCity}
@@ -696,7 +689,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
             
             <div className="relative postal-code-field">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Code postal *
+                Code postal {/* 🚨 OBLIGATOIRE - ajouter * */}
               </label>
               <input
                 type="text"
@@ -817,7 +810,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Date souhaitée *
+                Date souhaitée {/* 🚨 OBLIGATOIRE - ajouter * */}
               </label>
               <input
                 type="date"
@@ -864,7 +857,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
           </div>
         </div>
 
-        {/* Choix de l'offre */}
+        {/* Choix de l'offre - 🚨 OBLIGATOIRE (une offre doit être sélectionnée) */}
         <div className="bg-white p-4 rounded-lg shadow-sm border">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">📦 Choisissez votre offre</h3>
           

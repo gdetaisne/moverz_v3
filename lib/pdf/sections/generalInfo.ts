@@ -6,70 +6,115 @@ import { PDFFormData } from '../types';
 export function addGeneralInfo(doc: PDFDocument, formData: PDFFormData): void {
   const { margins, contentWidth } = PDF_CONFIG;
   
-  // Titre de section
-  addSectionTitle(doc, '📍 INFORMATIONS GÉNÉRALES');
+  // Titre de section moderne
+  addSectionTitle(doc, 'INFORMATIONS GÉNÉRALES');
   
-  // Cadre avec fond gris léger
+  const boxY = doc.y;
+  const boxPadding = 12;
+  const colWidth = (contentWidth - boxPadding * 3) / 2;
+  
+  // Encadré compact avec fond bleu clair
+  doc
+    .roundedRect(margins.left, boxY, contentWidth, 110, 8)
+    .fillColor(COLORS.background.accent)
+    .fill();
+  
+  doc
+    .roundedRect(margins.left, boxY, contentWidth, 110, 8)
+    .strokeColor(COLORS.primary)
+    .lineWidth(1.5)
+    .stroke();
+  
+  // Layout en 2 colonnes
+  const col1X = margins.left + boxPadding;
+  const col2X = margins.left + boxPadding + colWidth + boxPadding;
+  
+  doc.y = boxY + boxPadding;
+  
+  // COLONNE 1 - Départ
+  addSubSection(doc, 'ADRESSE DE DÉPART', col1X);
   const startY = doc.y;
   
-  // Adresse de départ
-  addSubSection(doc, '🏠 Adresse de départ');
-  addInfoLine(doc, 'Ville', `${formData.departureCity} (${formData.departurePostalCode})`);
+  if (formData.departureCity && formData.departurePostalCode) {
+    addInfoLineCompact(doc, 'Ville', `${formData.departureCity} (${formData.departurePostalCode})`, col1X, colWidth);
+  }
   if (formData.departureFloor) {
-    addInfoLine(doc, 'Étage', formData.departureFloor);
+    addInfoLineCompact(doc, 'Étage', formData.departureFloor, col1X, colWidth);
   }
   if (formData.departureArea) {
-    addInfoLine(doc, 'Superficie', formatArea(formData.departureArea));
+    addInfoLineCompact(doc, 'Superficie', formatArea(formData.departureArea), col1X, colWidth);
   }
   
   // Caractéristiques départ
   const departureFeatures = [];
   if (formData.departureElevator) departureFeatures.push('Ascenseur');
   if (formData.departureTruckAccess) departureFeatures.push('Accès camion');
-  if (formData.departureMonteCharge) departureFeatures.push('Monte-charge requis');
+  if (formData.departureMonteCharge) departureFeatures.push('Monte-charge');
   
   if (departureFeatures.length > 0) {
-    addInfoLine(doc, 'Caractéristiques', departureFeatures.join(', '));
+    addInfoLineCompact(doc, 'Équipements', departureFeatures.join(' • '), col1X, colWidth);
   }
   
-  doc.moveDown(0.5);
-  
-  // Adresse d'arrivée
-  addSubSection(doc, '🎯 Adresse d\'arrivée');
-  addInfoLine(doc, 'Ville', `${formData.arrivalCity} (${formData.arrivalPostalCode})`);
+  // COLONNE 2 - Arrivée
+  doc.y = startY;
+  addSubSection(doc, 'ADRESSE D\'ARRIVÉE', col2X);
+  if (formData.arrivalCity && formData.arrivalPostalCode) {
+    addInfoLineCompact(doc, 'Ville', `${formData.arrivalCity} (${formData.arrivalPostalCode})`, col2X, colWidth);
+  }
   if (formData.arrivalFloor) {
-    addInfoLine(doc, 'Étage', formData.arrivalFloor);
+    addInfoLineCompact(doc, 'Étage', formData.arrivalFloor, col2X, colWidth);
   }
   if (formData.arrivalArea) {
-    addInfoLine(doc, 'Superficie', formatArea(formData.arrivalArea));
+    addInfoLineCompact(doc, 'Superficie', formatArea(formData.arrivalArea), col2X, colWidth);
   }
   
   // Caractéristiques arrivée
   const arrivalFeatures = [];
   if (formData.arrivalElevator) arrivalFeatures.push('Ascenseur');
   if (formData.arrivalTruckAccess) arrivalFeatures.push('Accès camion');
-  if (formData.arrivalMonteCharge) arrivalFeatures.push('Monte-charge requis');
+  if (formData.arrivalMonteCharge) arrivalFeatures.push('Monte-charge');
   
   if (arrivalFeatures.length > 0) {
-    addInfoLine(doc, 'Caractéristiques', arrivalFeatures.join(', '));
+    addInfoLineCompact(doc, 'Équipements', arrivalFeatures.join(' • '), col2X, colWidth);
   }
   
-  doc.moveDown(0.5);
+  // Position après l'encadré
+  doc.y = boxY + 115;
   
-  // Détails du déménagement
-  addSubSection(doc, '📅 Détails du déménagement');
-  addInfoLine(doc, 'Date souhaitée', formatDate(formData.movingDate));
-  if (formData.movingTime) {
-    addInfoLine(doc, 'Heure préférée', formData.movingTime);
-  }
-  if (formData.flexibleDate) {
-    addInfoLine(doc, 'Flexibilité', 'Dates flexibles (± 3 jours)');
+  // Détails du déménagement - encadré compact
+  addSectionTitle(doc, 'DÉTAILS DU DÉMÉNAGEMENT');
+  
+  const box2Y = doc.y;
+  doc
+    .roundedRect(margins.left, box2Y, contentWidth, 50, 8)
+    .fillColor(COLORS.background.accent)
+    .fill();
+  
+  doc
+    .roundedRect(margins.left, box2Y, contentWidth, 50, 8)
+    .strokeColor(COLORS.primary)
+    .lineWidth(1.5)
+    .stroke();
+  
+  doc.y = box2Y + boxPadding;
+  
+  // Date et heure sur la même ligne
+  if (formData.movingDate) {
+    const dateText = `${formatDate(formData.movingDate)} à ${formData.movingTime || '09:00'}${formData.flexibleDate ? ' (dates flexibles ± 3j)' : ''}`;
+    addInfoLineCompact(doc, 'Date souhaitée', dateText, col1X, contentWidth - boxPadding * 2);
+  } else {
+    addInfoLineCompact(doc, 'Date souhaitée', 'À définir', col1X, contentWidth - boxPadding * 2);
   }
   
   // Offre choisie
-  addInfoLine(doc, 'Offre choisie', formatOffer(formData.selectedOffer));
+  if (formData.selectedOffer) {
+    addInfoLineCompact(doc, 'Offre sélectionnée', formatOffer(formData.selectedOffer), col1X, contentWidth - boxPadding * 2);
+  } else {
+    addInfoLineCompact(doc, 'Offre sélectionnée', 'À définir', col1X, contentWidth - boxPadding * 2);
+  }
   
-  doc.moveDown(1.5);
+  doc.y = box2Y + 55;
+  doc.moveDown(0.5);
 }
 
 function addSectionTitle(doc: PDFDocument, title: string): void {
@@ -82,33 +127,33 @@ function addSectionTitle(doc: PDFDocument, title: string): void {
   doc.moveDown(0.5);
 }
 
-function addSubSection(doc: PDFDocument, title: string): void {
+function addSubSection(doc: PDFDocument, title: string, x?: number): void {
+  const xPos = x || PDF_CONFIG.margins.left;
   doc
-    .fontSize(FONTS.sizes.h3)
-    .fillColor(COLORS.text.dark)
+    .fontSize(FONTS.sizes.body)
+    .fillColor(COLORS.primary)
     .font('Helvetica-Bold')
-    .text(title, PDF_CONFIG.margins.left, doc.y);
+    .text(title, xPos, doc.y);
   
   doc.moveDown(0.3);
 }
 
-function addInfoLine(doc: PDFDocument, label: string, value: string): void {
-  const { margins, contentWidth } = PDF_CONFIG;
-  const labelWidth = 120;
+function addInfoLineCompact(doc: PDFDocument, label: string, value: string, x: number, width: number): void {
+  const labelWidth = 80;
   
   doc
-    .fontSize(FONTS.sizes.body)
-    .fillColor(COLORS.text.medium)
+    .fontSize(FONTS.sizes.small)
+    .fillColor(COLORS.text.dark)
     .font('Helvetica-Bold')
-    .text(label + ':', margins.left + SPACING.md, doc.y, { 
+    .text(label + ':', x, doc.y, { 
       width: labelWidth,
       continued: true 
     })
     .font('Helvetica')
-    .fillColor(COLORS.text.dark)
-    .text(' ' + value, { width: contentWidth - labelWidth - SPACING.md });
+    .fillColor(COLORS.text.medium)
+    .text(' ' + value, { width: width - labelWidth });
   
-  doc.moveDown(0.3);
+  doc.moveDown(0.2);
 }
 
 function formatArea(area: string): string {
@@ -126,19 +171,27 @@ function formatArea(area: string): string {
 }
 
 function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
+  if (!dateString) return 'À définir';
+  
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'À définir';
+    
+    return date.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  } catch (error) {
+    return 'À définir';
+  }
 }
 
 function formatOffer(offer: string): string {
   const offerMap: { [key: string]: string } = {
-    'economique': '💼 Économique - Transport simple',
-    'standard': '📦 Standard - Avec démontage et cartons',
-    'premium': '⭐ Premium - Clé en main complet',
+    'economique': 'ÉCONOMIQUE - Transport simple',
+    'standard': 'STANDARD - Avec démontage et cartons',
+    'premium': 'PREMIUM - Clé en main complet',
   };
   return offerMap[offer] || offer;
 }
