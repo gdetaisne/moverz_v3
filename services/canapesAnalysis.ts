@@ -135,7 +135,14 @@ function mergeCanapesResults(
   console.log('OpenAI items:', JSON.stringify(openaiResults?.items, null, 2));
 
   if (!claudeResults && !openaiResults) {
-    return { items: [], totals: { total_volume_m3: 0, total_items: 0 } };
+    return {
+      version: "1.0.0",
+      photo_id: "canape-analysis",
+      items: [],
+      totals: { volume_m3: 0, count_items: 0 },
+      warnings: [],
+      errors: []
+    };
   }
 
   if (!claudeResults) return openaiResults!;
@@ -174,11 +181,15 @@ function mergeCanapesResults(
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
   return {
+    version: "1.0.0",
+    photo_id: "canape-analysis",
     items: mergedItems,
     totals: {
-      total_volume_m3: mergedItems.reduce((sum, item) => sum + item.volume_m3, 0),
-      total_items: mergedItems.length
-    }
+      volume_m3: mergedItems.reduce((sum, item) => sum + item.volume_m3, 0),
+      count_items: mergedItems.length
+    },
+    warnings: [],
+    errors: []
   };
 }
 
@@ -212,7 +223,7 @@ function validateCanapesDimensions(analysis: TPhotoAnalysis): TPhotoAnalysis {
       const { length } = item.dimensions_cm;
       
       // Vérifier largeur (dimension critique pour canapés)
-      const lengthDiff = Math.abs(length - expectedDims.length) / expectedDims.length;
+      const lengthDiff = Math.abs((length || 0) - expectedDims.length) / expectedDims.length;
       
       if (lengthDiff > 0.15) { // 15% tolérance
         console.log(`⚠️  Largeur hors standard: ${length}cm vs attendu ${expectedDims.length}cm (formule)`);
