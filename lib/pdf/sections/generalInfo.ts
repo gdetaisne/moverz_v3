@@ -1,9 +1,10 @@
 // Section informations générales du PDF
 import PDFDocument from 'pdfkit';
+import type { PDFDocument as PDFDocumentType } from 'pdfkit';
 import { COLORS, FONTS, SPACING, PDF_CONFIG } from '../styles';
 import { PDFFormData } from '../types';
 
-export function addGeneralInfo(doc: PDFDocument, formData: PDFFormData): void {
+export function addGeneralInfo(doc: PDFDocumentType, formData: PDFFormData): void {
   const { margins, contentWidth } = PDF_CONFIG;
   
   // Titre de section moderne

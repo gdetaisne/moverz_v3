@@ -1,10 +1,11 @@
 // Section détails de l'inventaire avec photos
 import PDFDocument from 'pdfkit';
+import type { PDFDocument as PDFDocumentType } from 'pdfkit';
 import { COLORS, FONTS, SPACING, PDF_CONFIG } from '../styles';
 import { PDFRoomData, PDFInventoryItem } from '../types';
 
 export function addInventoryDetails(
-  doc: PDFDocument,
+  doc: PDFDocumentType,
   rooms: PDFRoomData[]
 ): void {
   const { margins, contentWidth } = PDF_CONFIG;

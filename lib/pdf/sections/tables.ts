@@ -1,9 +1,10 @@
 // Section tableaux récapitulatifs
 import PDFDocument from 'pdfkit';
+import type { PDFDocument as PDFDocumentType } from 'pdfkit';
 import { COLORS, FONTS, SPACING, PDF_CONFIG } from '../styles';
 import { PDFRoomData, PDFInventoryItem } from '../types';
 
-export function addRecapTables(doc: PDFDocument, rooms: PDFRoomData[]): void {
+export function addRecapTables(doc: PDFDocumentType, rooms: PDFRoomData[]): void {
   const { margins, contentWidth } = PDF_CONFIG;
   
   // Nouvelle page pour les tableaux
@@ -57,7 +58,7 @@ export function addRecapTables(doc: PDFDocument, rooms: PDFRoomData[]): void {
   }
 }
 
-function addTableTitle(doc: PDFDocument, title: string, color: string): void {
+function addTableTitle(doc: PDFDocumentType, title: string, color: string): void {
   const { margins, contentWidth } = PDF_CONFIG;
   
   doc
@@ -69,7 +70,7 @@ function addTableTitle(doc: PDFDocument, title: string, color: string): void {
   doc.moveDown(0.5);
 }
 
-function addFragileTable(doc: PDFDocument, items: Array<PDFInventoryItem & { roomName: string }>): void {
+function addFragileTable(doc: PDFDocumentType, items: Array<PDFInventoryItem & { roomName: string }>): void {
   const { margins, contentWidth } = PDF_CONFIG;
   
   // Dimensions des colonnes
@@ -184,7 +185,7 @@ function addFragileTable(doc: PDFDocument, items: Array<PDFInventoryItem & { roo
   doc.y = currentY;
 }
 
-function addFurnitureTable(doc: PDFDocument, items: Array<PDFInventoryItem & { roomName: string }>): void {
+function addFurnitureTable(doc: PDFDocumentType, items: Array<PDFInventoryItem & { roomName: string }>): void {
   const { margins, contentWidth } = PDF_CONFIG;
   
   // Dimensions des colonnes
