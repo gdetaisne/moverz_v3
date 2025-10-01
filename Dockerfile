@@ -3,8 +3,11 @@ FROM node:18-alpine AS deps
 RUN apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
 
-# Install dependencies
+# Copy package files and scripts first
 COPY package.json package-lock.json ./
+COPY scripts/ ./scripts/
+
+# Install dependencies
 RUN npm ci
 
 # Stage 2: Builder
@@ -14,8 +17,8 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Copy Google credentials
-COPY google-credentials.json ./google-credentials.json
+# Copy Google credentials (optional)
+COPY google-credentials.json* ./google-credentials.json
 
 # Generate Prisma client
 RUN npx prisma generate
@@ -39,7 +42,7 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder /app/google-credentials.json ./google-credentials.json
+COPY --from=builder /app/google-credentials.json* ./google-credentials.json
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
