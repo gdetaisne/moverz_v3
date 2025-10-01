@@ -16,6 +16,9 @@ const nextConfig: NextConfig = {
       config.externals = config.externals || [];
       config.externals.push({
         'canvas': 'commonjs canvas',
+        // Externaliser PDFKit pour qu'il utilise directement node_modules
+        'pdfkit': 'commonjs pdfkit',
+        'blob-stream': 'commonjs blob-stream',
       });
     }
     

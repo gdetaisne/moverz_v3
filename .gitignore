@@ -58,3 +58,6 @@ Thumbs.db
 *AWS_FIX*.md
 *AWS_KEYS*.md
 *QUICK_FIX*.md
+
+/lib/generated/prisma
+/uploads/
