@@ -10,6 +10,9 @@ import { safeApiCall, createErrorHandler, APIError } from './core/errorHandling'
 import { cacheService, generateAnalysisCacheKey, cacheAnalysisResult, getCachedAnalysisResult } from './core/cacheService';
 import { config } from '../config/app';
 import crypto from 'crypto';
+// SPRINT 2 - Analyse contextuelle
+import { contextualAnalysisService, ContextualAnalysisResult } from './contextualAnalysisService';
+import { DetectedObject } from '../types/measurements';
 
 export interface OptimizedAnalysisResult extends TPhotoAnalysis {
   processingTime: number;
@@ -20,6 +23,7 @@ export interface OptimizedAnalysisResult extends TPhotoAnalysis {
     reasoning: string;
   };
   analysisType?: 'legacy' | 'specialized';
+  contextualAnalysis?: ContextualAnalysisResult; // SPRINT 2
 }
 
 // Cache géré par le service centralisé
@@ -58,7 +62,50 @@ export async function analyzePhotoWithOptimizedVision(opts: {
       petitsResults.status === 'fulfilled' ? petitsResults.value : null
     );
 
-    // 4. Recalculer le volume pour tous les objets (correction des erreurs IA)
+    // 4. SPRINT 2 : Analyse contextuelle si plusieurs objets
+    let contextualAnalysis: ContextualAnalysisResult | undefined;
+    if (finalResults.items.length >= 2) {
+      console.log('🔍 Analyse contextuelle multi-objets en cours...');
+      const detectedObjects: DetectedObject[] = finalResults.items.map((item, idx) => ({
+        id: `obj-${idx}`,
+        label: item.label,
+        confidence: item.confidence || 0.7,
+        dimensions: {
+          length: item.dimensions_cm?.length || 0,
+          width: item.dimensions_cm?.width || 0,
+          height: item.dimensions_cm?.height || 0
+        },
+        volume: item.volume_m3 || 0,
+        category: item.category || 'misc'
+      }));
+
+      contextualAnalysis = await contextualAnalysisService.analyzeContext(detectedObjects);
+      
+      // Appliquer les ajustements contextuels
+      // IMPORTANT : Les objets ajustés sont dans le même ordre que detectedObjects
+      if (contextualAnalysis.objects.length === finalResults.items.length) {
+        console.log(`✅ Application analyse contextuelle (${contextualAnalysis.adjustments.length} ajustement(s), cohérence: ${(contextualAnalysis.consistency * 100).toFixed(0)}%)`);
+        finalResults.items = finalResults.items.map((item, idx) => {
+          const adjustedObj = contextualAnalysis!.objects[idx];
+          // Appliquer les dimensions ajustées (préserver source et autres champs)
+          return {
+            ...item,
+            dimensions_cm: {
+              ...item.dimensions_cm,
+              length: adjustedObj.dimensions.length,
+              width: adjustedObj.dimensions.width,
+              height: adjustedObj.dimensions.height,
+              source: item.dimensions_cm?.source || 'estimated' // Préserver le source original
+            },
+            volume_m3: adjustedObj.volume
+          };
+        });
+      } else {
+        console.warn(`⚠️  Incohérence de taille : ${contextualAnalysis.objects.length} objets analysés vs ${finalResults.items.length} items. Analyse contextuelle ignorée.`);
+      }
+    }
+
+    // 5. Recalculer le volume pour tous les objets (correction des erreurs IA)
     const correctedResults = {
       ...finalResults,
       items: finalResults.items.map(item => {
@@ -74,14 +121,14 @@ export async function analyzePhotoWithOptimizedVision(opts: {
       })
     };
 
-    // 5. Détection de pièce désactivée (faite en parallèle dans l'API)
+    // 6. Détection de pièce désactivée (faite en parallèle dans l'API)
     const roomDetection = {
       roomType: 'pièce inconnue',
       confidence: 0.1,
       reasoning: 'Détection de pièce gérée en parallèle'
     };
 
-    // 6. Ajouter les métadonnées d'analyse
+    // 7. Ajouter les métadonnées d'analyse
     const processingTime = Date.now() - startTime;
     const result: OptimizedAnalysisResult = {
       ...correctedResults,
@@ -89,10 +136,11 @@ export async function analyzePhotoWithOptimizedVision(opts: {
       aiProvider: determineSpecializedAIProvider(volumineuxResults, petitsResults),
       analysisType: 'specialized',
       photo_id: opts.photoId,
-      roomDetection
+      roomDetection,
+      contextualAnalysis // SPRINT 2
     };
 
-    // 7. Mettre en cache
+    // 8. Mettre en cache
     cacheAnalysisResult(cacheKey, result, config.cache.ttl);
 
     console.log(`Analyse optimisée terminée en ${processingTime}ms (${result.aiProvider})`);
@@ -100,13 +148,15 @@ export async function analyzePhotoWithOptimizedVision(opts: {
 
   } catch (error) {
     console.error('Erreur lors de l\'analyse optimisée:', error);
-    // Fallback vers OpenAI seul
+    // Fallback vers OpenAI seul (pas d'analyse contextuelle en fallback)
     const fallbackResult = await originalAnalyzePhotoWithVision(opts);
     return {
       ...fallbackResult,
       processingTime: Date.now() - startTime,
       aiProvider: 'openai',
-      photo_id: opts.photoId
+      photo_id: opts.photoId,
+      analysisType: 'legacy',
+      contextualAnalysis: undefined // Pas d'analyse contextuelle en fallback
     };
   }
 }

@@ -3,22 +3,30 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3000",
-    "prebuild": "node scripts/update-build-info.js",
+    "predev": "node scripts/setup-pdfkit.js",
+    "dev": "next dev --port 3001",
+    "prebuild": "node scripts/update-build-info.js && node scripts/setup-pdfkit.js",
     "build": "next build",
     "start": "node server.js",
     "start:next": "next start",
-    "lint": "eslint"
+    "postinstall": "node scripts/setup-pdfkit.js || true",
+    "lint": "eslint",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.65.0",
     "@google-cloud/vision": "^5.3.3",
+    "@types/pdfkit": "^0.17.3",
     "aws-sdk": "^2.1692.0",
+    "blob-stream": "^0.1.3",
     "framer-motion": "^12.23.22",
     "jimp": "^1.6.0",
     "lucide-react": "^0.544.0",
     "next": "15.5.4",
     "openai": "^5.23.0",
+    "pdfkit": "^0.17.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "sharp": "^0.34.4",
@@ -27,12 +35,16 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.0",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
+    "jest": "^30.2.0",
     "tailwindcss": "^4",
+    "ts-jest": "^29.4.4",
     "typescript": "^5"
   }
 }

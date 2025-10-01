@@ -178,3 +178,4 @@ export function generateAnalysisCacheKey(imageUrl: string, analysisType: string 
   return cacheService.generateKey(`analysis:${analysisType}`, imageUrl);
 }
 
+

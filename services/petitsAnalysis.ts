@@ -397,3 +397,4 @@ async function prepareImageForClaude(imageUrl: string): Promise<Buffer> {
   }
 }
 
+

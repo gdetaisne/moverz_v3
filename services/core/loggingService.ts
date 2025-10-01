@@ -204,3 +204,4 @@ export function timeFunctionSync<T>(name: string, fn: () => T, context?: string)
   return logger.timeFunctionSync(name, fn, context);
 }
 
+

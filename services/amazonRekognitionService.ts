@@ -2,6 +2,7 @@
 // Service de mesure utilisant Amazon Rekognition
 
 import AWS from 'aws-sdk';
+import { calculateSmartDepth } from '../lib/depthDatabase';
 
 export interface AmazonRekognitionResult {
   dimensions: {
@@ -114,7 +115,13 @@ export class AmazonRekognitionService {
     // On assume une image de 1000x1000px pour la conversion
     const estimatedWidth = normalizedWidth * 1000; // cm
     const estimatedHeight = normalizedHeight * 1000; // cm
-    const estimatedDepth = Math.min(estimatedWidth, estimatedHeight) * 0.6; // Estimation de profondeur
+    
+    // AMÉLIORATION : Utiliser la DB de profondeurs au lieu de 0.6 fixe
+    const estimatedDepth = calculateSmartDepth(
+      objectLabel,
+      estimatedWidth,
+      estimatedHeight
+    );
 
     return {
       length: Math.round(estimatedWidth),

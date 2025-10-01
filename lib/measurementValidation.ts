@@ -13,7 +13,29 @@ export interface MeasurementValidation {
 }
 
 /**
+ * Mode de validation adaptatif selon la confiance
+ */
+type ValidationMode = 'strict' | 'normal' | 'relaxed';
+
+/**
+ * Détermine le mode de validation selon la confiance
+ * - relaxed (>0.8): Règles assouplies, fait confiance à l'IA
+ * - normal (0.5-0.8): Règles standards
+ * - strict (<0.5): Règles strictes, faible confiance
+ */
+function getValidationMode(confidence: number): ValidationMode {
+  if (confidence >= 0.8) {
+    return 'relaxed';
+  } else if (confidence >= 0.5) {
+    return 'normal';
+  } else {
+    return 'strict';
+  }
+}
+
+/**
  * Valide et corrige les dimensions d'un objet basé sur des règles de bon sens
+ * NOUVELLE VERSION : Validation adaptative basée sur la confiance
  */
 export function validateObjectMeasurements(
   label: string,
@@ -30,33 +52,50 @@ export function validateObjectMeasurements(
   const minDimension = Math.min(length, width, height);
   const maxDimension = Math.max(length, width, height);
   
-  // Validation de base
-  if (minDimension < 5) {
-    // Essayer de corriger les mesures trop petites
+  // NOUVELLE LOGIQUE : Validation adaptative selon la confiance
+  const validationMode = getValidationMode(confidence);
+  
+  // Validation de base avec tolérance adaptative
+  const minThreshold = validationMode === 'relaxed' ? 3 : 
+                       validationMode === 'normal' ? 5 : 8;
+  const maxThreshold = validationMode === 'relaxed' ? 600 : 
+                       validationMode === 'normal' ? 500 : 400;
+  
+  if (minDimension < minThreshold) {
+    // Pour haute confiance, moins de correction
+    const correctionFactor = validationMode === 'relaxed' ? 1.2 : 1.5;
     const correctedDimensions = {
       length: Math.max(length, 10),
       width: Math.max(width, 10),
       height: Math.max(height, 5)
     };
     
+    // Ajuster la confiance selon le mode
+    const adjustedConfidence = validationMode === 'relaxed' ? confidence * 0.9 : 0.3;
+    
     return {
       isValid: false,
-      confidence: 0.3,
+      confidence: adjustedConfidence,
       correctedDimensions,
-      reasoning: `Objet trop petit (${minDimension}cm) - dimensions corrigées`
+      reasoning: `Objet trop petit (${minDimension}cm < ${minThreshold}cm) - validation ${validationMode}`
     };
   }
   
-  if (maxDimension > 500) {
+  if (maxDimension > maxThreshold) {
+    // Pour haute confiance, accepter des dimensions plus grandes
+    const correctedDimensions = {
+      length: Math.min(length, maxThreshold),
+      width: Math.min(width, maxThreshold),
+      height: Math.min(height, maxThreshold)
+    };
+    
+    const adjustedConfidence = validationMode === 'relaxed' ? confidence * 0.85 : 0.1;
+    
     return {
       isValid: false,
-      confidence: 0.1,
-      correctedDimensions: {
-        length: Math.min(length, 300),
-        width: Math.min(width, 300),
-        height: Math.min(height, 300)
-      },
-      reasoning: `Objet trop grand (${maxDimension}cm) - dimensions corrigées`
+      confidence: adjustedConfidence,
+      correctedDimensions,
+      reasoning: `Objet trop grand (${maxDimension}cm > ${maxThreshold}cm) - validation ${validationMode}`
     };
   }
   

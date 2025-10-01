@@ -1,12 +1,9 @@
-import { TPhotoAnalysis } from '@/lib/schemas';
-import { analyzePhotoWithClaude } from './claudeVision';
-import { originalAnalyzePhotoWithVision } from './openaiVision';
+import { TPhotoAnalysis, TInventoryItem } from '@/lib/schemas';
 import { SPECIALIZED_AI_SETTINGS } from '@/lib/specializedPrompts';
 import { calculatePackagedVolume } from '@/lib/packaging';
 import { calculateDismountableProbability } from '@/lib/dismountable';
 import { mapToCatalog, volumeFromDims } from '@/lib/normalize';
 import { fastEstimateMeasurements, quickValidateMeasurements } from './fastMeasurementTool';
-import { googleVisionService } from './googleVisionService';
 import { hybridMeasurementService } from './hybridMeasurementService';
 
 export interface VolumineuxAnalysisResult extends TPhotoAnalysis {
@@ -203,7 +200,7 @@ async function analyzeVolumineuxWithOpenAI(opts: {
 /**
  * Traite et enrichit les résultats d'analyse volumineux
  */
-function processVolumineuxAnalysis(analysis: any, photoId: string): TPhotoAnalysis {
+function processVolumineuxAnalysis(analysis: TPhotoAnalysis, photoId: string): TPhotoAnalysis {
   // Enrichir chaque objet avec les propriétés du catalogue et calculs
   for (const item of analysis.items ?? []) {
     const cat = mapToCatalog(item.label);
@@ -269,8 +266,8 @@ function processVolumineuxAnalysis(analysis: any, photoId: string): TPhotoAnalys
 
   const items = analysis.items ?? [];
   const totals = {
-    count_items: items.reduce((s: number, i: any) => s + (i.quantity ?? 1), 0),
-    volume_m3: Number(items.reduce((s: number, i: any) => s + (i.volume_m3 ?? 0) * (i.quantity ?? 1), 0).toFixed(3)),
+    count_items: items.reduce((s: number, i: TInventoryItem) => s + (i.quantity ?? 1), 0),
+    volume_m3: Number(items.reduce((s: number, i: TInventoryItem) => s + (i.volume_m3 ?? 0) * (i.quantity ?? 1), 0).toFixed(3)),
   };
   
   // Gérer les special_rules
@@ -334,7 +331,7 @@ function mergeVolumineuxResults(
 /**
  * Fusionne les items volumineux des deux analyses
  */
-function mergeVolumineuxItems(items1: any[], items2: any[]): any[] {
+function mergeVolumineuxItems(items1: TInventoryItem[], items2: TInventoryItem[]): TInventoryItem[] {
   const mergedMap = new Map();
   
   // Ajouter les items de Claude

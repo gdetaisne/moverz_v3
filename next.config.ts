@@ -9,6 +9,25 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   
+  // Configuration webpack pour PDFKit et modules Node.js
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      // Configuration pour les modules Node.js utilisés par PDFKit
+      config.externals = config.externals || [];
+      config.externals.push({
+        'canvas': 'commonjs canvas',
+      });
+    }
+    
+    // Ignorer les warnings de modules optionnels
+    config.ignoreWarnings = [
+      { module: /node_modules\/node-fetch\/lib\/index\.js/ },
+      { module: /node_modules\/punycode\/punycode\.js/ },
+    ];
+    
+    return config;
+  },
+  
   // Headers pour permettre l'intégration iframe
   async headers() {
     return [

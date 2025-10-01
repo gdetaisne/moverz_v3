@@ -3,6 +3,7 @@
 
 import { ImageAnnotatorClient } from '@google-cloud/vision';
 import { logger as loggingService } from './core/loggingService';
+import { calculateSmartDepth } from '../lib/depthDatabase';
 
 export interface GoogleVisionResult {
   dimensions: {
@@ -20,13 +21,22 @@ export class GoogleVisionService {
 
   constructor() {
     try {
-      // Vérifier si Google Cloud est configuré
+      // Option 1 : Fichier JSON (local)
       if (process.env.GOOGLE_CLOUD_PROJECT_ID && process.env.GOOGLE_APPLICATION_CREDENTIALS) {
         this.client = new ImageAnnotatorClient({
           projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
           keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS
         });
-        loggingService.info('Google Vision Service initialisé', 'GoogleVisionService');
+        loggingService.info('Google Vision Service initialisé (fichier)', 'GoogleVisionService');
+      }
+      // Option 2 : JSON dans variable d'environnement (production)
+      else if (process.env.GOOGLE_CREDENTIALS_JSON) {
+        const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
+        this.client = new ImageAnnotatorClient({
+          projectId: credentials.project_id,
+          credentials: credentials
+        });
+        loggingService.info('Google Vision Service initialisé (JSON env)', 'GoogleVisionService');
       } else {
         loggingService.warn('Google Vision Service non configuré - credentials manquantes', 'GoogleVisionService');
       }
@@ -42,10 +52,6 @@ export class GoogleVisionService {
   async measureObject(imageUrl: string, objectLabel: string): Promise<GoogleVisionResult> {
     try {
       loggingService.info(`Mesure de ${objectLabel}`, 'GoogleVisionService');
-      
-      // TEMPORAIRE: Désactiver Google Vision pour faire passer le build
-      loggingService.warn('Google Vision Service temporairement désactivé pour le build', 'GoogleVisionService');
-      return this.getFallbackDimensions(objectLabel);
       
       // Vérifier si le client est initialisé
       if (!this.client) {
@@ -124,7 +130,18 @@ export class GoogleVisionService {
     // On assume une image de 1000x1000px pour la conversion
     const estimatedWidth = normalizedWidth * 1000; // cm
     const estimatedHeight = normalizedHeight * 1000; // cm
-    const estimatedDepth = Math.min(estimatedWidth, estimatedHeight) * 0.6; // Estimation de profondeur
+    
+    // AMÉLIORATION : Utiliser la DB de profondeurs au lieu de 0.6 fixe
+    const estimatedDepth = calculateSmartDepth(
+      targetLabel,
+      estimatedWidth,
+      estimatedHeight
+    );
+
+    loggingService.info(
+      `Profondeur calculée pour ${targetLabel}: ${estimatedDepth}cm (DB)`,
+      'GoogleVisionService'
+    );
 
     return {
       length: Math.round(estimatedWidth),

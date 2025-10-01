@@ -1,0 +1,71 @@
+name: Tests Unitaires
+
+on:
+  # À chaque push sur main ou dev
+  push:
+    branches: [main, dev]
+  
+  # À chaque Pull Request
+  pull_request:
+    branches: [main]
+  
+  # Tous les jours à 6h heure française (5h UTC en hiver, 4h UTC en été)
+  schedule:
+    - cron: '0 5 * * *'  # 6h heure de Paris (UTC+1)
+  
+  # Permet de lancer manuellement depuis GitHub
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. Récupérer le code
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # 2. Installer Node.js 20
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      # 3. Installer les dépendances
+      - name: Install dependencies
+        run: npm ci
+      
+      # 4. Lancer les tests
+      - name: Run tests
+        run: npm test
+      
+      # 5. Envoyer un email si les tests échouent
+      - name: Send email notification on failure
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          to: ${{ secrets.EMAIL_TO }}
+          from: GitHub Actions <noreply@github.com>
+          subject: "❌ Tests échoués sur moverz_v3"
+          body: |
+            Les tests unitaires ont échoué sur moverz_v3 !
+            
+            📋 Détails :
+            - Commit : ${{ github.sha }}
+            - Auteur : ${{ github.actor }}
+            - Branche : ${{ github.ref }}
+            - Workflow : ${{ github.workflow }}
+            
+            🔗 Voir les logs :
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            
+            ⏰ Date : ${{ github.event.head_commit.timestamp }}
+            
+            ---
+            Message du commit : ${{ github.event.head_commit.message }}
+

@@ -4,6 +4,7 @@
 import { googleVisionService, GoogleVisionResult } from './googleVisionService';
 import { amazonRekognitionService, AmazonRekognitionResult } from './amazonRekognitionService';
 import { logger as loggingService } from './core/loggingService';
+import { validateObjectMeasurements } from '../lib/measurementValidation';
 
 export interface HybridMeasurementResult {
   dimensions: {
@@ -127,6 +128,10 @@ export class HybridMeasurementService {
         (googleResult.confidence + amazonResult.confidence) / 2 * 1.1, // Boost de 10%
         0.95
       );
+
+      // AMÉLIORATION : Validation adaptative basée sur la confiance
+      // On ne valide pas ici pour préserver les dimensions fusionnées
+      // La validation sera faite au niveau supérieur si nécessaire
 
       return {
         dimensions: fusedDimensions,
