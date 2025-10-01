@@ -1,3 +1,38 @@
+/**
+ * 🤖 SERVICE D'ANALYSE IA OPTIMISÉE
+ * 
+ * 📐 ARCHITECTURE ACTUELLE :
+ * 
+ * analyzePhotoWithOptimizedVision()
+ * ├─ analyzeVolumineuxHybrid() → Objets >50cm (tables, canapés, armoires, lits...)
+ * │  ├─ analyzeVolumineuxWithClaude()  (en parallèle)
+ * │  └─ analyzeVolumineuxWithOpenAI()  (en parallèle)
+ * │
+ * ├─ analyzePetitsHybrid()     → Objets <50cm (déco, vaisselle, lampes...)
+ * │  ├─ analyzePetitsWithClaude()     (en parallèle)
+ * │  └─ analyzePetitsWithOpenAI()     (en parallèle)
+ * │
+ * └─ deduplicateItems()        → Fusion et dédoublonnage inter-analyses
+ * 
+ * 🚀 ÉVOLUTIONS FUTURES POSSIBLES (voir ANALYSE_PRIORITES_PRECISION.md) :
+ * 
+ * OPTION A : Spécialisation par type de meuble (impact max, complexité élevée)
+ *   analyzePhotoWithOptimizedVision()
+ *   ├─ analyzeTablesHybrid()          → Raisonnement contextuel (compter chaises)
+ *   ├─ analyzeArmoiresHybrid()        → Raisonnement (compter portes)
+ *   ├─ analyzeLitsHybrid()            → Raisonnement (compter oreillers)
+ *   ├─ analyzeCanapesHybrid()         → Raisonnement (compter places)
+ *   ├─ analyzeAutresVolumineuxHybrid()
+ *   └─ analyzePetitsHybrid()
+ * 
+ * OPTION B : Prompt structuré unique (impact bon, complexité faible) ← RECOMMANDÉ
+ *   - 1 seul appel API avec sections dédiées par type
+ *   - Garde performance actuelle
+ *   - Plus facile à maintenir
+ * 
+ * 📊 PRIORITÉS MESURES PRÉCISES (voir lib/catalog.ts et ANALYSE_PRIORITES_PRECISION.md)
+ */
+
 import { TPhotoAnalysis } from '@/lib/schemas';
 import { analyzePhotoWithClaude } from './claudeVision';
 import { originalAnalyzePhotoWithVision } from './openaiVision';

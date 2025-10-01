@@ -1,3 +1,33 @@
+/**
+ * 📊 CATALOGUE DES MEUBLES STANDARDS
+ * 
+ * 🎯 PRIORITÉS DE PRÉCISION (Impact volumétrique sur déménagement) :
+ * 
+ * 🔴 CRITIQUE (1.5-2.5 m³ × 3+ unités = ±1-1.5 m³ d'erreur potentielle) :
+ *    - ARMOIRES / PENDERIES : Volume individuel très élevé + plusieurs par foyer
+ *      → TODO : Ajouter raisonnement "1 porte=80cm, 2 portes=120cm, 3 portes=180cm"
+ * 
+ * 🟠 HAUTE (0.4-2.0 m³ × 1-2 unités = ±0.3-0.5 m³ d'erreur potentielle) :
+ *    - TABLES À MANGER : Erreur de forme fréquente (carré vs rectangulaire)
+ *      → TODO : Validation morphologique (ratio L/W) AVANT d'appliquer catalogue
+ *    - CANAPÉS : Volume élevé, forme complexe
+ *      → TODO : Raisonnement "2 places=160cm, 3 places=220cm"
+ * 
+ * 🟡 MOYENNE (0.6-1.2 m³ × 2-3 unités = ±0.4-0.7 m³ d'erreur potentielle) :
+ *    - LITS : Tailles standardisées (90/140/160/180)
+ *      → TODO : Compter oreillers → déduire taille
+ *    - RÉFRIGÉRATEURS : Dimensions assez standardisées
+ * 
+ * 🟢 BASSE (<0.3 m³) : Petits meubles, approximations acceptables
+ * 
+ * ⚠️  RÈGLE IMPORTANTE : Ne JAMAIS écraser dimensions IA avec catalogue si :
+ *     - Forme incompatible (ratio L/W différent >30%)
+ *     - Source = "catalog" déjà appliqué
+ *     - Confidence IA élevée (>0.8)
+ * 
+ * Voir ANALYSE_PRIORITES_PRECISION.md pour détails complets.
+ */
+
 export type CatalogRow = {
   key: string; // normalized label (slug)
   aliases: string[]; // words to match from model outputs
