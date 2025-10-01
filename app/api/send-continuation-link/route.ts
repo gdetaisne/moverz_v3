@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
       })
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Validation échouée', details: error.errors },

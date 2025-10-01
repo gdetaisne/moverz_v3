@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       file_size: saved.size,
       photo_id: saved.id
     });
-  } catch (e:any) {
+  } catch (e: unknown) {
     console.error("API Error:", e);
     console.error("Stack:", e.stack);
     return NextResponse.json({ 

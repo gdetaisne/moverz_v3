@@ -4,12 +4,14 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 
 interface FragileToggleProps {
-  item: any;
+  item: {
+    fragile?: boolean;
+    confidence?: number;
+  };
   onToggle: (isFragile: boolean) => void;
-  className?: string;
 }
 
-export default function FragileToggle({ item, onToggle, className = "" }: FragileToggleProps) {
+export default function FragileToggle({ item, onToggle }: FragileToggleProps) {
   const [isFragile, setIsFragile] = useState(item.fragile ?? false);
   const confidence = item.confidence ?? 0.5;
   

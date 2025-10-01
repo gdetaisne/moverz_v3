@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
 }
 
 // Support pour les requêtes OPTIONS (CORS)
-export async function OPTIONS(req: NextRequest) {
+export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: {

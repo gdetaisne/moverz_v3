@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json({ projects });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[GET /api/projects] Error:', error);
     return NextResponse.json(
       { error: error.message || 'Internal error' },
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ project }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[POST /api/projects] Error:', error);
     
     if (error instanceof z.ZodError) {

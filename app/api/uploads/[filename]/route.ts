@@ -41,7 +41,7 @@ export async function GET(
         'Cache-Control': 'public, max-age=31536000, immutable',
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error.code === 'ENOENT') {
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }

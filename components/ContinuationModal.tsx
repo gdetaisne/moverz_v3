@@ -12,8 +12,7 @@ interface ContinuationModalProps {
 export default function ContinuationModal({ 
   isOpen, 
   onClose, 
-  onSend,
-  projectId 
+  onSend
 }: ContinuationModalProps) {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -35,7 +34,7 @@ export default function ContinuationModal({
         setSuccess(false);
         setEmail("");
       }, 2000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || "Erreur lors de l'envoi de l'email");
     } finally {
       setIsLoading(false);

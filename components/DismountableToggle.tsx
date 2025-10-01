@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 
 interface DismountableToggleProps {
-  item: any;
+  item: {
+    dismountable?: boolean;
+    dismountable_confidence?: number;
+    dismountable_source?: string;
+    category?: string;
+    label?: string;
+  };
   onToggle: (dismountable: boolean) => void;
   className?: string;
 }

@@ -39,7 +39,7 @@ export async function GET(
     }
 
     return NextResponse.json({ project });
-  } catch (error: any) {
+  } catch (error: unknown) {
     const { id } = await params;
     console.error(`[GET /api/projects/${id}] Error:`, error);
     return NextResponse.json(
@@ -88,7 +88,7 @@ export async function PUT(
     });
 
     return NextResponse.json({ project });
-  } catch (error: any) {
+  } catch (error: unknown) {
     const { id } = await params;
     console.error(`[PUT /api/projects/${id}] Error:`, error);
     
@@ -135,7 +135,7 @@ export async function DELETE(
     });
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     const { id } = await params;
     console.error(`[DELETE /api/projects/${id}] Error:`, error);
     return NextResponse.json(

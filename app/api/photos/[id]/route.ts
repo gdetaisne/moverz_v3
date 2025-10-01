@@ -49,7 +49,7 @@ export async function PATCH(
     console.log(`✅ Photo ${photoId} mise à jour`);
 
     return NextResponse.json({ success: true, photo: updatedPhoto }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     const { id } = await params;
     console.error(`❌ Erreur mise à jour photo ${id}:`, error);
     return NextResponse.json({ error: "Failed to update photo" }, { status: 500 });
@@ -87,7 +87,7 @@ export async function GET(
     }
 
     return NextResponse.json({ photo }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     const { id } = await params;
     console.error(`❌ Erreur récupération photo ${id}:`, error);
     return NextResponse.json({ error: "Failed to fetch photo" }, { status: 500 });

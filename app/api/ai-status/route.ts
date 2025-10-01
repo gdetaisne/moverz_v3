@@ -40,7 +40,7 @@ async function checkOpenAI(): Promise<AIServiceStatus> {
       model: config.openai.model,
       lastCheck: new Date().toISOString()
     };
-  } catch (error) {
+  } catch {
     return {
       name: 'OpenAI',
       status: 'error',
@@ -88,7 +88,7 @@ async function checkClaude(): Promise<AIServiceStatus> {
       model: config.claude.model,
       lastCheck: new Date().toISOString()
     };
-  } catch (error) {
+  } catch {
     return {
       name: 'Claude',
       status: 'error',
