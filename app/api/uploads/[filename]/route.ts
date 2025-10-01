@@ -35,7 +35,7 @@ export async function GET(
       ext === 'gif' ? 'image/gif' :
       'image/jpeg';
     
-    return new NextResponse(file, {
+    return new NextResponse(file as BodyInit, {
       headers: {
         'Content-Type': contentType,
         'Cache-Control': 'public, max-age=31536000, immutable',
