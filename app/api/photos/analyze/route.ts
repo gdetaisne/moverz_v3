@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { analyzePhotoWithOptimizedVision } from "@/services/optimizedAnalysis";
-import { detectRoomTypeParallel } from "@/services/parallelRoomDetection";
 import { savePhotoToFile, saveAsBase64, savePhotoToDatabase } from "@/lib/storage";
 import { getUserId } from "@/lib/auth";
 
@@ -23,6 +21,10 @@ export async function POST(req: NextRequest) {
     // Pour l'analyse IA, on a toujours besoin du Base64 temporairement
     const base64Data = await saveAsBase64(file);
     
+    // Import dynamique pour éviter les erreurs de build
+    const { analyzePhotoWithOptimizedVision } = await import("@/services/optimizedAnalysis");
+    const { detectRoomTypeParallel } = await import("@/services/parallelRoomDetection");
+
     // Lancer les deux analyses EN PARALLÈLE
     console.log("🚀 Lancement des analyses parallèles...");
     const [analysis, roomDetection] = await Promise.all([

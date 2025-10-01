@@ -12,6 +12,9 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   
+  // Configuration pour éviter les erreurs de build avec les API routes
+  skipTrailingSlashRedirect: true,
+  
   // Configuration webpack pour PDFKit et modules Node.js
   webpack: (config, { isServer }) => {
     if (isServer) {
