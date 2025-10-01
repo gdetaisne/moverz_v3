@@ -38,6 +38,10 @@ import { analyzePhotoWithClaude } from './claudeVision';
 import { originalAnalyzePhotoWithVision } from './openaiVision';
 import { analyzeVolumineuxHybrid } from './volumineuxAnalysis';
 import { analyzePetitsHybrid } from './petitsAnalysis';
+// 🆕 Services spécialisés par catégorie
+import { analyzeArmoiresHybrid } from './armoiresAnalysis';
+import { analyzeTablesHybrid } from './tablesAnalysis';
+import { analyzeCanapesHybrid } from './canapesAnalysis';
 import { optimizeImageForAI } from '@/lib/imageOptimization';
 import { calculatePackagedVolume } from '@/lib/packaging';
 import { validateAllMeasurements } from '@/lib/measurementValidation';
@@ -81,18 +85,27 @@ export async function analyzePhotoWithOptimizedVision(opts: {
       return { ...cached, photo_id: opts.photoId };
     }
 
-    // 2. NOUVELLE APPROCHE : Analyse hybride spécialisée par catégorie
-    console.log("🚀 Lancement de l'analyse hybride spécialisée...");
+    // 2. NOUVELLE APPROCHE : 5 Analyses spécialisées en parallèle
+    console.log("🚀 Lancement de 5 analyses spécialisées en parallèle...");
     
-    const [volumineuxResults, petitsResults] = await Promise.allSettled([
-      // Analyse VOLUMINEUX : Claude + OpenAI sur gros objets (>50cm)
+    const [armoiresResults, tablesResults, canapesResults, volumineuxResults, petitsResults] = await Promise.allSettled([
+      // 🆕 Analyse ARMOIRES : Raisonnement contextuel (compter portes)
+      safeApiCall(() => analyzeArmoiresHybrid(opts), 'ArmoiresAnalysis'),
+      // 🆕 Analyse TABLES : Validation morphologique (ratio carré vs rectangulaire)
+      safeApiCall(() => analyzeTablesHybrid(opts), 'TablesAnalysis'),
+      // 🆕 Analyse CANAPÉS : Formule explicite (Places×60 + Accoudoirs)
+      safeApiCall(() => analyzeCanapesHybrid(opts), 'CanapesAnalysis'),
+      // Analyse VOLUMINEUX : Reste des gros objets (lits, électroménagers, etc.)
       safeApiCall(() => analyzeVolumineuxHybrid(opts), 'VolumineuxAnalysis'),
-      // Analyse PETITS : Claude + OpenAI sur petits objets (<50cm)
+      // Analyse PETITS : Petits objets (<50cm)
       safeApiCall(() => analyzePetitsHybrid(opts), 'PetitsAnalysis')
     ]);
 
-    // 3. Fusionner les résultats des deux analyses spécialisées
-    const finalResults = mergeSpecializedResults(
+    // 3. Fusionner les résultats des 5 analyses spécialisées
+    const finalResults = mergeAllSpecializedResults(
+      armoiresResults.status === 'fulfilled' ? armoiresResults.value : null,
+      tablesResults.status === 'fulfilled' ? tablesResults.value : null,
+      canapesResults.status === 'fulfilled' ? canapesResults.value : null,
       volumineuxResults.status === 'fulfilled' ? volumineuxResults.value : null,
       petitsResults.status === 'fulfilled' ? petitsResults.value : null
     );
@@ -168,7 +181,7 @@ export async function analyzePhotoWithOptimizedVision(opts: {
     const result: OptimizedAnalysisResult = {
       ...correctedResults,
       processingTime,
-      aiProvider: determineSpecializedAIProvider(volumineuxResults, petitsResults),
+      aiProvider: determineAllSpecializedAIProvider(armoiresResults, tablesResults, canapesResults, volumineuxResults, petitsResults),
       analysisType: 'specialized',
       photo_id: opts.photoId,
       roomDetection,
@@ -237,7 +250,7 @@ function deduplicateItems(volumineuxItems: any[], petitsItems: any[]): any[] {
 }
 
 /**
- * Fusionne les résultats des analyses spécialisées (volumineux + petits)
+ * Fusionne les résultats des analyses spécialisées (volumineux + petits) - LEGACY
  */
 function mergeSpecializedResults(
   volumineuxResults: any | null,
@@ -296,6 +309,114 @@ function mergeSpecializedResults(
     errors: [...(volumineuxResults.errors || []), ...(petitsResults.errors || [])],
     totals
   };
+}
+
+/**
+ * 🆕 Fusionne les résultats des 5 analyses spécialisées
+ * Priorité : Analyses spécialisées (armoires, tables, canapés) > Volumineux > Petits
+ */
+function mergeAllSpecializedResults(
+  armoiresResults: any | null,
+  tablesResults: any | null,
+  canapesResults: any | null,
+  volumineuxResults: any | null,
+  petitsResults: any | null
+): TPhotoAnalysis {
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('🔀 MERGE 5 ANALYSES SPÉCIALISÉES:');
+  console.log('- Armoires:', armoiresResults?.items?.length || 0, 'items');
+  console.log('- Tables:', tablesResults?.items?.length || 0, 'items');
+  console.log('- Canapés:', canapesResults?.items?.length || 0, 'items');
+  console.log('- Volumineux:', volumineuxResults?.items?.length || 0, 'items');
+  console.log('- Petits:', petitsResults?.items?.length || 0, 'items');
+
+  // Collecter tous les items avec leur priorité
+  const allItems = [
+    ...(armoiresResults?.items || []).map((item: any) => ({ ...item, _priority: 1, _source: 'armoires' })),
+    ...(tablesResults?.items || []).map((item: any) => ({ ...item, _priority: 1, _source: 'tables' })),
+    ...(canapesResults?.items || []).map((item: any) => ({ ...item, _priority: 1, _source: 'canapes' })),
+    ...(volumineuxResults?.items || []).map((item: any) => ({ ...item, _priority: 2, _source: 'volumineux' })),
+    ...(petitsResults?.items || []).map((item: any) => ({ ...item, _priority: 3, _source: 'petits' }))
+  ];
+
+  // Déduplication intelligente : priorité aux analyses spécialisées
+  const deduplicatedItems = deduplicateItemsWithPriority(allItems);
+
+  console.log('✅ Items après déduplication:', deduplicatedItems.length);
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+  // Valider et corriger les mesures
+  const validatedItems = validateAllMeasurements(deduplicatedItems);
+
+  // Fusionner les règles spéciales
+  const allResults = [armoiresResults, tablesResults, canapesResults, volumineuxResults, petitsResults].filter(r => r);
+  const specialRules = {
+    autres_objets: {
+      present: allResults.some(r => r.special_rules?.autres_objets?.present),
+      listed_items: allResults.flatMap(r => r.special_rules?.autres_objets?.listed_items || []),
+      volume_m3: allResults.reduce((sum, r) => sum + (r.special_rules?.autres_objets?.volume_m3 || 0), 0)
+    }
+  };
+
+  // Calculer les totaux
+  const totals = {
+    count_items: validatedItems.reduce((sum, item) => sum + (item.quantity || 1), 0),
+    volume_m3: Number(validatedItems.reduce((sum, item) => sum + (item.volume_m3 || 0) * (item.quantity || 1), 0).toFixed(3))
+  };
+
+  // Fusionner les warnings
+  const warnings = [
+    ...allResults.flatMap(r => r.warnings || []),
+    'Analyse hybride spécialisée : Armoires + Tables + Canapés + Volumineux + Petits'
+  ];
+
+  const photoId = armoiresResults?.photo_id || tablesResults?.photo_id || canapesResults?.photo_id || 
+                  volumineuxResults?.photo_id || petitsResults?.photo_id || '';
+
+  return {
+    version: "1.0.0",
+    photo_id: photoId,
+    items: validatedItems,
+    special_rules: specialRules,
+    warnings,
+    errors: allResults.flatMap(r => r.errors || []),
+    totals
+  };
+}
+
+/**
+ * 🆕 Déduplique les items en respectant la priorité des sources
+ * Priorité : 1 (spécialisé) > 2 (volumineux) > 3 (petits)
+ */
+function deduplicateItemsWithPriority(items: any[]): any[] {
+  const itemMap = new Map<string, any>();
+
+  for (const item of items) {
+    const key = item.label.toLowerCase().trim();
+    const existing = itemMap.get(key);
+
+    if (!existing) {
+      // Nouvel item
+      itemMap.set(key, item);
+    } else {
+      // Item existe déjà : garder celui avec meilleure priorité OU meilleure confidence
+      if (item._priority < existing._priority) {
+        // Priorité plus haute (spécialisé > volumineux > petits)
+        console.log(`  → Priorité: Remplacement "${key}" (${existing._source} → ${item._source})`);
+        itemMap.set(key, item);
+      } else if (item._priority === existing._priority && item.confidence > existing.confidence) {
+        // Même priorité mais meilleure confidence
+        console.log(`  → Confidence: Remplacement "${key}" (${existing.confidence} → ${item.confidence})`);
+        itemMap.set(key, item);
+      }
+    }
+  }
+
+  // Nettoyer les champs internes
+  return Array.from(itemMap.values()).map(item => {
+    const { _priority, _source, ...cleanItem } = item;
+    return cleanItem;
+  });
 }
 
 /**
@@ -394,7 +515,7 @@ function mergeItems(items1: any[], items2: any[]): any[] {
 }
 
 /**
- * Détermine le fournisseur IA utilisé pour l'analyse spécialisée
+ * Détermine le fournisseur IA utilisé pour l'analyse spécialisée - LEGACY
  */
 function determineSpecializedAIProvider(
   volumineuxResults: PromiseSettledResult<any>,
@@ -415,6 +536,36 @@ function determineSpecializedAIProvider(
   if (volumineuxSuccess) return 'openai'; // Fallback
   if (petitsSuccess) return 'openai'; // Fallback
   return 'openai'; // Fallback final
+}
+
+/**
+ * 🆕 Détermine le fournisseur IA utilisé pour les 5 analyses spécialisées
+ */
+function determineAllSpecializedAIProvider(
+  armoiresResults: PromiseSettledResult<any>,
+  tablesResults: PromiseSettledResult<any>,
+  canapesResults: PromiseSettledResult<any>,
+  volumineuxResults: PromiseSettledResult<any>,
+  petitsResults: PromiseSettledResult<any>
+): 'claude' | 'openai' | 'hybrid' | 'specialized-hybrid' {
+  const allResults = [armoiresResults, tablesResults, canapesResults, volumineuxResults, petitsResults];
+  const successfulResults = allResults.filter(r => r.status === 'fulfilled');
+  
+  if (successfulResults.length === 0) return 'openai'; // Fallback final
+  
+  // Compter combien utilisent l'hybride
+  const hybridCount = successfulResults.filter(r => 
+    r.status === 'fulfilled' && r.value?.aiProvider === 'hybrid'
+  ).length;
+  
+  // Si au moins 3 analyses utilisent l'hybride → specialized-hybrid
+  if (hybridCount >= 3) return 'specialized-hybrid';
+  
+  // Si au moins 1 hybride → hybrid
+  if (hybridCount >= 1) return 'hybrid';
+  
+  // Sinon fallback openai
+  return 'openai';
 }
 
 /**
