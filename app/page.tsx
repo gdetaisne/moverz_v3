@@ -1125,7 +1125,7 @@ export default function Home() {
       }
     };
 
-    const style = badgeStyles[confidence] || badgeStyles.low;
+    const style = badgeStyles[confidence as keyof typeof badgeStyles] || badgeStyles.low;
 
     return (
       <div className={`mt-2 p-2 rounded border ${style.border} ${style.bg}`}>
