@@ -11,7 +11,7 @@ export const DimensionsCm = z.object({
   length: z.number().positive().nullable(),
   width: z.number().positive().nullable(),
   height: z.number().positive().nullable(),
-  source: z.enum(["estimated","catalog","user"]).default("estimated"),
+  source: z.enum(["estimated","catalog","user","reasoned"]).default("estimated"),
 });
 
 export const InventoryItem = z.object({
@@ -34,6 +34,22 @@ export const InventoryItem = z.object({
   dismountable: z.boolean().optional(),
   dismountable_confidence: z.number().min(0).max(1).optional(),
   dismountable_source: z.enum(['database', 'ai', 'hybrid', 'user']).optional(),
+  // Nouveaux champs pour la détection de doublons
+  isPotentialDuplicate: z.boolean().optional(),
+  duplicateInfo: z.object({
+    targetPhotoIndex: z.number(),
+    targetItemIndex: z.number(),
+    sourcePhotoIndex: z.number(),
+    sourceItemIndex: z.number(),
+    similarity: z.number().min(0).max(1),
+    confidence: z.enum(['high', 'medium', 'low']),
+    reasons: z.array(z.string()),
+    method: z.enum(['exact', 'room-based', 'visual', 'metadata'])
+  }).optional(),
+  shouldAutoDeselect: z.boolean().optional(),
+  // Nouveaux champs pour les analyses spécialisées
+  detected_features: z.any().optional(), // Caractéristiques détectées (nb_chaises, nb_portes, nb_places, etc.)
+  reasoning: z.string().optional(), // Raisonnement de l'IA
 });
 
 export const SpecialRules = z.object({

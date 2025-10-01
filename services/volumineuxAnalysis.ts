@@ -267,13 +267,19 @@ function processVolumineuxAnalysis(analysis: TPhotoAnalysis, photoId: string): T
       item.dimensions_cm.width && item.dimensions_cm.width > 0 &&
       item.dimensions_cm.height && item.dimensions_cm.height > 0;
     
+    // ⚠️ FILTRE EXCLUSION : Ne pas appliquer le catalogue aux catégories spécialisées
+    const excludedCategories = ['table', 'armoire', 'penderie', 'canapé', 'sofa', 'dressing'];
+    const isExcluded = excludedCategories.some(exc => item.label.toLowerCase().includes(exc));
+    
     // ⚠️ PRIORITÉ AU CATALOGUE : Si le catalogue a des dimensions pour cet objet, les utiliser
     // Cela corrige les erreurs des IAs pour les objets standards
-    if (cat) {
+    if (cat && !isExcluded) {
       console.log(`📚 Catalogue utilisé pour "${item.label}": ${cat.length}×${cat.width}×${cat.height}cm`);
       item.dimensions_cm = {
         length: cat.length, width: cat.width, height: cat.height, source: "catalog"
       };
+    } else if (isExcluded && cat) {
+      console.log(`🚫 Catalogue ignoré pour "${item.label}" (catégorie spécialisée)`);
     } else if (!hasValidDimensions) {
       // Dimensions par défaut pour objets volumineux non catalogués
       item.dimensions_cm = {

@@ -385,6 +385,30 @@ function mergeAllSpecializedResults(
 }
 
 /**
+ * Normalise un label pour la déduplication
+ * Corrige les variations communes (table à manger → table, etc.)
+ */
+function normalizeLabel(label: string): string {
+  const normalized = label.toLowerCase().trim();
+  
+  // Patterns de normalisation (ordre important : du plus spécifique au plus général)
+  const patterns: [RegExp, string][] = [
+    [/table (à manger|de salle à manger|salle à manger|carrée|rectangulaire|ronde|ovale)/i, 'table'],
+    [/armoire|penderie|dressing/i, 'armoire'],
+    [/canapé|sofa/i, 'canapé'],
+    [/chaise de (cuisine|salle à manger|bureau)/i, 'chaise'],
+  ];
+  
+  for (const [pattern, replacement] of patterns) {
+    if (pattern.test(normalized)) {
+      return replacement;
+    }
+  }
+  
+  return normalized;
+}
+
+/**
  * 🆕 Déduplique les items en respectant la priorité des sources
  * Priorité : 1 (spécialisé) > 2 (volumineux) > 3 (petits)
  */
@@ -392,7 +416,7 @@ function deduplicateItemsWithPriority(items: any[]): any[] {
   const itemMap = new Map<string, any>();
 
   for (const item of items) {
-    const key = item.label.toLowerCase().trim();
+    const key = normalizeLabel(item.label);
     const existing = itemMap.get(key);
 
     if (!existing) {
