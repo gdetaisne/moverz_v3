@@ -86,11 +86,10 @@ async function analyzeCanapesWithClaude(opts: { imageUrl: string }): Promise<TPh
   try {
     const settings = SPECIALIZED_AI_SETTINGS.canapes;
     
-    const analysis = await analyzePhotoWithClaude(
-      opts.imageUrl,
-      settings.systemPrompt,
-      settings.userPrompt
-    );
+    const analysis = await analyzePhotoWithClaude({
+      photoId: 'canape-analysis',
+      imageUrl: opts.imageUrl
+    });
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('🤖 RÉPONSE BRUTE CLAUDE CANAPÉS:');
@@ -110,11 +109,10 @@ async function analyzeCanapesWithClaude(opts: { imageUrl: string }): Promise<TPh
 async function analyzeCanapesWithOpenAI(opts: { imageUrl: string }): Promise<TPhotoAnalysis> {
   const settings = SPECIALIZED_AI_SETTINGS.canapes;
   
-  const analysis = await originalAnalyzePhotoWithVision(
-    opts.imageUrl,
-    settings.systemPrompt,
-    settings.userPrompt
-  );
+  const analysis = await originalAnalyzePhotoWithVision({
+    photoId: 'canape-analysis',
+    imageUrl: opts.imageUrl
+  });
 
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('🤖 RÉPONSE BRUTE OPENAI CANAPÉS:');
