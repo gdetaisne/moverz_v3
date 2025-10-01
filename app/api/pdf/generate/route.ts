@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     const pdfBuffer = await generateMovingQuotePDF(pdfData);
 
     // Retourner le PDF
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(pdfBuffer as BodyInit, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
