@@ -62,4 +62,4 @@ ENV PORT 3001
 ENV HOSTNAME "0.0.0.0"
 
 # Script de démarrage qui initialise les credentials Google puis lance l'app
-CMD ["sh", "-c", "node scripts/init-google-credentials.js && node server.js"]
+CMD ["sh", "-c", "node scripts/init-google-credentials.js || echo 'Google credentials init failed, continuing...' && node server.js"]
