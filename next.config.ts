@@ -49,7 +49,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "frame-ancestors 'self' https://moverz.fr https://*.moverz.fr https://www.moverz.fr https://moverz-bordeaux.gslv.cloud https://*.gslv.cloud https://www.bordeaux-demenageur.fr https://bordeaux-demenageur.fr; frame-src 'self' https://moverz.fr https://*.moverz.fr https://moverz-bordeaux.gslv.cloud https://*.gslv.cloud https://www.bordeaux-demenageur.fr https://bordeaux-demenageur.fr;",
+            value: "frame-ancestors 'self' https://moverz.fr https://*.moverz.fr https://www.moverz.fr https://moverz-bordeaux.gslv.cloud https://*.gslv.cloud https://www.bordeaux-demenageur.fr https://bordeaux-demenageur.fr file://; frame-src 'self' https://moverz.fr https://*.moverz.fr https://moverz-bordeaux.gslv.cloud https://*.gslv.cloud https://www.bordeaux-demenageur.fr https://bordeaux-demenageur.fr file://;",
           },
           {
             key: 'Access-Control-Allow-Origin',
