@@ -11,8 +11,14 @@ import { config, getApiConfig } from '../config/app';
 export async function analyzePhotoWithClaude(opts: {
   photoId: string;
   imageUrl: string;
+  systemPrompt?: string;
+  userPrompt?: string;
 }): Promise<TPhotoAnalysis> {
   const settings = getAISettings();
+  
+  // Utiliser les prompts spécialisés si fournis, sinon utiliser les prompts par défaut
+  const systemPrompt = opts.systemPrompt || settings.systemPrompt;
+  const userPrompt = opts.userPrompt || settings.userPrompt;
   const isClaudeApiKeyConfigured = !!config.claude.apiKey;
 
   if (!isClaudeApiKeyConfigured) {
@@ -62,7 +68,7 @@ export async function analyzePhotoWithClaude(opts: {
             content: [
               {
                 type: 'text',
-                text: `${settings.systemPrompt}\n\n${settings.userPrompt}`
+                text: `${systemPrompt}\n\n${userPrompt}`
               },
               {
                 type: 'image',

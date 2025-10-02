@@ -4,15 +4,19 @@
  * 📐 ARCHITECTURE ACTUELLE :
  * 
  * analyzePhotoWithOptimizedVision()
- * ├─ analyzeVolumineuxHybrid() → Objets >50cm (tables, canapés, armoires, lits...)
- * │  ├─ analyzeVolumineuxWithClaude()  (en parallèle)
- * │  └─ analyzeVolumineuxWithOpenAI()  (en parallèle)
- * │
- * ├─ analyzePetitsHybrid()     → Objets <50cm (déco, vaisselle, lampes...)
- * │  ├─ analyzePetitsWithClaude()     (en parallèle)
- * │  └─ analyzePetitsWithOpenAI()     (en parallèle)
- * │
- * └─ deduplicateItems()        → Fusion et dédoublonnage inter-analyses
+ * ├─ analyzeArmoiresHybrid()   → ARMOIRES, PENDERIES, DRESSINGS (prompts spécialisés)
+ * ├─ analyzeTablesHybrid()     → TABLES À MANGER (prompts spécialisés)
+ * ├─ analyzeCanapesHybrid()    → CANAPÉS, SOFAS (prompts spécialisés)
+ * ├─ analyzeVolumineuxHybrid() → OBJETS VOLUMINEUX >50cm (prompts spécialisés)
+ * ├─ analyzePetitsHybrid()     → PETITS OBJETS <50cm (prompts spécialisés)
+ * └─ deduplicateItemsWithPriority() → Fusion intelligente avec priorité
+ * 
+ * 🚨 PROBLÈMES RÉSOLUS :
+ * - ARMOIRES et CANAPÉS utilisent maintenant leurs prompts spécialisés
+ * - TABLES utilise maintenant la bonne signature de fonction
+ * - Déduplication fusionne correctement les quantités
+ * 
+ * 📊 RÉSULTAT ATTENDU : 5 chaises + 1 table + autres objets (pas de doublons)
  * 
  * 🚀 ÉVOLUTIONS FUTURES POSSIBLES (voir ANALYSE_PRIORITES_PRECISION.md) :
  * 
@@ -432,6 +436,12 @@ function deduplicateItemsWithPriority(items: any[]): any[] {
         // Même priorité mais meilleure confidence
         console.log(`  → Confidence: Remplacement "${key}" (${existing.confidence} → ${item.confidence})`);
         itemMap.set(key, item);
+      } else if (item._priority === existing._priority && item.confidence === existing.confidence) {
+        // Même priorité et même confidence : fusionner les quantités
+        const maxQuantity = Math.max(item.quantity || 1, existing.quantity || 1);
+        existing.quantity = maxQuantity;
+        console.log(`  → Quantity: Fusion "${key}" (${existing.quantity || 1} → ${maxQuantity})`);
+        itemMap.set(key, existing);
       }
     }
   }

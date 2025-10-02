@@ -86,11 +86,12 @@ async function analyzeTablesWithClaude(opts: { imageUrl: string }): Promise<TPho
   try {
     const settings = SPECIALIZED_AI_SETTINGS.tables;
     
-    const analysis = await analyzePhotoWithClaude(
-      opts.imageUrl,
-      settings.systemPrompt,
-      settings.userPrompt
-    );
+    const analysis = await analyzePhotoWithClaude({
+      photoId: 'table-analysis',
+      imageUrl: opts.imageUrl,
+      systemPrompt: settings.systemPrompt,
+      userPrompt: settings.userPrompt
+    });
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('🤖 RÉPONSE BRUTE CLAUDE TABLES:');
@@ -110,11 +111,12 @@ async function analyzeTablesWithClaude(opts: { imageUrl: string }): Promise<TPho
 async function analyzeTablesWithOpenAI(opts: { imageUrl: string }): Promise<TPhotoAnalysis> {
   const settings = SPECIALIZED_AI_SETTINGS.tables;
   
-  const analysis = await originalAnalyzePhotoWithVision(
-    opts.imageUrl,
-    settings.systemPrompt,
-    settings.userPrompt
-  );
+  const analysis = await originalAnalyzePhotoWithVision({
+    photoId: 'table-analysis',
+    imageUrl: opts.imageUrl,
+    systemPrompt: settings.systemPrompt,
+    userPrompt: settings.userPrompt
+  });
 
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('🤖 RÉPONSE BRUTE OPENAI TABLES:');

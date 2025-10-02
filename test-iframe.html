@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Iframe Moverz</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test d'Intégration Iframe Moverz</h1>
+        
+        <div class="status success">
+            ✅ <strong>Configuration côté Moverz :</strong> Headers iframe configurés<br>
+            ✅ <strong>X-Frame-Options :</strong> ALLOWALL<br>
+            ✅ <strong>CSP frame-ancestors :</strong> Inclut bordeaux-demenageur.fr
+        </div>
+
+        <h2>Test de l'iframe :</h2>
+        <iframe 
+            src="https://movers-test.gslv.cloud" 
+            title="Application Moverz"
+            onload="document.getElementById('status').innerHTML='✅ Iframe chargée avec succès !'"
+            onerror="document.getElementById('status').innerHTML='❌ Erreur de chargement de l\'iframe'">
+        </iframe>
+        
+        <div id="status" class="status">
+            🔄 Chargement en cours...
+        </div>
+
+        <h3>Code HTML pour bordeaux-demenageur.fr :</h3>
+        <pre><code>&lt;iframe 
+  src="https://movers-test.gslv.cloud" 
+  width="100%" 
+  height="600px"
+  frameborder="0"
+  allowfullscreen&gt;
+&lt;/iframe&gt;</code></pre>
+    </div>
+</body>
+</html>

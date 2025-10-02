@@ -29,7 +29,7 @@ const server = http.createServer((req, res) => {
   });
 });
 
-const PORT = 3000;
+const PORT = 3002;
 server.listen(PORT, () => {
   console.log(`🚀 Serveur de test démarré sur http://localhost:${PORT}`);
   console.log(`📱 Ouvrez http://localhost:${PORT} pour tester l'iframe`);

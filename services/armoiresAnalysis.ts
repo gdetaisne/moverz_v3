@@ -11,6 +11,20 @@
  * Priorité : CRITIQUE (volume individuel très élevé × 3-4 par foyer)
  */
 
+/**
+ * 🚨 CRITIQUE - ANALYSE ARMOIRES
+ * 
+ * Ce service utilise les prompts spécialisés ARMOIRES_SYSTEM_PROMPT et ARMOIRES_USER_PROMPT
+ * qui EXCLUENT explicitement les chaises, fauteuils, sièges, tables et canapés.
+ * 
+ * ⚠️ PROBLÈME RÉSOLU : Les fonctions analyzeArmoiresWithClaude et analyzeArmoiresWithOpenAI
+ * utilisent maintenant correctement les prompts spécialisés au lieu du prompt par défaut.
+ * 
+ * 📊 RÉSULTAT ATTENDU : 0 armoires détectées sur une image avec 5 chaises
+ * 
+ * 🔍 DIAGNOSTIC : Vérifier les logs "MERGE 5 ANALYSES" - Armoires doit être 0
+ */
+
 import { TPhotoAnalysis, TInventoryItem } from '@/lib/schemas';
 import { SPECIALIZED_AI_SETTINGS } from '@/lib/specializedPrompts';
 import { analyzePhotoWithClaude } from './claudeVision';
@@ -88,7 +102,9 @@ async function analyzeArmoiresWithClaude(opts: { imageUrl: string }): Promise<TP
     
     const analysis = await analyzePhotoWithClaude({
       photoId: 'armoire-analysis',
-      imageUrl: opts.imageUrl
+      imageUrl: opts.imageUrl,
+      systemPrompt: settings.systemPrompt,
+      userPrompt: settings.userPrompt
     });
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -111,7 +127,9 @@ async function analyzeArmoiresWithOpenAI(opts: { imageUrl: string }): Promise<TP
   
   const analysis = await originalAnalyzePhotoWithVision({
     photoId: 'armoire-analysis',
-    imageUrl: opts.imageUrl
+    imageUrl: opts.imageUrl,
+    systemPrompt: settings.systemPrompt,
+    userPrompt: settings.userPrompt
   });
 
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

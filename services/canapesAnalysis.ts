@@ -11,6 +11,20 @@
  * Priorité : HAUTE (volume élevé, erreur accoudoirs fréquente)
  */
 
+/**
+ * 🚨 CRITIQUE - ANALYSE CANAPÉS
+ * 
+ * Ce service utilise les prompts spécialisés CANAPES_SYSTEM_PROMPT et CANAPES_USER_PROMPT
+ * qui EXCLUENT explicitement les chaises, fauteuils, sièges, armoires et tables.
+ * 
+ * ⚠️ PROBLÈME RÉSOLU : Les fonctions analyzeCanapesWithClaude et analyzeCanapesWithOpenAI
+ * utilisent maintenant correctement les prompts spécialisés au lieu du prompt par défaut.
+ * 
+ * 📊 RÉSULTAT ATTENDU : 0 canapés détectés sur une image avec 5 chaises
+ * 
+ * 🔍 DIAGNOSTIC : Vérifier les logs "MERGE 5 ANALYSES" - Canapés doit être 0
+ */
+
 import { TPhotoAnalysis, TInventoryItem } from '@/lib/schemas';
 import { SPECIALIZED_AI_SETTINGS } from '@/lib/specializedPrompts';
 import { analyzePhotoWithClaude } from './claudeVision';
@@ -88,7 +102,9 @@ async function analyzeCanapesWithClaude(opts: { imageUrl: string }): Promise<TPh
     
     const analysis = await analyzePhotoWithClaude({
       photoId: 'canape-analysis',
-      imageUrl: opts.imageUrl
+      imageUrl: opts.imageUrl,
+      systemPrompt: settings.systemPrompt,
+      userPrompt: settings.userPrompt
     });
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -111,7 +127,9 @@ async function analyzeCanapesWithOpenAI(opts: { imageUrl: string }): Promise<TPh
   
   const analysis = await originalAnalyzePhotoWithVision({
     photoId: 'canape-analysis',
-    imageUrl: opts.imageUrl
+    imageUrl: opts.imageUrl,
+    systemPrompt: settings.systemPrompt,
+    userPrompt: settings.userPrompt
   });
 
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

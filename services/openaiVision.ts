@@ -41,6 +41,8 @@ export async function analyzePhotoWithVision(opts: {
 export async function originalAnalyzePhotoWithVision(opts: {
   photoId: string;
   imageUrl: string; // local file served or presigned URL
+  systemPrompt?: string;
+  userPrompt?: string;
 }): Promise<TPhotoAnalysis> {
   // Récupérer les paramètres IA configurables côté serveur
   let aiSettings;
@@ -57,6 +59,10 @@ export async function originalAnalyzePhotoWithVision(opts: {
     console.warn('Erreur lors de la récupération des paramètres IA côté serveur:', error);
     aiSettings = getAISettings();
   }
+
+  // Utiliser les prompts spécialisés si fournis, sinon utiliser les prompts par défaut
+  const systemPrompt = opts.systemPrompt || aiSettings.systemPrompt;
+  const userPrompt = opts.userPrompt || aiSettings.userPrompt;
 
   const client = getOpenAIClient(aiSettings.openaiApiKey);
   
@@ -188,11 +194,11 @@ export async function originalAnalyzePhotoWithVision(opts: {
     max_tokens: aiSettings.maxTokens,
     response_format: { type: "json_object" },
     messages: [
-      { role: "system", content: aiSettings.systemPrompt },
+      { role: "system", content: systemPrompt },
       {
         role: "user",
         content: [
-          { type: "text", text: aiSettings.userPrompt },
+          { type: "text", text: userPrompt },
           imageContent,
         ],
       },
