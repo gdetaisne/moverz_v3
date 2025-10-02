@@ -1,16 +1,19 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
-/* CSS Variables - Style moverz.fr */
+/* CSS Variables - Style bordeaux-demenageur.fr */
 :root {
-  --mz-navy: #04163a;
-  --mz-teal: #2b7a78;
-  --mz-cyan: #6bcfcf;
-  --mz-bg: #f4f7f8;
-  --mz-card: #ffffff;
-  --mz-accent-purple: #b784f7;
-  --mz-accent-yellow: #ffd166;
-  --mz-accent-red: #ff6b6b;
+  --bd-navy: #1e3a8a;        /* Bleu foncé principal */
+  --bd-teal: #0d9488;        /* Teal pour les accents */
+  --bd-cyan: #06b6d4;        /* Cyan pour les boutons */
+  --bd-blue: #3b82f6;        /* Bleu standard */
+  --bd-bg: #f8fafc;          /* Arrière-plan clair */
+  --bd-card: #ffffff;        /* Cartes blanches */
+  --bd-text: #1e293b;        /* Texte principal */
+  --bd-text-light: #64748b;  /* Texte secondaire */
+  --bd-accent-orange: #f97316; /* Orange pour les accents */
+  --bd-accent-green: #10b981;  /* Vert pour les succès */
+  --bd-accent-red: #ef4444;    /* Rouge pour les erreurs */
   
   /* Override Tailwind defaults */
   --background: var(--mz-bg);

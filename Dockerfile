@@ -23,6 +23,9 @@ RUN touch ./google-credentials.json
 # Generate Prisma client
 RUN npx prisma generate
 
+# Create SQLite database for production
+RUN npx prisma db push
+
 # Build Next.js
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV NODE_ENV production
@@ -44,6 +47,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/google-credentials.json ./google-credentials.json
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/dev.db ./dev.db
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
