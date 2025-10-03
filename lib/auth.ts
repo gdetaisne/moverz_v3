@@ -34,13 +34,6 @@ export async function getUserId(req: NextRequest): Promise<string> {
     return cookieUserId;
   }
 
-  // En développement, créer un utilisateur par défaut si aucun n'est fourni
-  if (process.env.NODE_ENV === 'development') {
-    const defaultUserId = 'dev-user-default';
-    await ensureUserExists(defaultUserId);
-    return defaultUserId;
-  }
-
   // Nouveau: génère ID et crée user
   const newUserId = crypto.randomUUID();
   await prisma.user.create({
