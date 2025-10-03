@@ -1,7 +1,6 @@
 {
-  "schemaVersion": 1,
-  "templateId": "node-js",
-  "variables": [],
+  "schemaVersion": 2,
+  "dockerfilePath": "./Dockerfile",
   "dockerfileLines": [],
   "rootDirectory": "/",
   "preDeployFunction": "",
