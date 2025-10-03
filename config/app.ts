@@ -65,8 +65,9 @@ export const config = {
   google: {
     projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
     credentialsPath: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+    credentialsJson: process.env.GOOGLE_CREDENTIALS_JSON,
     apiKey: process.env.GOOGLE_VISION_API_KEY,
-    enabled: !!(process.env.GOOGLE_CLOUD_PROJECT_ID && process.env.GOOGLE_VISION_API_KEY)
+    enabled: !!(process.env.GOOGLE_CLOUD_PROJECT_ID && (process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.GOOGLE_CREDENTIALS_JSON))
   },
   
   aws: {
