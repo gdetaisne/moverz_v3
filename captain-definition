@@ -1,7 +1,6 @@
 {
   "schemaVersion": 2,
   "dockerfilePath": "./Dockerfile",
-  "dockerfileLines": [],
   "rootDirectory": "/",
   "preDeployFunction": "",
   "postDeployFunction": "",
