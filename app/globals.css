@@ -3,20 +3,26 @@
 
 /* CSS Variables - Style bordeaux-demenageur.fr */
 :root {
-  --bd-navy: #1e3a8a;        /* Bleu foncé principal */
-  --bd-teal: #0d9488;        /* Teal pour les accents */
-  --bd-cyan: #06b6d4;        /* Cyan pour les boutons */
-  --bd-blue: #3b82f6;        /* Bleu standard */
-  --bd-bg: #f8fafc;          /* Arrière-plan clair */
-  --bd-card: #ffffff;        /* Cartes blanches */
-  --bd-text: #1e293b;        /* Texte principal */
+  --bd-navy: #04163A;        /* Bleu nuit profond du site bordeaux-demenageur.fr */
+  --bd-dark: #04163A;        /* Bleu nuit très foncé */
+  --bd-primary: #2B7A78;     /* Bleu pétrole principal du site bordeaux-demenageur.fr */
+  --bd-primary-dark: #1f5a58; /* Bleu pétrole plus sombre pour hover */
+  --bd-accent: #6BCFCF;      /* Vert d'eau clair pour les accents */
+  --bd-bg: transparent;        /* Fond transparent pour iframe */
+  --bd-card: #ffffff;         /* Cartes blanches */
+  --bd-card-dark: #f8fafc;    /* Cartes légèrement teintées */
+  --bd-text: #1e293b;         /* Texte principal */
   --bd-text-light: #64748b;  /* Texte secondaire */
   --bd-accent-orange: #f97316; /* Orange pour les accents */
   --bd-accent-green: #10b981;  /* Vert pour les succès */
-  --bd-accent-red: #ef4444;    /* Rouge pour les erreurs */
+  --bd-accent-red: #fca5a5;    /* Rouge pastel pour les erreurs */
+  --bd-accent-red-dark: #f87171; /* Rouge pastel plus foncé */
+  --bd-stepper-active: #3b82f6;  /* Bleu du site pour stepper actif */
+  --bd-stepper-done: #10b981;    /* Vert pour stepper fait */
+  --bd-disabled: #9ca3af;        /* Gris pour états disabled */
   
   /* Override Tailwind defaults */
-  --background: var(--mz-bg);
+  --background: var(--bd-bg);
   --foreground: #0f172a;
 }
 
@@ -28,10 +34,264 @@
 }
 
 body {
-  background: var(--mz-bg);
+  background: transparent !important;
   color: var(--foreground);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji';
   scroll-behavior: smooth;
+}
+
+/* Force transparent background for iframe integration */
+html, body, #__next {
+  background: transparent !important;
+}
+
+/* Override any white backgrounds in iframe mode */
+.iframe-mode {
+  background: transparent !important;
+}
+
+.iframe-mode * {
+  background-color: transparent !important;
+}
+
+/* Only cards should have white background */
+.iframe-mode .card,
+.iframe-mode .bg-white,
+.iframe-mode .bg-gray-50 {
+  background-color: white !important;
+}
+
+/* Override ALL Tailwind blue classes with our custom colors */
+.iframe-mode .text-blue-500,
+.iframe-mode .text-blue-600,
+.iframe-mode .text-blue-700,
+.iframe-mode .text-blue-800,
+.iframe-mode .text-blue-900,
+.iframe-mode .text-blue-400,
+.iframe-mode .text-blue-300,
+.iframe-mode .text-blue-200,
+.iframe-mode .text-blue-100 {
+  color: var(--bd-primary) !important;
+}
+
+.iframe-mode .bg-blue-50,
+.iframe-mode .bg-blue-100,
+.iframe-mode .bg-blue-200,
+.iframe-mode .bg-blue-300,
+.iframe-mode .bg-blue-400,
+.iframe-mode .bg-blue-500,
+.iframe-mode .bg-blue-600,
+.iframe-mode .bg-blue-700,
+.iframe-mode .bg-blue-800,
+.iframe-mode .bg-blue-900 {
+  background-color: var(--bd-primary) !important;
+}
+
+.iframe-mode .border-blue-200,
+.iframe-mode .border-blue-300,
+.iframe-mode .border-blue-400,
+.iframe-mode .border-blue-500,
+.iframe-mode .border-blue-600,
+.iframe-mode .border-blue-700,
+.iframe-mode .border-blue-800,
+.iframe-mode .border-blue-900 {
+  border-color: var(--bd-primary) !important;
+}
+
+.iframe-mode .hover\:bg-blue-100:hover,
+.iframe-mode .hover\:bg-blue-200:hover,
+.iframe-mode .hover\:bg-blue-300:hover,
+.iframe-mode .hover\:bg-blue-400:hover,
+.iframe-mode .hover\:bg-blue-500:hover,
+.iframe-mode .hover\:bg-blue-600:hover,
+.iframe-mode .hover\:bg-blue-700:hover,
+.iframe-mode .hover\:bg-blue-800:hover,
+.iframe-mode .hover\:bg-blue-900:hover {
+  background-color: var(--bd-primary-dark) !important;
+}
+
+.iframe-mode .hover\:text-blue-800:hover,
+.iframe-mode .hover\:text-blue-700:hover,
+.iframe-mode .hover\:text-blue-600:hover,
+.iframe-mode .hover\:text-blue-500:hover,
+.iframe-mode .hover\:text-blue-400:hover,
+.iframe-mode .hover\:text-blue-300:hover,
+.iframe-mode .hover\:text-blue-200:hover,
+.iframe-mode .hover\:text-blue-100:hover {
+  color: var(--bd-primary-dark) !important;
+}
+
+/* Override button colors specifically */
+.iframe-mode button,
+.iframe-mode .btn,
+.iframe-mode .btn-primary,
+.iframe-mode .btn-secondary,
+.iframe-mode .btn-outline {
+  background-color: var(--bd-primary) !important;
+  color: white !important;
+  border-color: var(--bd-primary) !important;
+}
+
+.iframe-mode button:hover,
+.iframe-mode .btn:hover,
+.iframe-mode .btn-primary:hover,
+.iframe-mode .btn-secondary:hover,
+.iframe-mode .btn-outline:hover {
+  background-color: var(--bd-primary-dark) !important;
+  border-color: var(--bd-primary-dark) !important;
+}
+
+/* Override any blue classes that might be used */
+.iframe-mode [class*="blue-"] {
+  color: var(--bd-primary) !important;
+  background-color: var(--bd-primary) !important;
+  border-color: var(--bd-primary) !important;
+}
+
+/* Force iframe mode on body when in iframe */
+body.iframe-mode,
+html.iframe-mode,
+#__next.iframe-mode {
+  background: transparent !important;
+}
+
+/* Force iframe mode globally for testing */
+body,
+html,
+#__next {
+  background: transparent !important;
+}
+
+/* Force all elements to use our colors in iframe mode */
+.iframe-mode * {
+  background-color: transparent !important;
+}
+
+.iframe-mode .card,
+.iframe-mode .bg-white,
+.iframe-mode .bg-gray-50 {
+  background-color: white !important;
+}
+
+/* Override any remaining blue elements */
+.iframe-mode [style*="blue"],
+.iframe-mode [style*="rgb(59, 130, 246)"],
+.iframe-mode [style*="#3b82f6"],
+.iframe-mode [style*="rgb(0, 123, 255)"],
+.iframe-mode [style*="#007bff"],
+.iframe-mode [style*="rgb(43, 122, 120)"],
+.iframe-mode [style*="#2B7A78"] {
+  background-color: var(--bd-primary) !important;
+  color: white !important;
+}
+
+/* Force all blue elements to use our color - ULTRA SPECIFIC */
+html body *[class*="blue"],
+html body *[style*="blue"],
+html body *[style*="rgb(59, 130, 246)"],
+html body *[style*="#3b82f6"],
+html body button[class*="blue"],
+html body .btn[class*="blue"],
+html body .btn-primary,
+html body .btn-secondary,
+html body .btn-outline,
+html body button,
+html body .btn {
+  background-color: var(--bd-primary) !important;
+  color: white !important;
+  border-color: var(--bd-primary) !important;
+}
+
+html body *[class*="blue"]:hover,
+html body *[style*="blue"]:hover,
+html body button[class*="blue"]:hover,
+html body .btn[class*="blue"]:hover,
+html body .btn-primary:hover,
+html body .btn-secondary:hover,
+html body .btn-outline:hover,
+html body button:hover,
+html body .btn:hover {
+  background-color: var(--bd-primary-dark) !important;
+  border-color: var(--bd-primary-dark) !important;
+}
+
+/* Only cards should have white background */
+.card,
+.bg-white,
+.bg-gray-50 {
+  background-color: white !important;
+}
+
+/* ULTRA SPECIFIC - Target exact button classes */
+html body div button,
+html body div .btn,
+html body div .btn-primary,
+html body div .btn-secondary,
+html body div .btn-outline,
+html body div button[class*="blue"],
+html body div .btn[class*="blue"],
+html body div button[style*="blue"],
+html body div .btn[style*="blue"] {
+  background-color: var(--bd-primary) !important;
+  color: white !important;
+  border-color: var(--bd-primary) !important;
+}
+
+html body div button:hover,
+html body div .btn:hover,
+html body div .btn-primary:hover,
+html body div .btn-secondary:hover,
+html body div .btn-outline:hover,
+html body div button[class*="blue"]:hover,
+html body div .btn[class*="blue"]:hover,
+html body div button[style*="blue"]:hover,
+html body div .btn[style*="blue"]:hover {
+  background-color: var(--bd-primary-dark) !important;
+  border-color: var(--bd-primary-dark) !important;
+}
+
+/* NUCLEAR OPTION - Force all buttons to use our color */
+html body * {
+  background-color: transparent !important;
+}
+
+html body button,
+html body .btn,
+html body .btn-primary,
+html body .btn-secondary,
+html body .btn-outline,
+html body [class*="btn"],
+html body [class*="button"],
+html body [class*="blue"],
+html body [style*="blue"],
+html body [style*="rgb(59, 130, 246)"],
+html body [style*="#3b82f6"],
+html body [style*="rgb(0, 123, 255)"],
+html body [style*="#007bff"],
+html body [style*="rgb(43, 122, 120)"],
+html body [style*="#2B7A78"] {
+  background-color: var(--bd-primary) !important;
+  color: white !important;
+  border-color: var(--bd-primary) !important;
+}
+
+html body button:hover,
+html body .btn:hover,
+html body .btn-primary:hover,
+html body .btn-secondary:hover,
+html body .btn-outline:hover,
+html body [class*="btn"]:hover,
+html body [class*="button"]:hover,
+html body [class*="blue"]:hover,
+html body [style*="blue"]:hover,
+html body [style*="rgb(59, 130, 246)"]:hover,
+html body [style*="#3b82f6"]:hover,
+html body [style*="rgb(0, 123, 255)"]:hover,
+html body [style*="#007bff"]:hover,
+html body [style*="rgb(43, 122, 120)"]:hover,
+html body [style*="#2B7A78"]:hover {
+  background-color: var(--bd-primary-dark) !important;
+  border-color: var(--bd-primary-dark) !important;
 }
 
 /* Headings */
@@ -47,26 +307,41 @@ body {
 }
 .btn-primary { 
   @apply text-white shadow-lg; 
-  background-color: var(--mz-teal); 
+  background-color: var(--bd-primary); 
   box-shadow: 0 4px 14px 0 rgba(43, 122, 120, 0.3);
 }
 .btn-primary:hover { 
-  opacity: 0.9; 
+  background-color: var(--bd-primary-dark);
   transform: translateY(-1px);
   box-shadow: 0 6px 20px 0 rgba(43, 122, 120, 0.4);
 }
+.btn-primary:disabled {
+  background-color: var(--bd-disabled);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
 .btn-outline { 
-  @apply border-2 text-[color:var(--mz-teal)]; 
-  border-color: var(--mz-teal); 
+  @apply border-2; 
+  color: var(--bd-primary);
+  border-color: var(--bd-primary); 
 }
 .btn-outline:hover { 
   @apply text-white; 
-  background-color: var(--mz-teal); 
+  background-color: var(--bd-primary); 
+}
+.btn-outline:disabled {
+  color: var(--bd-disabled);
+  border-color: var(--bd-disabled);
+  cursor: not-allowed;
 }
 
 /* Card - Style moverz.fr */
 .card { 
-  @apply bg-[color:var(--mz-card)] rounded-2xl p-6 shadow-md transition-all duration-200; 
+  @apply bg-white rounded-2xl p-6 transition-all duration-200; 
+  background-color: var(--bd-card);
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   transform: translateY(0); 
 }
 .card:hover { 
@@ -107,7 +382,31 @@ body {
 .iframe-mode {
   margin: 0;
   padding: 0;
-  background: var(--mz-bg);
+  background: transparent !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Force transparent background on all main containers */
+.iframe-mode .min-h-screen,
+.iframe-mode main,
+.iframe-mode .container,
+.iframe-mode .mx-auto {
+  background: transparent !important;
+}
+
+/* Intégration avec le site parent */
+.iframe-mode .card {
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.iframe-mode .btn-primary {
+  font-weight: 600;
+  letter-spacing: 0.025em;
+}
+
+.iframe-mode .stepper-step {
+  font-weight: 600;
 }
 
 .iframe-mode .min-h-screen {
@@ -169,8 +468,76 @@ body {
 /* Focus styles */
 :focus-visible { 
   outline: none; 
-  box-shadow: 0 0 0 3px rgba(43, 122, 120, 0.35); 
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35); 
   border-radius: 8px; 
+}
+
+/* Stepper styles */
+.stepper-step {
+  @apply flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold transition-all duration-200;
+}
+
+.stepper-step.active {
+  background-color: var(--bd-stepper-active);
+  color: white;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+.stepper-step.completed {
+  background-color: var(--bd-stepper-done);
+  color: white;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+}
+
+.stepper-step.pending {
+  background-color: #e5e7eb;
+  color: #6b7280;
+}
+
+.stepper-line {
+  @apply flex-1 h-0.5 transition-all duration-200;
+}
+
+.stepper-line.completed {
+  background-color: var(--bd-stepper-done);
+}
+
+.stepper-line.pending {
+  background-color: #e5e7eb;
+}
+
+/* Error states - Pastel */
+.error-message {
+  @apply text-sm p-3 rounded-lg;
+  background-color: #fef2f2;
+  color: var(--bd-accent-red-dark);
+  border: 1px solid #fecaca;
+}
+
+.error-input {
+  border-color: var(--bd-accent-red);
+  box-shadow: 0 0 0 3px rgba(252, 165, 165, 0.2);
+}
+
+.error-input:focus {
+  border-color: var(--bd-accent-red-dark);
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.2);
+}
+
+/* Success states */
+.success-message {
+  @apply text-sm p-3 rounded-lg;
+  background-color: #f0fdf4;
+  color: #059669;
+  border: 1px solid #bbf7d0;
+}
+
+/* Warning states */
+.warning-message {
+  @apply text-sm p-3 rounded-lg;
+  background-color: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fed7aa;
 }
 
 /* Loading animation */

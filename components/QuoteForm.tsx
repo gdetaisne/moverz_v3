@@ -517,11 +517,11 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
             value={formData.email}
             onChange={(e) => handleInputChange('email', e.target.value)}
             className={`w-full px-3 py-3 border rounded-lg text-base ${
-              errors.email ? 'border-red-500' : 'border-gray-300'
+              errors.email ? 'error-input' : 'border-gray-300'
             }`}
             placeholder="votre@email.com"
           />
-          {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+          {errors.email && <p className="error-message mt-1">{errors.email}</p>}
         </div>
 
         {/* Adresse de départ */}
@@ -536,7 +536,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
                 value={formData.departureCity}
                 onChange={(e) => handleInputChange('departureCity', e.target.value)}
                 className={`w-full px-3 py-3 border rounded-lg text-base ${
-                  errors.departureCity ? 'border-red-500' : 'border-gray-300'
+                  errors.departureCity ? 'error-input' : 'border-gray-300'
                 }`}
               >
                 <option value="">Sélectionnez une ville</option>
@@ -544,7 +544,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
                   <option key={city} value={city}>{city}</option>
                 ))}
               </select>
-              {errors.departureCity && <p className="text-red-500 text-sm mt-1">{errors.departureCity}</p>}
+              {errors.departureCity && <p className="error-message mt-1">{errors.departureCity}</p>}
             </div>
             
             <div className="relative postal-code-field">
@@ -557,7 +557,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
                 onChange={(e) => handleInputChange('departurePostalCode', e.target.value)}
                 onFocus={() => setShowSuggestions(prev => ({ ...prev, departure: true }))}
                 className={`w-full px-3 py-3 border rounded-lg text-base ${
-                  errors.departurePostalCode ? 'border-red-500' : 'border-gray-300'
+                  errors.departurePostalCode ? 'error-input' : 'border-gray-300'
                 }`}
                 placeholder="33000"
                 list="departure-postal-codes"
@@ -584,7 +584,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
                   ))}
                 </div>
               )}
-              {errors.departurePostalCode && <p className="text-red-500 text-sm mt-1">{errors.departurePostalCode}</p>}
+              {errors.departurePostalCode && <p className="error-message mt-1">{errors.departurePostalCode}</p>}
             </div>
             
             <div>
@@ -676,7 +676,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
                 value={formData.arrivalCity}
                 onChange={(e) => handleInputChange('arrivalCity', e.target.value)}
                 className={`w-full px-3 py-3 border rounded-lg text-base ${
-                  errors.arrivalCity ? 'border-red-500' : 'border-gray-300'
+                  errors.arrivalCity ? 'error-input' : 'border-gray-300'
                 }`}
               >
                 <option value="">Sélectionnez une ville</option>
@@ -684,7 +684,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
                   <option key={city} value={city}>{city}</option>
                 ))}
               </select>
-              {errors.arrivalCity && <p className="text-red-500 text-sm mt-1">{errors.arrivalCity}</p>}
+              {errors.arrivalCity && <p className="error-message mt-1">{errors.arrivalCity}</p>}
             </div>
             
             <div className="relative postal-code-field">
@@ -697,7 +697,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
                 onChange={(e) => handleInputChange('arrivalPostalCode', e.target.value)}
                 onFocus={() => setShowSuggestions(prev => ({ ...prev, arrival: true }))}
                 className={`w-full px-3 py-3 border rounded-lg text-base ${
-                  errors.arrivalPostalCode ? 'border-red-500' : 'border-gray-300'
+                  errors.arrivalPostalCode ? 'error-input' : 'border-gray-300'
                 }`}
                 placeholder="33600"
                 list="arrival-postal-codes"
@@ -724,7 +724,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
                   ))}
                 </div>
               )}
-              {errors.arrivalPostalCode && <p className="text-red-500 text-sm mt-1">{errors.arrivalPostalCode}</p>}
+              {errors.arrivalPostalCode && <p className="error-message mt-1">{errors.arrivalPostalCode}</p>}
             </div>
             
             <div>
@@ -818,10 +818,10 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
                 onChange={(e) => handleInputChange('movingDate', e.target.value)}
                 min={new Date().toISOString().split('T')[0]}
                 className={`w-full px-3 py-3 border rounded-lg text-base ${
-                  errors.movingDate ? 'border-red-500' : 'border-gray-300'
+                  errors.movingDate ? 'error-input' : 'border-gray-300'
                 }`}
               />
-              {errors.movingDate && <p className="text-red-500 text-sm mt-1">{errors.movingDate}</p>}
+              {errors.movingDate && <p className="error-message mt-1">{errors.movingDate}</p>}
             </div>
             
             <div>
@@ -1026,7 +1026,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
           </div>
           
           {errors.selectedOffer && (
-            <p className="text-red-500 text-sm mt-3">{errors.selectedOffer}</p>
+            <p className="error-message mt-3">{errors.selectedOffer}</p>
           )}
           
       {/* Information sur le calcul des prix */}

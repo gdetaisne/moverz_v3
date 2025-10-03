@@ -17,20 +17,20 @@ export default function WorkflowSteps({ currentStep, onStepChange, steps }: Work
   return (
     <div className="bg-white border-b border-gray-200">
       <div className="max-w-4xl mx-auto px-4 py-3">
-        {/* Étapes ultra-simplifiées */}
+        {/* Étapes avec nouveau design */}
         <div className="flex justify-center space-x-8">
-          {steps.map((step) => (
-            <div key={step.id} className="flex items-center space-x-2">
-              {/* Cercle de l'étape avec états visuels clairs */}
+          {steps.map((step, index) => (
+            <div key={step.id} className="flex items-center">
+              {/* Cercle de l'étape avec nouveaux styles */}
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-200 ${
+                className={`stepper-step ${
                   step.completed
-                    ? 'bg-green-500 text-white cursor-pointer hover:bg-green-600 shadow-md' // ✅ Terminé : cercle vert avec ✓
+                    ? 'completed' // ✅ Terminé : vert d'eau
                     : currentStep === step.id
-                    ? 'bg-blue-600 text-white cursor-pointer hover:bg-blue-700 shadow-lg ring-2 ring-blue-200' // 🎯 En cours : cercle bleu accentué
+                    ? 'active' // 🎯 En cours : pétrole
                     : step.disabled
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed' // 🔒 Verrouillé : cercle gris clair
-                    : 'bg-gray-400 text-white cursor-pointer hover:bg-gray-500 hover:shadow-md' // ⏳ Futur : cercle gris moyen
+                    ? 'pending' // 🔒 Verrouillé : gris
+                    : 'pending' // ⏳ Futur : gris
                 }`}
                 onClick={() => {
                   console.log('🎯 Clic sur étape', step.id, 'disabled:', step.disabled);
@@ -43,15 +43,22 @@ export default function WorkflowSteps({ currentStep, onStepChange, steps }: Work
                 {step.completed ? '✓' : step.id}
               </div>
               
-              {/* Titre avec styles de police selon l'état */}
-              <span className={`text-sm font-medium transition-all duration-200 ${
+              {/* Ligne de connexion (sauf pour le dernier élément) */}
+              {index < steps.length - 1 && (
+                <div className={`stepper-line ${
+                  step.completed ? 'completed' : 'pending'
+                }`} />
+              )}
+              
+              {/* Titre avec styles selon l'état */}
+              <span className={`text-sm font-medium transition-all duration-200 ml-2 ${
                 step.completed 
-                  ? 'text-green-600 font-semibold' // ✅ Terminé : texte vert, police accentuée
+                  ? 'text-green-600 font-semibold' // ✅ Terminé : vert
                   : currentStep === step.id 
-                  ? 'text-gray-900 font-bold' // 🎯 En cours : texte foncé, police très accentuée
+                  ? 'text-blue-600 font-bold' // 🎯 En cours : bleu du site
                   : step.disabled 
-                  ? 'text-gray-400 font-normal' // 🔒 Verrouillé : texte gris clair, police normale
-                  : 'text-gray-500 font-medium' // ⏳ Futur : texte gris moyen, police légèrement accentuée
+                  ? 'text-gray-400 font-normal' // 🔒 Verrouillé : gris clair
+                  : 'text-gray-500 font-medium' // ⏳ Futur : gris moyen
               }`}>
                 {step.title}
               </span>
