@@ -32,19 +32,20 @@ export function addInventoryDetails(
     let roomTotalVolume = 0;
     let roomTotalCartons = 0;
     
-    // Parcourir les photos de la pièce
-    room.photos.forEach((photo, photoIndex) => {
-      if (photo.items && photo.items.length > 0) {
-        // Vérifier espace disponible
-        if (doc.y > PDF_CONFIG.pageHeight - 300) {
-          doc.addPage();
-        }
-        
-        const photoStats = addPhotoSection(doc, photo, photoIndex + 1, room.name);
-        roomTotalVolume += photoStats.totalVolume;
-        roomTotalCartons += photoStats.totalCartons;
+    // 🎯 NOUVELLE APPROCHE : Inventaire par pièce (pas par photo)
+    // Tous les objets de la pièce sont regroupés ensemble
+    const allRoomItems = room.photos.flatMap(photo => photo.items || []);
+    
+    if (allRoomItems.length > 0) {
+      // Vérifier espace disponible
+      if (doc.y > PDF_CONFIG.pageHeight - 300) {
+        doc.addPage();
       }
-    });
+      
+      const roomStats = addRoomInventorySection(doc, room, allRoomItems);
+      roomTotalVolume += roomStats.totalVolume;
+      roomTotalCartons += roomStats.totalCartons;
+    }
     
     // Afficher le total de la pièce
     addRoomTotal(doc, roomTotalVolume, roomTotalCartons);
@@ -79,6 +80,85 @@ function addRoomTitle(doc: typeof PDFDocument, roomName: string, roomNumber: num
     );
   
   doc.y = titleY + titleHeight + SPACING.md;
+}
+
+// 🎯 NOUVELLE FONCTION : Inventaire par pièce
+function addRoomInventorySection(
+  doc: typeof PDFDocument,
+  room: any,
+  allItems: any[]
+): { totalVolume: number; totalCartons: number } {
+  const { margins, contentWidth } = PDF_CONFIG;
+  const startY = doc.y;
+  
+  // Carrousel de photos de la pièce
+  const photoWidth = contentWidth;
+  const photoHeight = 200;
+  
+  // Titre de la pièce avec nombre de photos
+  doc
+    .fontSize(FONTS.sizes.h3)
+    .fillColor(COLORS.primary)
+    .font('Helvetica-Bold')
+    .text(`${room.name} (${room.photos.length} photo${room.photos.length > 1 ? 's' : ''})`, margins.left, startY);
+  
+  doc.moveDown(0.5);
+  const photosY = doc.y;
+  
+  // Afficher les photos en carrousel (première photo pour l'instant)
+  if (room.photos.length > 0) {
+    const firstPhoto = room.photos[0];
+    if (firstPhoto.photoData && typeof firstPhoto.photoData === 'string' && firstPhoto.photoData.startsWith('data:image')) {
+      try {
+        // Cadre pour la photo
+        doc
+          .roundedRect(margins.left, photosY, photoWidth, photoHeight, 4)
+          .strokeColor(COLORS.border)
+          .lineWidth(1.5)
+          .stroke();
+        
+        // Photo en base64
+        const base64Data = firstPhoto.photoData.includes(',') 
+          ? firstPhoto.photoData.split(',')[1] 
+          : firstPhoto.photoData;
+        const imageBuffer = Buffer.from(base64Data, 'base64');
+        
+        doc.image(imageBuffer, margins.left + 3, photosY + 3, {
+          width: photoWidth - 6,
+          height: photoHeight - 6,
+          fit: [photoWidth - 6, photoHeight - 6],
+          align: 'center',
+          valign: 'center',
+        });
+        
+        // Indicateur de carrousel si plusieurs photos
+        if (room.photos.length > 1) {
+          doc
+            .fontSize(10)
+            .fillColor(COLORS.text)
+            .font('Helvetica')
+            .text(`1/${room.photos.length}`, margins.left + photoWidth - 50, photosY + photoHeight - 20);
+        }
+      } catch (error) {
+        console.error('Erreur lors de l\'ajout de la photo:', error);
+        addPhotoPlaceholder(doc, margins.left, photosY, photoWidth, photoHeight);
+      }
+    } else {
+      addPhotoPlaceholder(doc, margins.left, photosY, photoWidth, photoHeight);
+    }
+  }
+  
+  doc.y = photosY + photoHeight + SPACING.md;
+  
+  // Liste des objets de la pièce (regroupés)
+  const stats = addItemsList(doc, allItems, margins.left, contentWidth);
+  
+  // Afficher le total de la pièce
+  addRoomTotal(doc, stats.totalVolume, stats.totalCartons);
+  
+  doc.moveDown(1);
+  
+  return stats;
 }
 
 function addPhotoSection(

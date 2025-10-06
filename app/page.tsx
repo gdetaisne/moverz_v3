@@ -11,7 +11,7 @@ import { PhotoCard } from "@/components/PhotoCard";
 import { InventoryItemCard } from "@/components/InventoryItemCard";
 import { InventorySummaryCard } from "@/components/InventorySummaryCard";
 import { PhotoUploadZone } from "@/components/PhotoUploadZone";
-import { RoomValidationStep } from "@/components/RoomValidationStep";
+import { RoomValidationStepV2 } from "@/components/RoomValidationStepV2";
 import { Step2RoomInventory } from "@/components/Step2RoomInventory";
 import { RoomInventoryCard } from "@/components/RoomInventoryCard";
 import { RoomPhotoCarousel } from "@/components/RoomPhotoCarousel";
@@ -1014,7 +1014,7 @@ export default function Home() {
           <div className="max-w-6xl mx-auto px-4">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="p-6">
-                <RoomValidationStep
+                <RoomValidationStepV2
                   photos={currentRoom.photos.map(photo => ({
                     id: photo.photoId || `photo-${Date.now()}-${Math.random()}`,
                     file: photo.file,
