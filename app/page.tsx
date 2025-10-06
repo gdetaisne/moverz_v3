@@ -11,13 +11,17 @@ import { PhotoCard } from "@/components/PhotoCard";
 import { InventoryItemCard } from "@/components/InventoryItemCard";
 import { InventorySummaryCard } from "@/components/InventorySummaryCard";
 import { PhotoUploadZone } from "@/components/PhotoUploadZone";
+import { RoomValidationStep } from "@/components/RoomValidationStep";
+import { Step2RoomInventory } from "@/components/Step2RoomInventory";
+import { RoomInventoryCard } from "@/components/RoomInventoryCard";
+import { RoomPhotoCarousel } from "@/components/RoomPhotoCarousel";
 import { useInventoryCalculations } from "@/hooks/useInventoryCalculations";
 import { useWorkflowSteps } from "@/hooks/useWorkflowSteps";
 import { getBuildInfo } from "@/lib/buildInfo";
 import { TInventoryItem } from "@/lib/schemas";
 import { clearCache } from "@/lib/cache";
 import { calculatePackagedVolume } from "@/lib/packaging";
-import { smartDuplicateDetectionService } from "@/services/smartDuplicateDetectionService";
+// 🎯 SUPPRIMÉ : Plus de détection de doublons avec la nouvelle logique par pièce
 
 interface RoomData {
   id: string;
@@ -49,6 +53,7 @@ export default function Home() {
   const [currentStep, setCurrentStep] = useState(1);
   const [quoteFormData, setQuoteFormData] = useState<any>(null);
   const [inventoryValidated, setInventoryValidated] = useState(false);
+  const [roomGroups, setRoomGroups] = useState<any[]>([]);
   const [isSubmittingQuote, setIsSubmittingQuote] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isSmallObjectsExpanded, setIsSmallObjectsExpanded] = useState(false);
@@ -64,6 +69,7 @@ export default function Home() {
   // Configuration des étapes du workflow
   // Une étape n'est "terminée" que si on est passé à l'étape suivante
   const isStep1Completed = currentStep > 1 && currentRoom.photos.length > 0;
+  const isStep1_5Completed = currentStep > 1.5 && roomGroups.length > 0; // Nouvelle étape de validation des pièces
   const isStep2Completed = currentStep > 2 && currentRoom.photos.some(p => p.analysis?.items && p.analysis.items.length > 0);
   const isStep3Completed = currentStep > 3 && quoteFormData !== null;
   const isStep4Completed = false; // Toujours false car c'est la dernière étape
@@ -75,6 +81,17 @@ export default function Home() {
     console.log('🎯 handleStepChange appelée avec étape:', step);
     setCurrentStep(step);
   };
+
+  // Fonction pour gérer la validation des pièces
+  const handleRoomValidationComplete = useCallback((validatedRoomGroups: any[]) => {
+    console.log('🏠 Validation des pièces terminée:', validatedRoomGroups);
+    setRoomGroups(validatedRoomGroups);
+    setCurrentStep(2); // Passer à l'étape 2 (Valider l'inventaire)
+  }, []);
+
+  const handleRoomValidationPrevious = useCallback(() => {
+    setCurrentStep(1); // Retourner à l'étape 1 (Charger des photos)
+  }, []);
 
   // Fonctions pour gérer le formulaire (mémorisées pour éviter les re-rendus)
   const handleQuoteFormNext = useCallback((formData: any) => {
@@ -514,7 +531,10 @@ export default function Home() {
             // Sauvegarder en DB
             await fetch(`/api/photos/${photo.photoId}`, {
               method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 
+                'Content-Type': 'application/json',
+                'x-user-id': 'dev-user' // TODO: Récupérer le vrai userId
+              },
               body: JSON.stringify({ 
                 analysis: updatedAnalysis,
                 roomType: photo.roomName
@@ -597,72 +617,9 @@ export default function Home() {
     }));
   };
 
-  // Fonction de détection de doublons
-  const detectDuplicates = useCallback(async () => {
-    try {
-      console.log('🔍 Lancement détection doublons...');
-      
-      // Préparer les données pour le service
-      const photosWithAnalysis = currentRoom.photos.map((photo, idx) => ({
-        photoIndex: idx,
-        photoId: photo.photoId || `photo-${idx}`,
-        roomName: photo.roomName,
-        analysis: photo.analysis,
-        fileUrl: photo.fileUrl,
-        file: photo.file
-      }));
-
-      // Détecter les doublons
-      const duplicatesMap = await smartDuplicateDetectionService.detectDuplicates(photosWithAnalysis);
-      
-      if (duplicatesMap.size === 0) {
-        console.log('✅ Aucun doublon détecté');
-        return;
-      }
-
-      console.log(`⚠️  ${duplicatesMap.size} doublon(s) potentiel(s) détecté(s)`);
-
-      // Enrichir les items avec les infos de doublons
-      const enrichedPhotos = smartDuplicateDetectionService.enrichItemsWithDuplicates(
-        photosWithAnalysis,
-        duplicatesMap
-      );
-
-      // Mettre à jour le state avec les items enrichis
-      setCurrentRoom(prev => ({
-        ...prev,
-        photos: prev.photos.map((photo, idx) => ({
-          ...photo,
-          analysis: enrichedPhotos[idx].analysis
-        }))
-      }));
-
-      // Auto-désélectionner les doublons haute confiance
-      enrichedPhotos.forEach((photo, photoIdx) => {
-        photo.analysis?.items.forEach((item: any, itemIdx) => {
-          if (item.shouldAutoDeselect) {
-            console.log(`🔴 Auto-désélection doublon: Photo ${photoIdx + 1}, ${item.label}`);
-            // Désélectionner l'item
-            setCurrentRoom(prev => ({
-              ...prev,
-              photos: prev.photos.map((p, pIdx) => {
-                if (pIdx === photoIdx) {
-                  const selectedItems = new Set(p.selectedItems);
-                  selectedItems.delete(itemIdx);
-                  return { ...p, selectedItems };
-                }
-                return p;
-              })
-            }));
-          }
-        });
-      });
-
-      console.log('✅ Détection doublons terminée');
-    } catch (error) {
-      console.error('❌ Erreur détection doublons:', error);
-    }
-  }, [currentRoom.photos]);
+  // 🎯 SUPPRIMÉ : Plus de détection de doublons nécessaire
+  // Avec la nouvelle logique d'analyse par pièce, l'IA analyse déjà
+  // l'ensemble des photos d'une pièce d'un coup, donc pas de doublons possibles
 
   // Fonction de traitement asynchrone d'une photo
   const processPhotoAsync = async (photoIndex: number, file: File, photoId: string) => {
@@ -716,11 +673,13 @@ export default function Home() {
             photos: prev.photos.map((photo, idx) => 
               idx === photoIndex ? { 
                 ...photo, 
-                roomName: result.roomDetection.roomType
+                roomName: result.roomDetection.roomType,
+                roomType: result.roomDetection.roomType,
+                roomConfidence: result.roomDetection.confidence
               } : photo
             )
           }));
-          console.log(`Photo ${photoIndex}: pièce détectée = ${result.roomDetection.roomType}`);
+          console.log(`Photo ${photoIndex}: pièce détectée = ${result.roomDetection.roomType} (${result.roomDetection.confidence})`);
         }
 
         // Marquer comme terminé avec le résultat et l'URL Base64
@@ -738,11 +697,8 @@ export default function Home() {
           )
         }));
 
-        // ✅ NOUVEAU : Détecter les doublons après l'analyse réussie
-        // Attendre un court instant pour s'assurer que le state est mis à jour
-        setTimeout(() => {
-          detectDuplicates();
-        }, 500);
+        // 🎯 SUPPRIMÉ : Plus de détection de doublons nécessaire
+        // L'analyse par pièce élimine automatiquement les doublons
       } else {
         throw new Error(result.error || 'Erreur inconnue');
       }
@@ -895,7 +851,7 @@ export default function Home() {
   const inventoryCalculations = useInventoryCalculations(currentRoom.photos);
   
   // Utiliser le hook pour les étapes du workflow
-  const workflowSteps = useWorkflowSteps(currentStep, currentRoom.photos, quoteFormData);
+  const workflowSteps = useWorkflowSteps(currentStep, currentRoom.photos, quoteFormData, roomGroups);
 
   const toggleItemSelection = (photoIndex: number, itemIndex: number) => {
     setCurrentRoom(prev => ({
@@ -1045,75 +1001,62 @@ export default function Home() {
     return description;
   };
 
-  // Fonction pour rendre le badge de doublon
+  // 🎯 SUPPRIMÉ : Plus de badges de doublons nécessaires
   const renderDuplicateBadge = (item: any) => {
-    if (!item.isPotentialDuplicate || !item.duplicateInfo) return null;
-
-    const { confidence, reasons, similarity, sourcePhotoIndex } = item.duplicateInfo;
-    
-    // Couleurs et icônes selon la confiance
-    const badgeStyles = {
-      high: {
-        bg: 'bg-red-100',
-        text: 'text-red-800',
-        border: 'border-red-400',
-        icon: '🔴',
-        label: 'DOUBLON'
-      },
-      medium: {
-        bg: 'bg-yellow-100',
-        text: 'text-yellow-800',
-        border: 'border-yellow-400',
-        icon: '🟡',
-        label: 'Doublon probable'
-      },
-      low: {
-        bg: 'bg-blue-100',
-        text: 'text-blue-700',
-        border: 'border-blue-300',
-        icon: '⚪',
-        label: 'Possible doublon'
-      }
-    };
-
-    const style = badgeStyles[confidence as keyof typeof badgeStyles] || badgeStyles.low;
-
-    return (
-      <div className={`mt-2 p-2 rounded border ${style.border} ${style.bg}`}>
-        <div className="flex items-center gap-2">
-          <span className={`text-xs font-semibold ${style.text} px-2 py-0.5 rounded-full ${style.bg}`}>
-            {style.icon} {style.label}
-          </span>
-          <span className="text-xs text-gray-600">
-            ({Math.round(similarity * 100)}% similaire)
-          </span>
-        </div>
-        <div className={`mt-1 text-xs ${style.text}`}>
-          ↪ Ressemble à {item.label} de Photo {sourcePhotoIndex + 1}
-        </div>
-        {reasons && reasons.length > 0 && (
-          <div className="mt-1 space-y-0.5">
-            {reasons.slice(0, 3).map((reason: string, idx: number) => (
-              <div key={idx} className="flex items-start gap-1 text-xs text-gray-700">
-                <span>✓</span>
-                <span>{reason}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
+    return null; // Plus de doublons avec l'analyse par pièce
   };
 
   const renderTestsInterface = () => (
     <>
 
-        {/* Étape 2 - Valider l'inventaire */}
-        {currentStep === 2 && (
+        {/* Étape 1.5 - Valider les pièces */}
+        {currentStep === 1.5 && (
           <div className="max-w-6xl mx-auto px-4">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              
+              <div className="p-6">
+                <RoomValidationStep
+                  photos={currentRoom.photos.map(photo => ({
+                    id: photo.photoId || `photo-${Date.now()}-${Math.random()}`,
+                    file: photo.file,
+                    fileUrl: photo.fileUrl,
+                    analysis: photo.analysis,
+                    status: photo.status,
+                    error: photo.error,
+                    selectedItems: photo.selectedItems,
+                    photoId: photo.photoId,
+                    progress: photo.progress,
+                    roomName: photo.roomName,
+                    roomConfidence: photo.roomConfidence,
+                    roomType: photo.roomType
+                  }))}
+                  onValidationComplete={handleRoomValidationComplete}
+                  onPrevious={handleRoomValidationPrevious}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
+        {/* Étape 2 - Valider l'inventaire par pièce */}
+        {currentStep === 2 && (
+          <Step2RoomInventory
+            roomGroups={roomGroups}
+            onRoomTypeChange={(groupId, newRoomType) => {
+              setRoomGroups(prev => prev.map(group => 
+                group.id === groupId 
+                  ? { ...group, roomType: newRoomType }
+                  : group
+              ));
+            }}
+            onPrevious={() => setCurrentStep(1.5)}
+            onNext={() => setCurrentStep(3)}
+          />
+        )}
+
+        {/* Ancienne étape 2 - Commentée pour référence */}
+        {false && currentStep === 2 && (
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="p-6">
                 {currentRoom.photos.length === 0 ? (
                   <div className="text-center py-12">
@@ -1240,7 +1183,7 @@ export default function Home() {
                                                       </span>
                                                       <span className="text-xs text-gray-500 ml-2">{item.volume_m3}m³</span>
                                                       {/* Badge doublon */}
-                                                      {renderDuplicateBadge(item)}
+                                                      {/* Plus de badges de doublons */}
                                                     </div>
                                                     <div className="flex items-center space-x-2">
                                                       <FragileToggle
@@ -1374,7 +1317,7 @@ export default function Home() {
                                                             </span>
                                                             <span className="text-xs text-gray-500 ml-2">{item.volume_m3}m³</span>
                                                             {/* Badge doublon */}
-                                                            {renderDuplicateBadge(item)}
+                                                            {/* Plus de badges de doublons */}
                                                           </div>
                                                           <div className="flex items-center space-x-2">
                                                             <FragileToggle
@@ -1708,10 +1651,16 @@ export default function Home() {
                             <button
                 onClick={() => {
                   console.log('🎯 Bouton "Étape suivante" cliqué, passage à l\'étape', currentStep + 1);
-                  setCurrentStep(currentStep + 1);
+                  // Si on est à l'étape 1, passer à l'étape 1.5 (validation des pièces)
+                  if (currentStep === 1) {
+                    setCurrentStep(1.5);
+                  } else {
+                    setCurrentStep(currentStep + 1);
+                  }
                 }}
                 disabled={
                   (currentStep === 1 && currentRoom.photos.length === 0) ||
+                  (currentStep === 1.5 && roomGroups.length === 0) ||
                   (currentStep === 2 && !currentRoom.photos.some(p => p.status === 'completed')) ||
                   (currentStep === 3 && !quoteFormData)
                 }
@@ -2604,10 +2553,16 @@ export default function Home() {
                   <button
                     onClick={() => {
                       console.log('🎯 Bouton "Étape suivante" cliqué, passage à l\'étape', currentStep + 1);
-                      setCurrentStep(currentStep + 1);
+                      // Si on est à l'étape 1, passer à l'étape 1.5 (validation des pièces)
+                      if (currentStep === 1) {
+                        setCurrentStep(1.5);
+                      } else {
+                        setCurrentStep(currentStep + 1);
+                      }
                     }}
                     disabled={
                       (currentStep === 1 && currentRoom.photos.length === 0) ||
+                      (currentStep === 1.5 && roomGroups.length === 0) ||
                       (currentStep === 2 && !currentRoom.photos.some(p => p.status === 'completed')) ||
                       (currentStep === 3 && !quoteFormData)
                     }

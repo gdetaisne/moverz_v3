@@ -105,8 +105,9 @@ export async function analyzePhotoWithOptimizedVision(opts: {
       safeApiCall(() => analyzePetitsHybrid(opts), 'PetitsAnalysis')
     ]);
 
-    // 3. Fusionner les résultats des 5 analyses spécialisées
-    const finalResults = mergeAllSpecializedResults(
+    // 3. 🎯 FUSION SIMPLIFIÉE : Plus de déduplication complexe
+    // L'IA analyse déjà l'ensemble des photos d'une pièce
+    const finalResults = mergeAllSpecializedResultsSimple(
       armoiresResults.status === 'fulfilled' ? armoiresResults.value : null,
       tablesResults.status === 'fulfilled' ? tablesResults.value : null,
       canapesResults.status === 'fulfilled' ? canapesResults.value : null,
@@ -319,7 +320,7 @@ function mergeSpecializedResults(
  * 🆕 Fusionne les résultats des 5 analyses spécialisées
  * Priorité : Analyses spécialisées (armoires, tables, canapés) > Volumineux > Petits
  */
-function mergeAllSpecializedResults(
+function mergeAllSpecializedResultsSimple(
   armoiresResults: any | null,
   tablesResults: any | null,
   canapesResults: any | null,
@@ -327,30 +328,27 @@ function mergeAllSpecializedResults(
   petitsResults: any | null
 ): TPhotoAnalysis {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('🔀 MERGE 5 ANALYSES SPÉCIALISÉES:');
+  console.log('🔀 MERGE SIMPLE 5 ANALYSES:');
   console.log('- Armoires:', armoiresResults?.items?.length || 0, 'items');
   console.log('- Tables:', tablesResults?.items?.length || 0, 'items');
   console.log('- Canapés:', canapesResults?.items?.length || 0, 'items');
   console.log('- Volumineux:', volumineuxResults?.items?.length || 0, 'items');
   console.log('- Petits:', petitsResults?.items?.length || 0, 'items');
 
-  // Collecter tous les items avec leur priorité
+  // 🎯 COLLECTE SIMPLE : Plus de déduplication complexe
   const allItems = [
-    ...(armoiresResults?.items || []).map((item: any) => ({ ...item, _priority: 1, _source: 'armoires' })),
-    ...(tablesResults?.items || []).map((item: any) => ({ ...item, _priority: 1, _source: 'tables' })),
-    ...(canapesResults?.items || []).map((item: any) => ({ ...item, _priority: 1, _source: 'canapes' })),
-    ...(volumineuxResults?.items || []).map((item: any) => ({ ...item, _priority: 2, _source: 'volumineux' })),
-    ...(petitsResults?.items || []).map((item: any) => ({ ...item, _priority: 3, _source: 'petits' }))
+    ...(armoiresResults?.items || []),
+    ...(tablesResults?.items || []),
+    ...(canapesResults?.items || []),
+    ...(volumineuxResults?.items || []),
+    ...(petitsResults?.items || [])
   ];
 
-  // Déduplication intelligente : priorité aux analyses spécialisées
-  const deduplicatedItems = deduplicateItemsWithPriority(allItems);
-
-  console.log('✅ Items après déduplication:', deduplicatedItems.length);
+  console.log('✅ Items totaux:', allItems.length);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
   // Valider et corriger les mesures
-  const validatedItems = validateAllMeasurements(deduplicatedItems);
+  const validatedItems = validateAllMeasurements(allItems);
 
   // Fusionner les règles spéciales
   const allResults = [armoiresResults, tablesResults, canapesResults, volumineuxResults, petitsResults].filter(r => r);

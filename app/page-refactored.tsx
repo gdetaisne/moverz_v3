@@ -17,7 +17,7 @@ import { getBuildInfo } from "@/lib/buildInfo";
 import { TInventoryItem } from "@/lib/schemas";
 import { clearCache } from "@/lib/cache";
 import { calculatePackagedVolume } from "@/lib/packaging";
-import { smartDuplicateDetectionService } from "@/services/smartDuplicateDetectionService";
+// 🎯 SUPPRIMÉ : Plus de détection de doublons
 
 interface RoomData {
   id: string;

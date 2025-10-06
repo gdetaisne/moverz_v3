@@ -37,6 +37,7 @@ model Project {
   updatedAt       DateTime @updatedAt
 
   @@index([userId])
+  @@unique([userId, name], name: "userId_name")
 }
 
 model Photo {

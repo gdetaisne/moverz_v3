@@ -18,10 +18,12 @@ interface WorkflowStep {
 export function useWorkflowSteps(
   currentStep: number,
   photos: PhotoData[],
-  quoteFormData: unknown
+  quoteFormData: unknown,
+  roomGroups: any[] = []
 ): WorkflowStep[] {
   return useMemo(() => {
     const isStep1Completed = currentStep > 1 && photos.length > 0;
+    const isStep1_5Completed = currentStep > 1.5 && roomGroups.length > 0; // Nouvelle étape de validation des pièces
     const isStep2Completed = currentStep > 2 && photos.some(p => p.analysis?.items && p.analysis.items.length > 0);
     const isStep3Completed = currentStep > 3 && quoteFormData !== null;
     const isStep4Completed = false; // Toujours false car c'est la dernière étape
@@ -36,12 +38,20 @@ export function useWorkflowSteps(
         disabled: false
       },
       {
+        id: 1.5,
+        title: "Valider les pièces",
+        description: "Vérifiez la classification des pièces",
+        icon: "🏠",
+        completed: isStep1_5Completed,
+        disabled: !isStep1Completed
+      },
+      {
         id: 2,
         title: "Valider l'inventaire",
         description: "Vérifiez les objets dans la pièce",
         icon: "🔍",
         completed: isStep2Completed,
-        disabled: !isStep1Completed
+        disabled: !isStep1_5Completed
       },
       {
         id: 3,
@@ -60,5 +70,5 @@ export function useWorkflowSteps(
         disabled: !isStep3Completed
       }
     ];
-  }, [currentStep, photos, quoteFormData]);
+  }, [currentStep, photos, quoteFormData, roomGroups]);
 }

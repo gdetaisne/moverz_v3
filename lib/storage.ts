@@ -124,9 +124,19 @@ export async function savePhotoToDatabase(params: {
 }): Promise<{ photoId: string; projectId: string }> {
   const { userId, photoId, filename, filePath, url, roomType, analysis } = params;
 
-  // 1. Récupérer ou créer un projet par défaut pour cet utilisateur
+  // 1. S'assurer que l'utilisateur existe
+  await prisma.user.upsert({
+    where: { id: userId },
+    update: {},
+    create: { id: userId }
+  });
+
+  // 2. Récupérer ou créer un projet par défaut pour cet utilisateur
   let project = await prisma.project.findFirst({
-    where: { userId: userId, name: "Projet Moverz" },
+    where: { 
+      userId: userId,
+      name: "Projet Moverz"
+    },
     select: { id: true }
   });
 
@@ -141,7 +151,7 @@ export async function savePhotoToDatabase(params: {
     });
   }
 
-  // 2. Créer ou mettre à jour la photo en DB
+  // 3. Créer ou mettre à jour la photo en DB
   const photo = await prisma.photo.upsert({
     where: { id: photoId },
     update: {

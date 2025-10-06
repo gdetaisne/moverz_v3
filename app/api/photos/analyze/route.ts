@@ -25,23 +25,25 @@ export async function POST(req: NextRequest) {
     const { analyzePhotoWithOptimizedVision } = await import("@/services/optimizedAnalysis");
     const { detectRoomTypeParallel } = await import("@/services/parallelRoomDetection");
 
-    // Lancer les deux analyses EN PARALLÈLE
-    console.log("🚀 Lancement des analyses parallèles...");
-    const [analysis, roomDetection] = await Promise.all([
-      // Analyse A : Détection d'objets (utilise Base64 temporaire)
-      analyzePhotoWithOptimizedVision({ 
-        photoId: saved.id, 
-        imageUrl: base64Data.dataUrl
-      }),
-      // Analyse B : Détection de pièce (utilise Base64 temporaire)
-      detectRoomTypeParallel(base64Data.dataUrl)
-    ]);
+    // 🏠 ÉTAPE 1 : Seulement détection de pièce lors de l'upload
+    console.log("🏠 Détection de pièce uniquement...");
+    const roomDetection = await detectRoomTypeParallel(base64Data.dataUrl);
     
-    console.log("✅ Analyse objets terminée:", analysis.items?.length, "objets, temps:", analysis.processingTime, "ms");
     console.log("✅ Détection pièce terminée:", roomDetection.roomType, "confiance:", roomDetection.confidence, "temps:", roomDetection.processingTime, "ms");
+    
+    // 📝 L'analyse d'objets sera lancée plus tard après validation des pièces
+    const analysis = {
+      items: [],
+      processingTime: 0,
+      aiProvider: "pending-room-validation",
+      analysisType: "room-validation-pending"
+    };
 
-    // ✨ Sauvegarder en DB (URL fichier, pas Base64)
-    const userId = await getUserId(req);
+    // ✨ Récupérer userId depuis form data ou headers
+    const formUserId = form.get("userId");
+    const userId = formUserId && typeof formUserId === 'string' 
+      ? formUserId 
+      : await getUserId(req);
     const fullAnalysis = {
       ...analysis,
       roomDetection: {
