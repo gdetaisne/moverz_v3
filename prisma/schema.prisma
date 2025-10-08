@@ -107,3 +107,58 @@ model AiMetric {
   @@index([success])
   @@index([operation])
 }
+
+// LOT 8 - Direct S3/MinIO Upload
+enum AssetStatus {
+  PENDING
+  UPLOADED
+  PROCESSING
+  READY
+  ERROR
+}
+
+model Asset {
+  id          String      @id @default(cuid())
+  userId      String
+  projectId   String?
+  filename    String
+  s3Key       String      @unique  // userId/yyyy/mm/dd/<uuid>.<ext>
+  mime        String
+  sizeBytes   Int         @default(0)
+  status      AssetStatus @default(PENDING)
+  uploadedAt  DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model Job {
+  id          String    @id @default(cuid())
+  type        String    // 'analyze_photo' | 'detect_room' | 'generate_pdf'
+  assetId     String?
+  userId      String
+  status      JobStatus @default(PENDING)
+  progress    Int       @default(0)  // 0-100
+  result      Json?
+  error       String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+}

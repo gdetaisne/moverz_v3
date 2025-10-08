@@ -18,3 +18,4 @@ export * from './config/app';
 export * from './normalize';
 export * from './dismountable';
 export * from './roomTypeNormalizer';
+export * from './s3Client';
