@@ -19,3 +19,5 @@ export * from './normalize';
 export * from './dismountable';
 export * from './roomTypeNormalizer';
 export * from './s3Client';
+export * from './queue/queue';
+export * from './queue/worker';
