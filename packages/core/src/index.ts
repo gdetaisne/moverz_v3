@@ -15,3 +15,6 @@ export * from './settings';
 export * from './pdf';
 export * from './logger';
 export * from './config/app';
+export * from './normalize';
+export * from './dismountable';
+export * from './roomTypeNormalizer';

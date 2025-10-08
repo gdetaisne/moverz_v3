@@ -14,3 +14,14 @@ export const config = {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d'
   }
 };
+
+export function getApiConfig() {
+  return {
+    claude: {
+      apiKey: process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY
+    },
+    openai: {
+      apiKey: process.env.OPENAI_API_KEY
+    }
+  };
+}
