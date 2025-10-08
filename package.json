@@ -2,6 +2,10 @@
   "name": "movers_v3",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "predev": "node scripts/setup-pdfkit.js",
     "dev": "next dev --port 3001",
