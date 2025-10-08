@@ -18,7 +18,13 @@
     "check:env": "node -e \"console.log('OpenAI:', process.env.OPENAI_API_KEY ? '✅' : '❌'); console.log('Claude:', process.env.CLAUDE_API_KEY ? '✅' : '❌'); console.log('DB:', process.env.DATABASE_URL ? '✅' : '❌');\"",
     "db:push": "npx prisma db push",
     "db:generate": "npx prisma generate",
-    "db:reset": "npx prisma db push --force-reset"
+    "db:reset": "npx prisma db push --force-reset",
+    "prisma:migrate": "npx prisma migrate dev",
+    "prisma:migrate:deploy": "npx prisma migrate deploy",
+    "prisma:studio": "npx prisma studio",
+    "prisma:generate": "npx prisma generate",
+    "check:neon": "node scripts/check-neon-config.js",
+    "migrate:neon": "node scripts/check-neon-config.js && npm run prisma:generate && npm run prisma:migrate"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.65.0",
