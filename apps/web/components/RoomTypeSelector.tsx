@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ROOM_TYPES } from '@/lib/roomValidation';
+import { ROOM_TYPES } from '@core/roomValidation';
 
 interface RoomTypeSelectorProps {
   value: string;

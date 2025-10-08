@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { prisma } from '@core/db';
 import { z } from 'zod';
 
 // Schéma de validation Zod pour POST

@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import DismountableToggle from './DismountableToggle';
 import FragileToggle from './FragileToggle';
 import { ItemDetailsModal } from './ItemDetailsModal';
-import { TInventoryItem } from '@/lib/schemas';
+import { TInventoryItem } from '@core/schemas';
 
 interface InventoryItemInlineProps {
   item: TInventoryItem & { photoId: string; itemIndex: number };

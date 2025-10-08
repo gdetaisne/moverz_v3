@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { config } from '@/config/app';
+import { config } from '@core/config/app';
 
 // Interface pour le statut d'une IA
 interface AIServiceStatus {

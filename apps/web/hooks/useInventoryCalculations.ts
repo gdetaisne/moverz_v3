@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { TInventoryItem } from '@/lib/schemas';
+import { TInventoryItem } from '@core/schemas';
 
 interface PhotoData {
   file: File;

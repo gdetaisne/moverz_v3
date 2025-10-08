@@ -1,7 +1,7 @@
 "use client";
 import React from 'react';
 import { motion } from 'framer-motion';
-import { TInventoryItem } from '@/lib/schemas';
+import { TInventoryItem } from '@core/schemas';
 
 interface ItemDetailsModalProps {
   item: TInventoryItem;

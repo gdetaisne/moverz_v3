@@ -4,8 +4,8 @@ import {
   generateMovingQuotePDF, 
   generateReferenceNumber,
   formatGeneratedDate 
-} from '@/lib/pdf/generator';
-import { PDFGenerationData } from '@/lib/pdf/types';
+} from '@core/pdf/generator';
+import { PDFGenerationData } from '@core/pdf/types';
 
 // Force l'utilisation du runtime Node.js (pas Edge)
 export const runtime = 'nodejs';

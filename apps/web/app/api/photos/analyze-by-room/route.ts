@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserId } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { getUserId } from "@core/auth";
+import { prisma } from "@core/db";
 
 export const runtime = "nodejs";
 
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Import dynamique pour éviter les erreurs de build
-    const { analyzeRoomPhotos } = await import("@/services/roomBasedAnalysis");
+    const { analyzeRoomPhotos } = await import("@ai/adapters/roomBasedAnalysis");
 
     // 🎯 NOUVELLE LOGIQUE : Analyse par groupe de pièces
     const analysis = await analyzeRoomPhotos({

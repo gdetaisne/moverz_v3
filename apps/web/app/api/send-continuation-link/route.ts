@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import { getUserId } from '@/lib/auth';
-import { sendEmail, generateContinuationToken, generateContinuationEmailHtml } from '@/lib/email';
+import { prisma } from '@core/db';
+import { getUserId } from '@core/auth';
+import { sendEmail, generateContinuationToken, generateContinuationEmailHtml } from '@core/email';
 import { z } from 'zod';
 
 export const runtime = "nodejs";

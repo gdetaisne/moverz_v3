@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { PhotoData, RoomGroup } from '@/lib/roomValidation';
+import { PhotoData, RoomGroup } from '@core/roomValidation';
 
 interface PhotoThumbnailProps {
   photo: PhotoData;

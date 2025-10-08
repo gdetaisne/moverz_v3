@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { savePhotoToFile, saveAsBase64, savePhotoToDatabase } from "@/lib/storage";
-import { getUserId } from "@/lib/auth";
+import { savePhotoToFile, saveAsBase64, savePhotoToDatabase } from "@core/storage";
+import { getUserId } from "@core/auth";
 
 export const runtime = "nodejs";
 
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     console.log(`📦 [TIMING] Conversion Base64: ${base64Time}ms`);
     
     // Import dynamique pour éviter les erreurs de build
-    const { detectRoomType } = await import("@/services/roomDetection");
+    const { detectRoomType } = await import("@ai/adapters/roomDetection");
 
     // 🏠 Détection de pièce IA (analyse séquentielle pour éviter les blocages)
     console.log("🏠 [TIMING] Détection de pièce IA...");
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     const objectsStart = Date.now();
     
     // Import dynamique pour Claude
-    const { analyzePhotoWithClaude } = await import("@/services/claudeVision");
+    const { analyzePhotoWithClaude } = await import("@ai/adapters/claudeVision");
     
     // Analyser les objets avec Claude
     const objectsAnalysis = await analyzePhotoWithClaude({

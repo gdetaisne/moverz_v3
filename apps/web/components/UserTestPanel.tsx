@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { userSession } from '@/lib/auth-client';
-import { StorageCleanup } from '@/lib/user-storage';
+import { userSession } from '@core/auth-client';
+import { StorageCleanup } from '@core/user-storage';
 
 interface UserTestPanelProps {
   className?: string;

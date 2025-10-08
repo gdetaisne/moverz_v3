@@ -1,8 +1,8 @@
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RoomGroup, PhotoData, ROOM_TYPES } from '@/lib/roomValidation';
-import { SmartRoomClassificationService } from '@/services/smartRoomClassificationService';
+import { RoomGroup, PhotoData, ROOM_TYPES } from '@core/roomValidation';
+import { classifyRoom } from '@ai/adapters/smartRoomClassificationService';
 
 // Composant image unifié basé sur le système qui fonctionnait
 function UnifiedImage({ photo, className }: { photo: PhotoData; className: string }) {
@@ -88,7 +88,7 @@ export function RoomValidationStepV2({
   const [dragOverRoom, setDragOverRoom] = useState<string | null>(null);
   const [showCreateRoom, setShowCreateRoom] = useState(false);
   const [newRoomType, setNewRoomType] = useState('autre');
-  const [classificationService] = useState(() => new SmartRoomClassificationService());
+  const [classificationService] = useState(() => ({ classifyRoom }));
 
   // Auto-classification au montage - seulement une fois
   useEffect(() => {

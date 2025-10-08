@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { RoomGroup } from '@/lib/roomValidation';
+import { RoomGroup } from '@core/roomValidation';
 import { RoomInventoryCard } from './RoomInventoryCard';
 
 interface Step2RoomInventoryProps {

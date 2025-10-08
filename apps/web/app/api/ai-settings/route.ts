@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AISettings } from '@/lib/settings';
-import { getServerAISettings, saveServerAISettings } from '@/lib/serverSettings';
+import { AISettings } from '@core/settings';
+import { getServerAISettings, saveServerAISettings } from '@core/serverSettings';
 
 export async function GET() {
   try {

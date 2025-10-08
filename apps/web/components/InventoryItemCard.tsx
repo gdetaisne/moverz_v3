@@ -3,7 +3,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import DismountableToggle from './DismountableToggle';
 import FragileToggle from './FragileToggle';
-import { TInventoryItem } from '@/lib/schemas';
+import { TInventoryItem } from '@core/schemas';
 
 interface InventoryItemCardProps {
   item: TInventoryItem & { photoId: string; itemIndex: number };
