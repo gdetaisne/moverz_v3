@@ -1,5 +1,5 @@
 import { randomBytes } from 'crypto';
-
+import { logger } from '@/lib/logger';
 /**
  * Service d'envoi d'emails
  * Utilise Resend (moderne et simple) ou Nodemailer en fallback
@@ -19,7 +19,7 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
 
   if (!resendApiKey) {
     console.warn('⚠️ RESEND_API_KEY non configuré, email non envoyé');
-    console.log('📧 Email (mode dev):', options);
+    logger.debug('📧 Email (mode dev):', options);
     return false;
   }
 
@@ -45,7 +45,7 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
     }
 
     const data = await response.json();
-    console.log('✅ Email envoyé via Resend:', data.id);
+    logger.debug('✅ Email envoyé via Resend:', data.id);
     return true;
   } catch (error) {
     console.error('❌ Erreur envoi email:', error);

@@ -12,7 +12,7 @@ export function setUserIdCookie(userId: string): void {
   if (typeof document === 'undefined') return;
   
   document.cookie = `${COOKIE_NAME}=${userId}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`;
-  console.log(`🍪 Cookie user_id défini: ${userId}`);
+  logger.debug(`🍪 Cookie user_id défini: ${userId}`);
 }
 
 /**
@@ -35,7 +35,7 @@ export function clearUserIdCookie(): void {
   document.cookie = `user_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
   // Supprimer le nouveau cookie moverz_user_id
   document.cookie = `${COOKIE_NAME}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-  console.log('🍪 Cookies user_id supprimés');
+  logger.debug('🍪 Cookies user_id supprimés');
 }
 
 /**
@@ -48,7 +48,7 @@ export function migrateCookies(): void {
   const oldCookie = document.cookie.match(/(^| )user_id=([^;]+)/);
   if (oldCookie) {
     const oldUserId = oldCookie[2];
-    console.log(`🔄 Migration cookie: user_id → moverz_user_id (${oldUserId})`);
+    logger.debug(`🔄 Migration cookie: user_id → moverz_user_id (${oldUserId})`);
     
     // Supprimer l'ancien cookie
     document.cookie = `user_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
@@ -101,7 +101,7 @@ export class UserSessionManager {
     // 2. Générer un nouvel ID temporaire
     const newUserId = generateTemporaryUserId();
     setUserIdCookie(newUserId);
-    console.log(`🆕 Nouvel utilisateur temporaire créé: ${newUserId}`);
+    logger.debug(`🆕 Nouvel utilisateur temporaire créé: ${newUserId}`);
     
     return newUserId;
   }
@@ -121,7 +121,7 @@ export class UserSessionManager {
     // Mettre à jour le cookie
     setUserIdCookie(permanentUserId);
     
-    console.log(`🔄 Utilisateur converti: ${temporaryUserId} → ${permanentUserId} (${email})`);
+    logger.debug(`🔄 Utilisateur converti: ${temporaryUserId} → ${permanentUserId} (${email})`);
     
     return permanentUserId;
   }
@@ -134,7 +134,7 @@ export class UserSessionManager {
     // Pour l'instant, on génère un ID basé sur l'email
     const userId = `user-${btoa(email).replace(/[^a-zA-Z0-9]/g, '').substring(0, 8)}`;
     setUserIdCookie(userId);
-    console.log(`🔑 Connexion avec email: ${email} → ${userId}`);
+    logger.debug(`🔑 Connexion avec email: ${email} → ${userId}`);
   }
   
   /**
@@ -142,7 +142,7 @@ export class UserSessionManager {
    */
   logout(): void {
     clearUserIdCookie();
-    console.log('🚪 Déconnexion');
+    logger.debug('🚪 Déconnexion');
   }
   
   /**

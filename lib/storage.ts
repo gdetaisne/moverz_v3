@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { File } from "node:buffer";
 import { optimizeImageForAI } from "@/lib/imageOptimization";
 import { prisma } from "@/lib/db";
+import { logger } from "@/lib/logger";
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -48,7 +49,7 @@ export async function savePhotoToFile(file: any, photoId?: string) {
   // URL publique
   const url = `${UPLOADS_URL}/${filename}`;
   
-  console.log(`💾 Photo sauvegardée: ${filePath} (${optimized.buffer.length} bytes)`);
+  logger.debug(`💾 Photo sauvegardée: ${filePath} (${optimized.buffer.length} bytes)`);
   
   return {
     id,
@@ -97,7 +98,7 @@ export async function saveAsBase64(file: any){
   // Créer l'URL data optimisée
   const dataUrl = `data:${mimeType};base64,${base64}`;
   
-  console.log(`Image optimized: ${originalBuffer.length}→${optimized.buffer.length} bytes (${Math.round((1 - optimized.buffer.length/originalBuffer.length) * 100)}% reduction)`);
+  logger.debug(`Image optimized: ${originalBuffer.length}→${optimized.buffer.length} bytes (${Math.round((1 - optimized.buffer.length/originalBuffer.length) * 100)}% reduction)`);
   
   return { 
     id, 
@@ -172,7 +173,7 @@ export async function savePhotoToDatabase(params: {
     }
   });
 
-  console.log(`📸 Photo DB: ${photo.id} → ${photo.url} (${project.id})`);
+  logger.debug(`📸 Photo DB: ${photo.id} → ${photo.url} (${project.id})`);
 
   // 4. Créer ou mettre à jour l'entité Room si roomType est défini
   if (roomType) {
@@ -192,7 +193,7 @@ export async function savePhotoToDatabase(params: {
         name: getRoomDisplayName(roomType)
       }
     });
-    console.log(`🏠 Room DB: ${roomType} créé/mis à jour pour ${userId}`);
+    logger.debug(`🏠 Room DB: ${roomType} créé/mis à jour pour ${userId}`);
   }
 
   return { photoId: photo.id, projectId: project.id };

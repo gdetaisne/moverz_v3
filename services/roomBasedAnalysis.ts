@@ -11,7 +11,7 @@ import { calculatePackagedVolume } from "@/lib/packaging";
 import { calculateDismountableProbability } from "@/lib/dismountable";
 import { mapToCatalog, volumeFromDims } from "@/lib/normalize";
 import { config } from '../config/app';
-
+import { logger } from '@/lib/logger';
 export interface RoomAnalysisRequest {
   roomType: string;
   photos: Array<{
@@ -132,14 +132,14 @@ export async function analyzeRoomPhotos(request: RoomAnalysisRequest): Promise<R
   const startTime = Date.now();
   
   try {
-    console.log(`🏠 Début analyse pièce "${request.roomType}" avec ${request.photos.length} photos`);
+    logger.debug(`🏠 Début analyse pièce "${request.roomType}" avec ${request.photos.length} photos`);
     
     if (request.photos.length === 0) {
       throw new Error('Aucune photo fournie pour l\'analyse');
     }
 
     // 🎯 NOUVELLE LOGIQUE : Analyser chaque photo individuellement puis fusionner
-    console.log(`🔍 Analyse de ${request.photos.length} photos de la pièce "${request.roomType}"`);
+    logger.debug(`🔍 Analyse de ${request.photos.length} photos de la pièce "${request.roomType}"`);
     
     const userPrompt = `Analyse cette photo de la pièce "${request.roomType}" et crée un inventaire complet.
 
@@ -148,7 +148,7 @@ export async function analyzeRoomPhotos(request: RoomAnalysisRequest): Promise<R
     // Analyser chaque photo individuellement
     const photoAnalyses = await Promise.all(
       request.photos.map(async (photo, index) => {
-        console.log(`📸 Analyse photo ${index + 1}/${request.photos.length}: ${photo.filename}`);
+        logger.debug(`📸 Analyse photo ${index + 1}/${request.photos.length}: ${photo.filename}`);
         
         // Construire l'URL complète
         const fullUrl = photo.url.startsWith('http') 
@@ -162,7 +162,7 @@ export async function analyzeRoomPhotos(request: RoomAnalysisRequest): Promise<R
           userPrompt: userPrompt
         });
         
-        console.log(`✅ Photo ${index + 1} analysée: ${analysis.items?.length || 0} objets`);
+        logger.debug(`✅ Photo ${index + 1} analysée: ${analysis.items?.length || 0} objets`);
         return analysis;
       })
     );
@@ -248,7 +248,7 @@ export async function analyzeRoomPhotos(request: RoomAnalysisRequest): Promise<R
       photo_id: request.photos.map(p => p.id).join(',')
     };
     
-    console.log(`✅ Analyse pièce "${request.roomType}" terminée: ${result.items.length} objets, ${processingTime}ms`);
+    logger.debug(`✅ Analyse pièce "${request.roomType}" terminée: ${result.items.length} objets, ${processingTime}ms`);
     
     return result;
     
@@ -313,7 +313,7 @@ async function analyzePhotoWithClaude(opts: {
       ? opts.imageUrl 
       : `http://localhost:3001${opts.imageUrl}`;
     
-    console.log(`🖼️ Chargement image depuis: ${fullImageUrl}`);
+    logger.debug(`🖼️ Chargement image depuis: ${fullImageUrl}`);
     
     // Charger l'image depuis l'URL
     const imageResponse = await fetch(fullImageUrl);
@@ -326,7 +326,7 @@ async function analyzePhotoWithClaude(opts: {
     // Pour le test, utiliser directement l'image sans optimisation
     const base64Image = Buffer.from(imageBuffer).toString('base64');
     
-    console.log(`Image Claude préparée: ${base64Image.length} bytes`);
+    logger.debug(`Image Claude préparée: ${base64Image.length} bytes`);
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -367,7 +367,7 @@ async function analyzePhotoWithClaude(opts: {
     }
 
     const data = await response.json();
-    console.log('Réponse Claude reçue:', data);
+    logger.debug('Réponse Claude reçue:', data);
 
     // Parser la réponse Claude
     const content = data.content[0]?.text;

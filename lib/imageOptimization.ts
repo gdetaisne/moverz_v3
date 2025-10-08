@@ -1,6 +1,6 @@
 import sharp from "sharp";
 import crypto from "crypto";
-
+import { logger } from '@/lib/logger';
 export interface OptimizedImage {
   buffer: Buffer;
   hash: string;
@@ -43,7 +43,7 @@ export async function optimizeImageForAI(inputBuffer: Buffer): Promise<Optimized
   const hash = crypto.createHash('sha256').update(optimizedBuffer).digest('hex');
   
   const processingTime = Date.now() - startTime;
-  console.log(`🖼️ [TIMING] Optimisation Sharp: ${processingTime}ms - ${originalSize}→${optimizedBuffer.length} bytes (${Math.round((1 - optimizedBuffer.length/originalSize) * 100)}% réduction)`);
+  logger.debug(`🖼️ [TIMING] Optimisation Sharp: ${processingTime}ms - ${originalSize}→${optimizedBuffer.length} bytes (${Math.round((1 - optimizedBuffer.length/originalSize) * 100)}% réduction)`);
 
   return {
     buffer: optimizedBuffer,

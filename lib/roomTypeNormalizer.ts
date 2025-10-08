@@ -87,7 +87,7 @@ export function normalizeRoomType(detectedType: string): string {
   // Chercher une correspondance partielle
   for (const [label, value] of Object.entries(ROOM_TYPE_MAPPING)) {
     if (cleanedType.includes(label) || label.includes(cleanedType)) {
-      console.log(`🔄 Normalisation partielle: "${detectedType}" → "${value}"`);
+      logger.debug(`🔄 Normalisation partielle: "${detectedType}" → "${value}"`);
       return value;
     }
   }

@@ -1,7 +1,7 @@
 import { TPhotoAnalysis } from "@/lib/schemas";
 import { optimizeImageForAI } from "@/lib/imageOptimization";
 import { normalizeRoomType } from "@/lib/roomTypeNormalizer";
-
+import { logger } from '@/lib/logger';
 export interface RoomDetectionResult {
   roomType: string;
   confidence: number;
@@ -38,16 +38,16 @@ async function detectRoomTypeWithClaude(photoAnalysis: TPhotoAnalysis, imageUrl?
 
   // Si on a l'URL de l'image, l'analyser directement
   if (imageUrl) {
-    console.log('🔍 Analyse de l\'image pour détection de pièce...');
+    logger.debug('🔍 Analyse de l\'image pour détection de pièce...');
     return await detectRoomTypeFromImage(anthropic, imageUrl);
   }
 
   // Sinon, analyser les objets détectés (fallback)
-  console.log('⚠️ Fallback: analyse basée sur les objets détectés');
+  logger.debug('⚠️ Fallback: analyse basée sur les objets détectés');
   
   // Vérification de sécurité pour photoAnalysis.items
   if (!photoAnalysis.items || !Array.isArray(photoAnalysis.items) || photoAnalysis.items.length === 0) {
-    console.log('⚠️ Aucun objet détecté, retour type par défaut');
+    logger.debug('⚠️ Aucun objet détecté, retour type par défaut');
     return {
       roomType: 'pièce inconnue',
       confidence: 0.1,

@@ -7,7 +7,7 @@ import { calculateDismountableProbability, requiresVisualCheck } from "@/lib/dis
 
 import { getEstimatedDimensions, hasValidDimensions, validateObjectDimensions, calculateVolumeFromDimensions } from './core/measurementUtils';
 import { config, getApiConfig } from '../config/app';
-
+import { logger } from '@/lib/logger';
 export async function analyzePhotoWithClaude(opts: {
   photoId: string;
   imageUrl: string;
@@ -49,7 +49,7 @@ export async function analyzePhotoWithClaude(opts: {
     const imageBuffer = await optimizeImageForAI(Buffer.from(opts.imageUrl.replace(/^data:image\/[a-z]+;base64,/, ''), 'base64')).then(result => result.buffer);
     const base64Image = imageBuffer.toString('base64');
     
-    console.log(`Image Claude préparée: ${base64Image.length} bytes`);
+    logger.debug(`Image Claude préparée: ${base64Image.length} bytes`);
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -90,7 +90,7 @@ export async function analyzePhotoWithClaude(opts: {
     }
 
     const data = await response.json();
-    console.log('Réponse Claude reçue:', data);
+    logger.debug('Réponse Claude reçue:', data);
 
     // Parser la réponse Claude
     const content = data.content[0]?.text;
@@ -190,7 +190,7 @@ export async function analyzePhotoWithClaude(opts: {
       photo_id: opts.photoId,
     };
 
-    console.log(`Analyse Claude terminée: ${formattedAnalysis.items.length} objets détectés`);
+    logger.debug(`Analyse Claude terminée: ${formattedAnalysis.items.length} objets détectés`);
     return formattedAnalysis;
 
   } catch (error) {

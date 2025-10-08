@@ -1,7 +1,7 @@
 import { AISettings, DEFAULT_AI_SETTINGS } from './settings';
 import fs from 'fs';
 import path from 'path';
-
+import { logger } from '@/lib/logger';
 const SETTINGS_FILE = path.join(process.cwd(), 'ai-settings.json');
 
 export function getServerAISettings(): AISettings {
@@ -21,7 +21,7 @@ export function getServerAISettings(): AISettings {
 export function saveServerAISettings(settings: AISettings): void {
   try {
     fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
-    console.log('Paramètres IA sauvegardés côté serveur');
+    logger.debug('Paramètres IA sauvegardés côté serveur');
   } catch (error) {
     console.error('Erreur lors de la sauvegarde des paramètres IA:', error);
     throw error;

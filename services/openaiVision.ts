@@ -8,7 +8,7 @@ import { calculatePackagedVolume } from "@/lib/packaging";
 import { calculateDismountableProbability, requiresVisualCheck } from "@/lib/dismountable";
 
 import { getEstimatedDimensions, hasValidDimensions, validateObjectDimensions, calculateVolumeFromDimensions } from './core/measurementUtils';
-
+import { logger } from '@/lib/logger';
 // Client OpenAI initialisé avec la clé configurée
 export function getOpenAIClient(apiKey?: string) {
   // Priorité : clé configurée dans le Back office, puis variable d'environnement
@@ -19,7 +19,7 @@ export function getOpenAIClient(apiKey?: string) {
     return null as any;
   }
   
-  console.log("Utilisation de la clé OpenAI configurée");
+  logger.debug("Utilisation de la clé OpenAI configurée");
   return new OpenAI({ apiKey: key });
 }
 
@@ -50,7 +50,7 @@ export async function originalAnalyzePhotoWithVision(opts: {
     // Import dynamique pour éviter les problèmes de build
     const { getServerAISettings } = await import('@/lib/serverSettings');
     aiSettings = getServerAISettings();
-    console.log('Paramètres IA chargés:', {
+    logger.debug('Paramètres IA chargés:', {
       model: aiSettings.model,
       temperature: aiSettings.temperature,
       hasApiKey: !!aiSettings.openaiApiKey
@@ -144,7 +144,7 @@ export async function originalAnalyzePhotoWithVision(opts: {
     // Vérifier le cache
     const cached = getCachedAnalysis(imageHash);
     if (cached) {
-      console.log(`Cache hit for optimized Base64 image ${imageHash.substring(0, 8)}... (${optimized.originalSize}→${optimized.optimizedSize} bytes)`);
+      logger.debug(`Cache hit for optimized Base64 image ${imageHash.substring(0, 8)}... (${optimized.originalSize}→${optimized.optimizedSize} bytes)`);
       return { ...cached, photo_id: opts.photoId };
     }
     
@@ -152,7 +152,7 @@ export async function originalAnalyzePhotoWithVision(opts: {
     const optimizedBase64 = optimized.buffer.toString('base64');
     imageContent = { type: "image_url" as const, image_url: { url: `data:${mimeType};base64,${optimizedBase64}` } };
     
-    console.log(`Processing optimized Base64 image: ${optimized.originalSize}→${optimized.optimizedSize} bytes (${Math.round((1 - optimized.optimizedSize/optimized.originalSize) * 100)}% reduction)`);
+    logger.debug(`Processing optimized Base64 image: ${optimized.originalSize}→${optimized.optimizedSize} bytes (${Math.round((1 - optimized.optimizedSize/optimized.originalSize) * 100)}% reduction)`);
     
   } else if (opts.imageUrl.startsWith('http://localhost') || opts.imageUrl.startsWith('/uploads/')) {
     // Ancien système de fichiers (pour compatibilité)
@@ -171,7 +171,7 @@ export async function originalAnalyzePhotoWithVision(opts: {
     // Vérifier le cache
     const cached = getCachedAnalysis(imageHash);
     if (cached) {
-      console.log(`Cache hit for ${imageHash.substring(0, 8)}... (${optimized.originalSize}→${optimized.optimizedSize} bytes)`);
+      logger.debug(`Cache hit for ${imageHash.substring(0, 8)}... (${optimized.originalSize}→${optimized.optimizedSize} bytes)`);
       return { ...cached, photo_id: opts.photoId };
     }
     
@@ -180,7 +180,7 @@ export async function originalAnalyzePhotoWithVision(opts: {
                      ext === '.png' ? 'image/png' : 'image/webp';
     imageContent = { type: "image_url" as const, image_url: { url: `data:${mimeType};base64,${optimized.buffer.toString('base64')}` } };
     
-    console.log(`Processing optimized image: ${optimized.originalSize}→${optimized.optimizedSize} bytes (${Math.round((1 - optimized.optimizedSize/optimized.originalSize) * 100)}% reduction)`);
+    logger.debug(`Processing optimized image: ${optimized.originalSize}→${optimized.optimizedSize} bytes (${Math.round((1 - optimized.optimizedSize/optimized.originalSize) * 100)}% reduction)`);
   } else {
     // Pour les URLs externes, pas d'optimisation ni de cache
     imageContent = { type: "image_url" as const, image_url: { url: opts.imageUrl } };
@@ -290,7 +290,7 @@ export async function originalAnalyzePhotoWithVision(opts: {
   // Mettre en cache le résultat (sauf pour les URLs externes)
   if (imageHash !== 'external') {
     setCachedAnalysis(imageHash, validated);
-    console.log(`Cached analysis for ${imageHash.substring(0, 8)}...`);
+    logger.debug(`Cached analysis for ${imageHash.substring(0, 8)}...`);
   }
   
   return validated;
