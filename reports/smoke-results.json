@@ -1,0 +1,44 @@
+{
+  "timestamp": "2025-10-08T07:04:36.950Z",
+  "passed": 3,
+  "failed": 1,
+  "total": 4,
+  "results": [
+    {
+      "test": "GET /api/ai-status",
+      "expected": 200,
+      "success": true,
+      "status": 500,
+      "latency": 135,
+      "body": "{\"success\":false,\"error\":\"Erreur lors de la vérification des services\"}",
+      "pass": false
+    },
+    {
+      "test": "POST /api/rooms",
+      "expected": 201,
+      "success": true,
+      "status": 201,
+      "latency": 4674,
+      "body": "{\"id\":\"1554b3b3-097f-4443-84a1-d29a75aab3d6\",\"name\":\"Test Room\",\"roomType\":\"salon\",\"userId\":\"smoke-test-user\",\"createdAt\":\"2025-10-08T07:04:33.337Z\",\"updatedAt\":\"2025-10-08T07:04:33.337Z\"}",
+      "pass": true
+    },
+    {
+      "test": "GET /api/room-groups",
+      "expected": 200,
+      "success": true,
+      "status": 200,
+      "latency": 2424,
+      "body": "[]",
+      "pass": true
+    },
+    {
+      "test": "POST /api/user-modifications",
+      "expected": 400,
+      "success": true,
+      "status": 400,
+      "latency": 168,
+      "body": "{\"error\":\"Validation error\",\"details\":[{\"code\":\"invalid_type\",\"expected\":\"string\",\"received\":\"undefined\",\"path\":[\"photoId\"],\"message\":\"Required\"},{\"code\":\"invalid_type\",\"expected\":\"number\",\"received\":",
+      "pass": true
+    }
+  ]
+}

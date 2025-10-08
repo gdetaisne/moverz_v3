@@ -15,9 +15,11 @@
     "start:next": "next start",
     "postinstall": "node scripts/setup-pdfkit.js || true",
     "lint": "eslint",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    "test": "vitest",
+    "test:unit": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "smoke:api": "node scripts/smoke.js",
     "setup:env": "node setup-env.js",
     "check:env": "node -e \"console.log('OpenAI:', process.env.OPENAI_API_KEY ? '✅' : '❌'); console.log('Claude:', process.env.CLAUDE_API_KEY ? '✅' : '❌'); console.log('DB:', process.env.DATABASE_URL ? '✅' : '❌');\"",
     "db:push": "npx prisma db push",
@@ -46,14 +48,20 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.1.5",
+    "@testing-library/react": "^14.1.2",
+    "@testing-library/user-event": "^14.5.1",
     "@types/node": "^20",
     "@types/react": "^19",
+    "@vitest/coverage-v8": "^1.0.4",
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
     "jest": "^30.2.0",
+    "jsdom": "^23.0.1",
     "prisma": "^6.16.3",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^1.0.4"
   }
 }
