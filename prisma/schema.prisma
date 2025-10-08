@@ -40,6 +40,7 @@ model Project {
   userId          String
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   photos          Photo[]
+  batches         Batch[]
   
   // Formulaire demande (étape 3)
   customerName    String?
@@ -56,18 +57,73 @@ model Project {
   @@unique([userId, name], name: "userId_name")
 }
 
+enum PhotoStatus {
+  PENDING
+  PROCESSING
+  DONE
+  ERROR
+}
+
+enum BatchStatus {
+  QUEUED
+  PROCESSING
+  PARTIAL
+  COMPLETED
+  FAILED
+}
+
+model Batch {
+  id               String      @id @default(uuid())
+  projectId        String
+  project          Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId           String
+  status           BatchStatus @default(QUEUED)
+  
+  // Compteurs pour performance
+  countsQueued     Int         @default(0)
+  countsProcessing Int         @default(0)
+  countsCompleted  Int         @default(0)
+  countsFailed     Int         @default(0)
+  
+  // Flag pour éviter multiple triggers inventory-sync
+  inventoryQueued  Boolean     @default(false)
+  
+  // Relations
+  photos           Photo[]
+  
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  
+  @@index([projectId])
+  @@index([userId])
+  @@index([status])
+}
+
 model Photo {
-  id          String   @id @default(uuid())
-  projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  filename    String
-  filePath    String
-  url         String
-  roomType    String?
-  analysis    Json?
-  createdAt   DateTime @default(now())
+  id           String      @id @default(uuid())
+  projectId    String
+  project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  batchId      String?
+  batch        Batch?      @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  filename     String
+  filePath     String
+  url          String
+  roomType     String?
+  analysis     Json?
+  status       PhotoStatus @default(PENDING)
+  errorCode    String?
+  errorMessage String?
+  processedAt  DateTime?
+  
+  // Checksum pour détection duplicates (optionnel)
+  checksum     String?
+  
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   @@index([projectId])
+  @@index([batchId])
+  @@index([status])
 }
 
 model UserModification {
@@ -100,7 +156,7 @@ model AiMetric {
   tokensIn    Int?
   tokensOut   Int?
   costUsd     Decimal  @default(0) @db.Decimal(10, 6)
-  meta        Json?    // requestId, userId, roomType, photoId, etc.
+  meta        Json?    // requestId, userId, roomType, photoId, batchId, etc.
 
   @@index([ts])
   @@index([provider, model])

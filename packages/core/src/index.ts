@@ -21,3 +21,4 @@ export * from './roomTypeNormalizer';
 export * from './s3Client';
 export * from './queue/queue';
 export * from './queue/worker';
+export * from './batch/batchService';

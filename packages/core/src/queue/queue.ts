@@ -70,6 +70,7 @@ export async function enqueuePhotoAnalysis(data: {
   userId: string;
   assetId?: string;
   roomType?: string;
+  batchId?: string;
 }) {
   const queue = getPhotoAnalyzeQueue();
   const job = await queue.add('analyze', data, {
@@ -84,12 +85,65 @@ export async function enqueuePhotoAnalysis(data: {
 export async function enqueueInventorySync(data: {
   projectId: string;
   userId: string;
+  batchId?: string;
 }) {
   const queue = getInventorySyncQueue();
+  const jobIdSuffix = data.batchId ? `-batch-${data.batchId}` : '';
   const job = await queue.add('sync', data, {
-    jobId: `inventory-${data.projectId}`,
+    jobId: `inventory-${data.projectId}${jobIdSuffix}`,
   });
   return job;
+}
+
+/**
+ * Enqueue all photos from a batch for analysis
+ */
+export async function enqueueBatch(batchId: string) {
+  const { prisma } = await import('../db');
+  
+  // Récupérer toutes les photos du batch avec status PENDING
+  const photos = await prisma.photo.findMany({
+    where: {
+      batchId,
+      status: 'PENDING',
+    },
+    select: {
+      id: true,
+      roomType: true,
+      batch: {
+        select: {
+          userId: true,
+          projectId: true,
+        },
+      },
+    },
+  });
+
+  if (photos.length === 0) {
+    console.log(`⚠️  No pending photos in batch ${batchId}`);
+    return [];
+  }
+
+  console.log(`📤 Enqueuing ${photos.length} photos from batch ${batchId}`);
+
+  // Enqueue tous les jobs en parallèle
+  const queue = getPhotoAnalyzeQueue();
+  const jobs = await Promise.all(
+    photos.map((photo) =>
+      queue.add('analyze', {
+        photoId: photo.id,
+        userId: photo.batch!.userId,
+        roomType: photo.roomType || undefined,
+        batchId,
+      }, {
+        jobId: `photo-${photo.id}`,
+      })
+    )
+  );
+
+  console.log(`✅ ${jobs.length} jobs enqueued for batch ${batchId}`);
+
+  return jobs;
 }
 
 /**
