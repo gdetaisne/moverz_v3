@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
 
 // Schéma de validation Zod pour POST
 const createRoomSchema = z.object({
   name: z.string().min(1, 'Le nom est requis'),
+  roomType: z.string().min(1, 'Le type de pièce est requis'),
 });
 
 // Middleware d'authentification simple pour DEV
@@ -45,7 +44,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { name } = validation.data;
+    const { name, roomType } = validation.data;
 
     // Créer l'utilisateur s'il n'existe pas
     await prisma.user.upsert({
@@ -58,6 +57,7 @@ export async function POST(req: NextRequest) {
     const room = await prisma.room.create({
       data: {
         name,
+        roomType,
         userId,
       },
     });
