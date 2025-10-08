@@ -85,3 +85,25 @@ model UserModification {
   @@index([userId])
   @@index([photoId])
 }
+
+// LOT 7.5 - AI Metrics & Observability
+model AiMetric {
+  id          String   @id @default(cuid())
+  ts          DateTime @default(now())
+  provider    String   // 'anthropic' | 'openai' | 'mock' | 'other'
+  model       String
+  operation   String   // 'classify' | 'analyze_photo' | 'detect_room' | 'embed' | 'other'
+  latencyMs   Int
+  success     Boolean
+  errorType   String?  // 'TIMEOUT' | 'RATE_LIMIT' | 'NETWORK' | 'PROVIDER_ERROR' | 'UNKNOWN'
+  retries     Int      @default(0)
+  tokensIn    Int?
+  tokensOut   Int?
+  costUsd     Decimal  @default(0) @db.Decimal(10, 6)
+  meta        Json?    // requestId, userId, roomType, photoId, etc.
+
+  @@index([ts])
+  @@index([provider, model])
+  @@index([success])
+  @@index([operation])
+}
