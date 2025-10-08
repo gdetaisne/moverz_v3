@@ -4,18 +4,83 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { RoomGroup, PhotoData, ROOM_TYPES } from '@/lib/roomValidation';
 import { SmartRoomClassificationService } from '@/services/smartRoomClassificationService';
 
+// Composant image unifié basé sur le système qui fonctionnait
+function UnifiedImage({ photo, className }: { photo: PhotoData; className: string }) {
+  // Logique simple et directe comme PhotoCard et PhotoThumbnail
+  const getImageSrc = () => {
+    // 1. Priorité : URL d'API si disponible
+    if (photo.photoId) {
+      const apiUrl = `/api/uploads/${photo.photoId}.jpeg`;
+      // console.log('🖼️ UnifiedImage: Utilisation API URL:', apiUrl);
+      return apiUrl;
+    }
+    
+    // 2. Fallback : fileUrl si c'est une URL d'API
+    if (photo.fileUrl && photo.fileUrl.startsWith('/api/uploads/')) {
+      // console.log('🖼️ UnifiedImage: Utilisation fileUrl API:', photo.fileUrl);
+      return photo.fileUrl;
+    }
+    
+    // 3. Fallback : file object (nouveau upload) - créer blob temporairement
+    if (photo.file) {
+      const blobUrl = URL.createObjectURL(photo.file);
+      // console.log('🖼️ UnifiedImage: Création blob URL temporaire:', blobUrl);
+      return blobUrl;
+    }
+    
+    // 4. Dernier recours : placeholder
+    // console.log('🖼️ UnifiedImage: Utilisation placeholder');
+    return '/placeholder-image.svg';
+  };
+
+  const handleError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const target = e.target as HTMLImageElement;
+    
+    // console.log('❌ UnifiedImage: Erreur de chargement pour:', target.src);
+    
+    // Si l'URL était avec .jpeg, essayer .jpg
+    if (target.src.includes('.jpeg')) {
+      const newSrc = target.src.replace('.jpeg', '.jpg');
+      // console.log('🔄 UnifiedImage: Tentative avec .jpg:', newSrc);
+      target.src = newSrc;
+    } else {
+      // Sinon, utiliser le placeholder
+      // console.log('🔄 UnifiedImage: Utilisation placeholder après erreur');
+      target.src = '/placeholder-image.svg';
+    }
+  };
+
+  const imageSrc = getImageSrc();
+  
+  return (
+    <img
+      src={imageSrc}
+      alt={`Photo ${photo.id}`}
+      className={className}
+      onError={handleError}
+      onLoad={() => {
+        // console.log('✅ UnifiedImage: Image chargée avec succès:', imageSrc);
+      }}
+    />
+  );
+}
+
 interface RoomValidationStepV2Props {
   photos: PhotoData[];
+  userId: string; // Ajout du userId pour les appels API
   onValidationComplete: (roomGroups: RoomGroup[]) => void;
   onPrevious: () => void;
+  onPhotosUpdated?: (updatedPhotos: PhotoData[]) => void; // Nouvelle prop pour recharger les photos
   className?: string;
 }
 
 export function RoomValidationStepV2({ 
   photos, 
+  userId,
   onValidationComplete, 
   onPrevious,
-  className = "" 
+  onPhotosUpdated,
+  className = ""
 }: RoomValidationStepV2Props) {
   const [roomGroups, setRoomGroups] = useState<RoomGroup[]>([]);
   const [isValidating, setIsValidating] = useState(false);
@@ -25,20 +90,64 @@ export function RoomValidationStepV2({
   const [newRoomType, setNewRoomType] = useState('autre');
   const [classificationService] = useState(() => new SmartRoomClassificationService());
 
-  // Auto-classification au montage
+  // Auto-classification au montage - seulement une fois
   useEffect(() => {
     if (photos.length > 0 && roomGroups.length === 0) {
       handleAutoClassify();
     }
-  }, [photos]);
+  }, [photos.length]); // Seulement dépendre de la longueur, pas des objets photos
 
   const handleAutoClassify = async () => {
     setIsValidating(true);
     try {
       console.log('🏠 Début de la classification automatique...');
-      const groups = await classificationService.classifyPhotos(photos);
+      
+      // Utiliser les roomType déjà détectés par l'IA au lieu de reclassifier
+      const roomTypeMap = new Map<string, PhotoData[]>();
+      
+      photos.forEach(photo => {
+        const roomType = photo.roomType || 'autre';
+        if (!roomTypeMap.has(roomType)) {
+          roomTypeMap.set(roomType, []);
+        }
+        // Transformer la photo pour le composant - GARDER le photoId original
+        const transformedPhoto = {
+          id: photo.photoId || photo.id || `photo-${Date.now()}-${Math.random()}`,
+          file: photo.file,
+          fileUrl: photo.fileUrl || (photo.photoId ? `/api/uploads/${photo.photoId}.jpeg` : undefined),
+          analysis: photo.analysis,
+          status: photo.status,
+          error: photo.error,
+          selectedItems: photo.selectedItems,
+          photoId: photo.photoId || photo.id, // GARDER l'ID original de la DB
+          progress: photo.progress,
+          roomName: photo.roomName,
+          roomConfidence: photo.roomConfidence,
+          roomType: photo.roomType
+        };
+        
+        // Debug temporaire
+        console.log('🔍 Photo transformée:', {
+          id: transformedPhoto.id,
+          photoId: transformedPhoto.photoId,
+          fileUrl: transformedPhoto.fileUrl,
+          hasFile: !!photo.file
+        });
+        roomTypeMap.get(roomType)!.push(transformedPhoto);
+      });
+      
+      const groups: RoomGroup[] = Array.from(roomTypeMap.entries()).map(([roomType, groupPhotos]) => ({
+        id: `group-${roomType}-${Date.now()}`,
+        roomType,
+        photos: groupPhotos,
+        confidence: 0.9, // Confiance élevée car basée sur l'IA
+        isUserValidated: false,
+        lastModified: new Date()
+      }));
+      
       setRoomGroups(groups);
-      console.log('✅ Classification terminée:', groups.length, 'groupes');
+      console.log('✅ Classification terminée basée sur l\'IA:', groups.length, 'groupes');
+      console.log('Groupes créés:', groups.map(g => `${g.roomType} (${g.photos.length} photos)`));
     } catch (error) {
       console.error('❌ Erreur lors de la classification:', error);
       // Créer un groupe par défaut
@@ -73,26 +182,67 @@ export function RoomValidationStepV2({
 
   // Déplacer une photo vers une pièce
   const movePhotoToRoom = useCallback((photoId: string, targetRoomId: string) => {
+    console.log(`🔍 movePhotoToRoom: photoId=${photoId}, targetRoomId=${targetRoomId}`);
+    console.log(`🔍 Photos disponibles:`, photos.map(p => ({ id: p.id, photoId: p.photoId })));
+    
     setRoomGroups(prev => {
       const newGroups = [...prev];
       
       // Retirer la photo de sa pièce actuelle
       newGroups.forEach(group => {
+        const beforeCount = group.photos.length;
         group.photos = group.photos.filter(p => p.id !== photoId);
+        const afterCount = group.photos.length;
+        if (beforeCount !== afterCount) {
+          console.log(`🗑️ Photo ${photoId} retirée de ${group.roomType} (${beforeCount} → ${afterCount})`);
+        }
       });
       
       // Ajouter la photo à la pièce cible
       const targetGroup = newGroups.find(g => g.id === targetRoomId);
       if (targetGroup) {
-        const photo = photos.find(p => p.id === photoId);
-        if (photo) {
-          targetGroup.photos.push(photo);
-          targetGroup.lastModified = new Date();
+        // Chercher la photo dans les groupes existants (photos transformées)
+        let photoToMove = null;
+        for (const group of newGroups) {
+          photoToMove = group.photos.find(p => p.id === photoId);
+          if (photoToMove) break;
         }
+        
+        // Si pas trouvée dans les groupes, chercher dans le tableau photos original
+        if (!photoToMove) {
+          photoToMove = photos.find(p => p.photoId === photoId || p.id === photoId);
+          if (photoToMove) {
+            // Transformer la photo pour la cohérence - GARDER le photoId original
+            photoToMove = {
+              id: photoToMove.photoId || photoToMove.id || `photo-${Date.now()}-${Math.random()}`,
+              file: photoToMove.file,
+              fileUrl: photoToMove.fileUrl || (photoToMove.photoId ? `/api/uploads/${photoToMove.photoId}.jpeg` : undefined),
+              analysis: photoToMove.analysis,
+              status: photoToMove.status,
+              error: photoToMove.error,
+              selectedItems: photoToMove.selectedItems,
+              photoId: photoToMove.photoId || photoToMove.id, // GARDER l'ID original de la DB
+              progress: photoToMove.progress,
+              roomName: photoToMove.roomName,
+              roomConfidence: photoToMove.roomConfidence,
+              roomType: photoToMove.roomType
+            };
+          }
+        }
+        
+        if (photoToMove) {
+          targetGroup.photos.push(photoToMove);
+          targetGroup.lastModified = new Date();
+          console.log(`✅ Photo ${photoId} déplacée vers ${targetGroup.roomType} (${targetGroup.photos.length} photos)`);
+        } else {
+          console.error(`❌ Photo ${photoId} non trouvée dans les groupes ni dans le tableau photos !`);
+        }
+      } else {
+        console.error(`❌ Pièce cible ${targetRoomId} non trouvée !`);
       }
       
-      // Supprimer les pièces vides
-      return newGroups.filter(g => g.photos.length > 0);
+           // Supprimer les pièces vides après le drag & drop
+           return newGroups.filter(group => group.photos.length > 0);
     });
   }, [photos]);
 
@@ -151,6 +301,7 @@ export function RoomValidationStepV2({
   const handleDrop = (e: React.DragEvent, roomId: string) => {
     e.preventDefault();
     if (draggedPhoto) {
+      console.log(`🔄 Drop: Photo ${draggedPhoto.id} vers pièce ${roomId}`);
       movePhotoToRoom(draggedPhoto.id, roomId);
     }
     setDraggedPhoto(null);
@@ -166,19 +317,21 @@ export function RoomValidationStepV2({
     try {
       setIsValidating(true);
       
-      // Analyser chaque groupe de pièces
-      for (const group of validatedGroups) {
+      // Analyser tous les groupes de pièces EN PARALLÈLE
+      console.log(`🚀 Lancement de ${validatedGroups.length} analyses en parallèle...`);
+      
+      const analysisPromises = validatedGroups.map(async (group) => {
         console.log(`🏠 Analyse pièce "${group.roomType}" avec ${group.photos.length} photos`);
         
         const response = await fetch('/api/photos/analyze-by-room', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
-            'x-user-id': 'dev-user'
+            'x-user-id': userId
           },
           body: JSON.stringify({
             roomType: group.roomType,
-            photoIds: group.photos.map(p => p.photoId || p.id)
+            photoIds: group.photos.map(p => p.photoId).filter(id => id) // Utiliser seulement les vrais photoIds de la DB
           })
         });
         
@@ -188,13 +341,82 @@ export function RoomValidationStepV2({
         
         const result = await response.json();
         console.log(`✅ Pièce "${group.roomType}" analysée: ${result.items?.length || 0} objets`);
-      }
+        return result;
+      });
+      
+      // Attendre que toutes les analyses se terminent
+      const results = await Promise.all(analysisPromises);
+      console.log(`🎉 Toutes les analyses terminées: ${results.length} pièces analysées`);
       
       console.log('✅ Toutes les analyses d\'objets terminées');
-      onValidationComplete(validatedGroups);
+      
+      // Recharger les photos depuis la base de données AVANT de passer à l'étape suivante
+      if (onPhotosUpdated) {
+        try {
+          const response = await fetch('/api/photos', {
+            headers: { 'x-user-id': userId }
+          });
+          if (response.ok) {
+            const updatedPhotos = await response.json();
+            console.log('🔄 Photos rechargées depuis la DB:', updatedPhotos.length);
+            
+            // Transformer les photos de la DB vers le format attendu par l'interface
+            const transformedPhotos = updatedPhotos.map((photo: any) => ({
+              id: photo.id,
+              photoId: photo.id,
+              file: null, // Pas de file object pour les photos de la DB
+              fileUrl: photo.url.startsWith('http') ? photo.url : `http://localhost:3001${photo.url}`,
+              analysis: photo.analysis,
+              status: 'completed' as const,
+              error: undefined,
+              selectedItems: new Set(),
+              progress: 100,
+              roomName: photo.roomType,
+              roomConfidence: 0.9,
+              roomType: photo.roomType,
+              userId: userId
+            }));
+            
+            // Debug: vérifier les analyses
+            const photosWithAnalysis = transformedPhotos.filter(p => p.analysis && p.analysis.items && p.analysis.items.length > 0);
+            console.log(`🔄 Photos transformées: ${transformedPhotos.length}, avec analyse: ${photosWithAnalysis.length}`);
+            console.log('🔄 Première photo avec analyse:', photosWithAnalysis[0] ? {
+              id: photosWithAnalysis[0].id,
+              roomType: photosWithAnalysis[0].roomType,
+              itemsCount: photosWithAnalysis[0].analysis?.items?.length
+            } : 'Aucune');
+            
+            console.log('🔄 Appel onPhotosUpdated avec', transformedPhotos.length, 'photos');
+            onPhotosUpdated(transformedPhotos);
+            
+            // Attendre un peu pour que l'interface se mette à jour
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        } catch (error) {
+          console.error('❌ Erreur rechargement photos:', error);
+        }
+      }
+      
+      // Mettre à jour les roomGroups avec les résultats des analyses
+      const updatedGroups = validatedGroups.map((group, index) => {
+        const analysisResult = results[index];
+        return {
+          ...group,
+          photos: group.photos.map(photo => ({
+            ...photo,
+            analysis: analysisResult
+          }))
+        };
+      });
+      
+      setRoomGroups(updatedGroups);
+      
+      // Maintenant passer à l'étape suivante avec les groupes mis à jour
+      onValidationComplete(updatedGroups);
       
     } catch (error) {
       console.error('❌ Erreur lors des analyses d\'objets:', error);
+      // En cas d'erreur, passer quand même les groupes validés (sans analyses)
       onValidationComplete(validatedGroups);
     } finally {
       setIsValidating(false);
@@ -235,6 +457,7 @@ export function RoomValidationStepV2({
           </svg>
           Créer une nouvelle pièce
         </button>
+        
       </div>
 
       {/* Modal création pièce */}
@@ -310,16 +533,6 @@ export function RoomValidationStepV2({
         ))}
       </div>
 
-      {/* Photos non classées */}
-      {photos.filter(p => !roomGroups.some(g => g.photos.some(photo => photo.id === p.id))).length > 0 && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8">
-          <h3 className="font-medium text-yellow-800 mb-2">Photos non classées</h3>
-          <p className="text-sm text-yellow-700">
-            {photos.filter(p => !roomGroups.some(g => g.photos.some(photo => photo.id === p.id))).length} photo(s) 
-            n'ont pas encore été assignées à une pièce.
-          </p>
-        </div>
-      )}
 
       {/* Actions */}
       <div className="flex justify-between">
@@ -456,20 +669,35 @@ function RoomGroupCardV2({
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                <img
-                  src={photo.fileUrl || URL.createObjectURL(photo.file)}
-                  alt={`Photo ${photo.id}`}
-                  className="w-full h-20 object-cover rounded-lg shadow-sm border border-gray-200"
-                />
-                
-                {/* Overlay au survol */}
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-25 transition-all duration-200 rounded-lg flex items-center justify-center">
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
+                <div className="relative">
+                  <UnifiedImage
+                    photo={photo}
+                    className="w-full h-20 object-cover rounded-lg shadow-sm border border-gray-200"
+                  />
+                  
+                  {/* Overlay au survol - CORRIGÉ POUR NE PAS MASQUER L'IMAGE */}
+                  <div className="absolute inset-0 group-hover:bg-black group-hover:bg-opacity-25 transition-all duration-200 rounded-lg flex items-center justify-center pointer-events-none">
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
+                
+                {/* Texte avec degré de confiance */}
+                <p className="text-xs text-gray-600 mt-1 text-center">
+                  {(() => {
+                    const displayedRoomName = photo.roomName ? photo.roomName.charAt(0).toUpperCase() + photo.roomName.slice(1) :
+                                                  (group.roomType === 'autre' ? 'Pièce inconnue' : group.roomType.charAt(0).toUpperCase() + group.roomType.slice(1));
+                    let confidenceText = '';
+                    if (photo.roomConfidence !== undefined && photo.roomConfidence !== null) {
+                      const percentage = Math.round(photo.roomConfidence * 100);
+                      confidenceText = ` (${percentage}%)`;
+                    }
+                    return `${displayedRoomName}${confidenceText}`;
+                  })()}
+                </p>
               </motion.div>
             ))}
           </div>
@@ -478,3 +706,4 @@ function RoomGroupCardV2({
     </motion.div>
   );
 }
+

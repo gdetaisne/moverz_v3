@@ -69,3 +69,6 @@ export function Step2RoomInventory({
     </div>
   );
 }
+
+
+

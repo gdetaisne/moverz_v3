@@ -12,6 +12,11 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   
+  // 🚀 OPTIMISATIONS POUR LA VITESSE EN DEV
+  swcMinify: true, // Utiliser SWC pour la minification (plus rapide)
+  compress: true, // Compression gzip
+  poweredByHeader: false, // Supprimer le header X-Powered-By
+  
   // Configuration pour éviter les erreurs de build avec les API routes
   skipTrailingSlashRedirect: true,
   

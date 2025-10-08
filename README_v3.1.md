@@ -109,8 +109,18 @@ Les changements sont rétrocompatibles :
 
 MIT License - Voir [LICENSE](LICENSE) pour plus de détails.
 
+## 📚 Documentation Archivée
+
+La documentation technique legacy (guides de déploiement, rapports de sprints, analyses historiques) a été déplacée vers `docs/archive/` pour réduire le bruit en racine du projet. Cette documentation reste accessible pour consultation mais n'est plus maintenue activement.
+
+**Localisation** : `docs/archive/` (70 fichiers)  
+**Raison** : Historique/obsolète - La documentation à jour se trouve dans README_v3.1.md et CHANGELOG_v3.1.md
+
 ---
 
 **Repository** : [https://github.com/gdetaisne/moverz_v3.1](https://github.com/gdetaisne/moverz_v3.1)
 **Version** : 3.1.0
-**Dernière mise à jour** : Janvier 2025
+**Dernière mise à jour** : Octobre 2025
+
+
+

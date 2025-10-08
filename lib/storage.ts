@@ -174,5 +174,48 @@ export async function savePhotoToDatabase(params: {
 
   console.log(`📸 Photo DB: ${photo.id} → ${photo.url} (${project.id})`);
 
+  // 4. Créer ou mettre à jour l'entité Room si roomType est défini
+  if (roomType) {
+    await prisma.room.upsert({
+      where: {
+        userId_roomType: {
+          userId: userId,
+          roomType: roomType
+        }
+      },
+      update: {
+        updatedAt: new Date()
+      },
+      create: {
+        userId: userId,
+        roomType: roomType,
+        name: getRoomDisplayName(roomType)
+      }
+    });
+    console.log(`🏠 Room DB: ${roomType} créé/mis à jour pour ${userId}`);
+  }
+
   return { photoId: photo.id, projectId: project.id };
+}
+
+/**
+ * Convertit un roomType technique en nom d'affichage
+ */
+function getRoomDisplayName(roomType: string): string {
+  const roomNames: Record<string, string> = {
+    'salon': 'Salon',
+    'cuisine': 'Cuisine',
+    'chambre': 'Chambre',
+    'bureau': 'Bureau',
+    'salle_de_bain': 'Salle de bain',
+    'garage': 'Garage',
+    'cave': 'Cave',
+    'grenier': 'Grenier',
+    'balcon': 'Balcon',
+    'terrasse': 'Terrasse',
+    'jardin': 'Jardin',
+    'unknown': 'Pièce non identifiée'
+  };
+  
+  return roomNames[roomType] || roomType.charAt(0).toUpperCase() + roomType.slice(1);
 }

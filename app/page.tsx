@@ -21,6 +21,9 @@ import { getBuildInfo } from "@/lib/buildInfo";
 import { TInventoryItem } from "@/lib/schemas";
 import { clearCache } from "@/lib/cache";
 import { calculatePackagedVolume } from "@/lib/packaging";
+import { userSession } from "@/lib/auth-client";
+import { createUserStorage, StorageCleanup } from "@/lib/user-storage";
+import { UserTestPanel } from "@/components/UserTestPanel";
 // 🎯 SUPPRIMÉ : Plus de détection de doublons avec la nouvelle logique par pièce
 
 interface RoomData {
@@ -36,11 +39,17 @@ interface RoomData {
     photoId?: string; // ID unique pour le traitement asynchrone
     progress?: number; // Pourcentage de progression (0-100)
     roomName?: string; // Nom de la pièce pour cette photo spécifique
+    roomType?: string; // Type de pièce détecté par l'IA
+    roomConfidence?: number; // Confiance de la détection de pièce
+    userId?: string; // ID de l'utilisateur propriétaire
   }[];
 }
 
 
 export default function Home() {
+  // Gestion des sessions utilisateur
+  const [currentUserId, setCurrentUserId] = useState<string>('');
+  const [userStorage, setUserStorage] = useState<any>(null);
   const [currentRoom, setCurrentRoom] = useState<RoomData>({
     id: 'room-1',
     name: 'Détection automatique...',
@@ -66,13 +75,44 @@ export default function Home() {
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Initialisation du système d'authentification
+  useEffect(() => {
+    const initializeAuth = () => {
+      try {
+        // Nettoyer les anciennes données localStorage
+        StorageCleanup.clearLegacyData();
+        
+        // Initialiser la session utilisateur
+        const userId = userSession.getCurrentUserId();
+        const storage = createUserStorage(userId);
+        
+        setCurrentUserId(userId);
+        setUserStorage(storage);
+        
+        console.log(`🔐 Session initialisée: ${userId}`);
+        
+        // Charger les données sauvegardées pour cet utilisateur
+        const savedData = storage.loadInventoryData();
+        if (savedData) {
+          console.log('📥 Données utilisateur chargées depuis localStorage');
+          // TODO: Restaurer les données si nécessaire
+        }
+        
+      } catch (error) {
+        console.error('❌ Erreur initialisation auth:', error);
+      }
+    };
+    
+    initializeAuth();
+  }, []);
+
   // Configuration des étapes du workflow
   // Une étape n'est "terminée" que si on est passé à l'étape suivante
   const isStep1Completed = currentStep > 1 && currentRoom.photos.length > 0;
-  const isStep1_5Completed = currentStep > 1.5 && roomGroups.length > 0; // Nouvelle étape de validation des pièces
-  const isStep2Completed = currentStep > 2 && currentRoom.photos.some(p => p.analysis?.items && p.analysis.items.length > 0);
-  const isStep3Completed = currentStep > 3 && quoteFormData !== null;
-  const isStep4Completed = false; // Toujours false car c'est la dernière étape
+  const isStep2Completed = currentStep > 2 && roomGroups.length > 0; // Validation des pièces
+  const isStep3Completed = currentStep > 3 && currentRoom.photos.some(p => p.analysis?.items && p.analysis.items.length > 0);
+  const isStep4Completed = currentStep > 4 && quoteFormData !== null;
+  const isStep5Completed = false; // Toujours false car c'est la dernière étape
   
   // Les workflowSteps sont maintenant gérés par le hook useWorkflowSteps
 
@@ -88,6 +128,97 @@ export default function Home() {
     setRoomGroups(validatedRoomGroups);
     setCurrentStep(2); // Passer à l'étape 2 (Valider l'inventaire)
   }, []);
+
+  // Fonction pour charger les roomGroups depuis l'API
+  const loadRoomGroupsFromAPI = useCallback(async () => {
+    if (!currentUserId) {
+      console.log('⏳ Attente de l\'initialisation de l\'utilisateur...');
+      return;
+    }
+    
+    try {
+      console.log(`🔄 Chargement des roomGroups depuis l'API pour ${currentUserId}...`);
+      const response = await fetch(`/api/room-groups?userId=${currentUserId}`);
+      
+      if (response.ok) {
+        const roomGroups = await response.json();
+        console.log(`✅ RoomGroups chargés: ${roomGroups.length} pièces`);
+        setRoomGroups(roomGroups);
+        
+        // Note: Passage automatique désactivé pour permettre à l'utilisateur de contrôler la navigation
+        // if (roomGroups.length > 0 && currentStep === 1) {
+        //   console.log('🚀 Passage automatique à l\'étape 2 (Inventaire par Pièce)');
+        //   setCurrentStep(2);
+        // }
+      } else {
+        console.error('❌ Erreur lors du chargement des roomGroups:', response.statusText);
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des roomGroups:', error);
+    }
+  }, [currentUserId, currentStep]);
+
+  // Fonction pour recharger les photos depuis la base de données
+  const handlePhotosUpdated = useCallback((updatedPhotos: any[]) => {
+    console.log('🔄 [handlePhotosUpdated] Mise à jour des photos:', updatedPhotos.length);
+    
+    // Vérifier que les photos ont des analyses
+    const photosWithAnalysis = updatedPhotos.filter(p => p.analysis && p.analysis.items && p.analysis.items.length > 0);
+    console.log(`📊 Photos avec analyse: ${photosWithAnalysis.length}/${updatedPhotos.length}`);
+    
+    setCurrentRoom(prev => ({
+      ...prev,
+      photos: updatedPhotos
+    }));
+    
+    // Recalculer les groupes de pièces à partir des photos mises à jour
+    const newRoomGroups = updatedPhotos.reduce((groups: any[], photo) => {
+      const roomType = photo.roomType || photo.roomName || 'unknown';
+      let group = groups.find(g => g.roomType === roomType);
+      
+      if (!group) {
+        group = {
+          id: `room-${roomType}`,
+          roomType,
+          photos: []
+        };
+        groups.push(group);
+      }
+      
+      group.photos.push(photo);
+      return groups;
+    }, []);
+    
+    console.log('🔄 Groupes de pièces recalculés:', newRoomGroups.length);
+    newRoomGroups.forEach(group => {
+      const itemsCount = group.photos.flatMap((p: any) => p.analysis?.items || []).length;
+      console.log(`  - ${group.roomType}: ${group.photos.length} photos, ${itemsCount} objets`);
+    });
+    
+    setRoomGroups(newRoomGroups);
+  }, []);
+
+  // Fonction de test pour recharger les photos manuellement
+  const handleTestReloadPhotos = useCallback(async () => {
+    if (!currentUserId) {
+      console.log('⏳ Attente de l\'initialisation de l\'utilisateur...');
+      return;
+    }
+    
+    try {
+      console.log(`🧪 Test rechargement photos pour ${currentUserId}...`);
+      const response = await fetch('/api/photos', {
+        headers: { 'x-user-id': currentUserId }
+      });
+      if (response.ok) {
+        const photos = await response.json();
+        console.log('🧪 Photos récupérées:', photos.length);
+        handlePhotosUpdated(photos);
+      }
+    } catch (error) {
+      console.error('❌ Erreur test rechargement:', error);
+    }
+  }, [currentUserId, handlePhotosUpdated]);
 
   const handleRoomValidationPrevious = useCallback(() => {
     setCurrentStep(1); // Retourner à l'étape 1 (Charger des photos)
@@ -422,9 +553,9 @@ export default function Home() {
     }
   };
 
-  // Afficher le modal de continuation quand on arrive sur l'étape 2
+  // Afficher le modal de continuation quand on arrive sur l'étape 3
   useEffect(() => {
-    if (currentStep === 2 && currentRoom.photos.length > 0 && !hasShownContinuationModal) {
+    if (currentStep === 3 && currentRoom.photos.length > 0 && !hasShownContinuationModal) {
       // Afficher le modal après 5 secondes
       const timer = setTimeout(() => {
         setShowContinuationModal(true);
@@ -466,8 +597,10 @@ export default function Home() {
     }
   };
 
-  // Persistance automatique des données
+  // Persistance automatique des données (nouveau système)
   useEffect(() => {
+    if (!userStorage) return;
+    
     const saveData = () => {
       const dataToSave = {
         currentRoom,
@@ -476,7 +609,7 @@ export default function Home() {
         inventoryValidated,
         timestamp: Date.now()
       };
-      localStorage.setItem('moverz_inventory_data', JSON.stringify(dataToSave));
+      userStorage.saveInventoryData(dataToSave);
     };
 
     // Sauvegarder toutes les 5 secondes
@@ -486,90 +619,40 @@ export default function Home() {
     saveData();
 
     return () => clearInterval(interval);
-  }, [currentRoom, currentStep, quoteFormData, inventoryValidated]);
+  }, [currentRoom, currentStep, quoteFormData, inventoryValidated, userStorage]);
 
-  // ✨ NOUVEAU: Sauvegarde automatique en DB avec recalcul des volumes (debounce 3s)
+  // 🚫 DÉSACTIVÉ: Auto-sauvegarde automatique en DB (causait des boucles)
+  // Les analyses sont maintenant sauvegardées directement par l'API d'analyse par pièce
+  /*
   useEffect(() => {
     const timer = setTimeout(async () => {
-      // Pour chaque photo avec un photoId et une analyse
-      for (const photo of currentRoom.photos) {
-        if (photo.photoId && photo.analysis) {
-          try {
-            // Recalculer les volumes emballés pour chaque item
-            const updatedItems = photo.analysis.items?.map((item: any) => {
-              const packagingInfo = calculatePackagedVolume(
-                item.volume_m3,
-                item.fragile,
-                item.category,
-                item.dimensions_cm,
-                item.dismountable
-              );
-              
-              return {
-                ...item,
-                packaged_volume_m3: packagingInfo.packagedVolumeM3,
-                packaging_display: packagingInfo.displayValue,
-                is_small_object: packagingInfo.isSmallObject,
-                packaging_calculation_details: packagingInfo.calculationDetails
-              };
-            }) || [];
-
-            // Recalculer les totaux
-            const totalVolumeM3 = updatedItems.reduce((sum: number, item: any) => sum + item.volume_m3, 0);
-            const totalPackagedM3 = updatedItems.reduce((sum: number, item: any) => sum + item.packaged_volume_m3, 0);
-
-            const updatedAnalysis = {
-              ...photo.analysis,
-              items: updatedItems,
-              totals: {
-                total_volume_m3: totalVolumeM3,
-                total_packaged_m3: totalPackagedM3,
-                total_items: updatedItems.length
-              }
-            };
-
-            // Sauvegarder en DB
-            await fetch(`/api/photos/${photo.photoId}`, {
-              method: 'PATCH',
-              headers: { 
-                'Content-Type': 'application/json',
-                'x-user-id': 'dev-user' // TODO: Récupérer le vrai userId
-              },
-              body: JSON.stringify({ 
-                analysis: updatedAnalysis,
-                roomType: photo.roomName
-              })
-            });
-
-            console.log(`✅ Photo ${photo.photoId} auto-sauvegardée (${updatedItems.length} items)`);
-          } catch (error) {
-            console.error(`❌ Erreur auto-sauvegarde photo ${photo.photoId}:`, error);
-          }
-        }
-      }
-    }, 3000); // Debounce de 3 secondes
+      // Code désactivé pour éviter les sauvegardes en boucle
+    }, 3000);
 
     return () => clearTimeout(timer);
   }, [currentRoom.photos]);
+  */
 
-  // Charger les données sauvegardées au démarrage
+  // Charger les données sauvegardées au démarrage (nouveau système)
   useEffect(() => {
-    const savedData = localStorage.getItem('moverz_inventory_data');
+    if (!userStorage) return;
+    
+    const savedData = userStorage.loadInventoryData();
     if (savedData) {
       try {
-        const data = JSON.parse(savedData);
         // Vérifier que les données ne sont pas trop anciennes (24h)
-        if (data.timestamp && (Date.now() - data.timestamp) < 24 * 60 * 60 * 1000) {
-          if (data.currentRoom) setCurrentRoom(data.currentRoom);
-          if (data.currentStep) setCurrentStep(data.currentStep);
-          if (data.quoteFormData) setQuoteFormData(data.quoteFormData);
-          if (data.inventoryValidated) setInventoryValidated(data.inventoryValidated);
+        if (savedData.timestamp && (Date.now() - savedData.timestamp) < 24 * 60 * 60 * 1000) {
+          if (savedData.currentRoom) setCurrentRoom(savedData.currentRoom);
+          if (savedData.currentStep) setCurrentStep(savedData.currentStep);
+          if (savedData.quoteFormData) setQuoteFormData(savedData.quoteFormData);
+          if (savedData.inventoryValidated) setInventoryValidated(savedData.inventoryValidated);
+          console.log('📥 Données utilisateur restaurées depuis localStorage');
         }
       } catch (error) {
         console.error('Erreur lors du chargement des données sauvegardées:', error);
       }
     }
-  }, []);
+  }, [userStorage]);
 
 
   // Pas d'auto-avancement - l'utilisateur contrôle les étapes manuellement
@@ -623,7 +706,9 @@ export default function Home() {
 
   // Fonction de traitement asynchrone d'une photo
   const processPhotoAsync = async (photoIndex: number, file: File, photoId: string) => {
+    const photoStart = Date.now();
     try {
+      console.log(`📸 [TIMING] Début traitement photo ${photoIndex}: ${file.name}`);
       // Vérifier si la photo est déjà en cours de traitement
       setCurrentRoom(prev => {
         const photo = prev.photos[photoIndex];
@@ -660,8 +745,17 @@ export default function Home() {
 
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch("/api/photos/analyze", { method: "POST", body: fd });
+      const apiStart = Date.now();
+      const res = await fetch("/api/photos/analyze", { 
+        method: "POST", 
+        body: fd,
+        headers: {
+          'x-user-id': currentUserId
+        }
+      });
       const result = await res.json();
+      const apiTime = Date.now() - apiStart;
+      console.log(`🌐 [TIMING] API /photos/analyze: ${apiTime}ms - Photo ${photoIndex}`);
       
       clearInterval(progressInterval);
 
@@ -679,7 +773,8 @@ export default function Home() {
               } : photo
             )
           }));
-          console.log(`Photo ${photoIndex}: pièce détectée = ${result.roomDetection.roomType} (${result.roomDetection.confidence})`);
+          const totalPhotoTime = Date.now() - photoStart;
+          console.log(`✅ [TIMING] Photo ${photoIndex} terminée: ${totalPhotoTime}ms - Pièce: ${result.roomDetection.roomType} (${result.roomDetection.confidence})`);
         }
 
         // Marquer comme terminé avec le résultat et l'URL Base64
@@ -769,7 +864,8 @@ export default function Home() {
         status: 'uploaded' as const,
         selectedItems: new Set<number>(),
         photoId,
-        progress: 0
+        progress: 0,
+        userId: currentUserId
       };
     });
     
@@ -778,20 +874,27 @@ export default function Home() {
       photos: [...prev.photos, ...newPhotos]
     }));
     
-    // Traiter chaque photo en arrière-plan
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
+    // 🚀 OPTIMISATION : Traitement parallèle au lieu de séquentiel
+    const parallelStart = Date.now();
+    console.log(`🚀 [TIMING] Début traitement parallèle de ${files.length} photos`);
+    
+    const processingPromises = files.map((file, i) => {
       const photoIndex = currentRoom.photos.length + i;
       const photoId = newPhotos[i].photoId!;
       
-      // Lancer le traitement asynchrone (ne pas attendre)
-      // Utiliser setTimeout pour s'assurer que le state est mis à jour avant
-      setTimeout(() => {
-        processPhotoAsync(photoIndex, file, photoId);
-      }, 100);
-    }
+      // Lancer le traitement asynchrone immédiatement
+      return processPhotoAsync(photoIndex, file, photoId);
+    });
     
-    setLoading(false);
+    // Lancer tous les traitements en parallèle
+    Promise.allSettled(processingPromises).then(() => {
+      const parallelTime = Date.now() - parallelStart;
+      console.log(`✅ [TIMING] Traitement parallèle terminé: ${parallelTime}ms pour ${files.length} photos (${Math.round(parallelTime/files.length)}ms/photo)`);
+      setLoading(false);
+    }).catch(error => {
+      console.error('❌ Erreur lors du traitement parallèle:', error);
+      setLoading(false);
+    });
   };
 
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -814,7 +917,8 @@ export default function Home() {
         status: 'uploaded' as const,
         selectedItems: new Set<number>(),
         photoId,
-        progress: 0
+        progress: 0,
+        userId: currentUserId
       };
     });
     
@@ -852,6 +956,13 @@ export default function Home() {
   
   // Utiliser le hook pour les étapes du workflow
   const workflowSteps = useWorkflowSteps(currentStep, currentRoom.photos, quoteFormData, roomGroups);
+
+  // Charger les roomGroups depuis l'API quand l'utilisateur est initialisé
+  useEffect(() => {
+    if (currentUserId) {
+      loadRoomGroupsFromAPI();
+    }
+  }, [currentUserId]); // Retirer loadRoomGroupsFromAPI des dépendances pour éviter la boucle
 
   const toggleItemSelection = (photoIndex: number, itemIndex: number) => {
     setCurrentRoom(prev => ({
@@ -1009,48 +1120,65 @@ export default function Home() {
   const renderTestsInterface = () => (
     <>
 
-        {/* Étape 1.5 - Valider les pièces */}
-        {currentStep === 1.5 && (
+        {/* Étape 2 - Valider les pièces */}
+        {currentStep === 2 && (
           <div className="max-w-6xl mx-auto px-4">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="p-6">
                 <RoomValidationStepV2
-                  photos={currentRoom.photos.map(photo => ({
-                    id: photo.photoId || `photo-${Date.now()}-${Math.random()}`,
-                    file: photo.file,
-                    fileUrl: photo.fileUrl,
-                    analysis: photo.analysis,
-                    status: photo.status,
-                    error: photo.error,
-                    selectedItems: photo.selectedItems,
-                    photoId: photo.photoId,
-                    progress: photo.progress,
-                    roomName: photo.roomName,
-                    roomConfidence: photo.roomConfidence,
-                    roomType: photo.roomType
-                  }))}
+                  photos={currentRoom.photos}
+                  userId={currentUserId}
                   onValidationComplete={handleRoomValidationComplete}
                   onPrevious={handleRoomValidationPrevious}
+                  onPhotosUpdated={handlePhotosUpdated}
                 />
               </div>
             </div>
           </div>
         )}
 
-        {/* Étape 2 - Valider l'inventaire par pièce */}
-        {currentStep === 2 && (
-          <Step2RoomInventory
-            roomGroups={roomGroups}
-            onRoomTypeChange={(groupId, newRoomType) => {
-              setRoomGroups(prev => prev.map(group => 
-                group.id === groupId 
-                  ? { ...group, roomType: newRoomType }
-                  : group
-              ));
-            }}
-            onPrevious={() => setCurrentStep(1.5)}
-            onNext={() => setCurrentStep(3)}
-          />
+        {/* Étape 3 - Valider l'inventaire par pièce */}
+        {currentStep === 3 && (
+          <div>
+            {/* Panneau de test des utilisateurs */}
+            <div className="mb-6">
+              <UserTestPanel />
+            </div>
+
+            {/* Boutons de test */}
+            <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex gap-4">
+                <button
+                  onClick={handleTestReloadPhotos}
+                  className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600"
+                >
+                  🧪 Test: Recharger les photos
+                </button>
+                <button
+                  onClick={loadRoomGroupsFromAPI}
+                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                  🔄 Recharger les roomGroups
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mt-2">
+                Boutons de test pour recharger les données depuis la base de données
+              </p>
+            </div>
+            
+            <Step2RoomInventory
+              roomGroups={roomGroups}
+              onRoomTypeChange={(groupId, newRoomType) => {
+                setRoomGroups(prev => prev.map(group => 
+                  group.id === groupId 
+                    ? { ...group, roomType: newRoomType }
+                    : group
+                ));
+              }}
+              onPrevious={() => setCurrentStep(1.5)}
+              onNext={() => setCurrentStep(3)}
+            />
+          </div>
         )}
 
         {/* Ancienne étape 2 - Commentée pour référence */}
@@ -1386,8 +1514,8 @@ export default function Home() {
           </div>
         )}
 
-        {/* Étape 3 - Préparer la demande */}
-        {currentStep === 3 && (
+        {/* Étape 4 - Préparer la demande */}
+        {currentStep === 4 && (
           <QuoteForm 
             onNext={handleQuoteFormNext}
             onPrevious={handleQuoteFormPrevious}
@@ -1571,7 +1699,31 @@ export default function Home() {
                                     <span className="text-xs font-medium text-gray-600">
                                       {photo.status === 'uploaded' && 'En attente'}
                                       {photo.status === 'processing' && 'Analyse...'}
-                                      {photo.status === 'completed' && 'Terminé'}
+                                      {photo.status === 'completed' && (
+                                        photo.roomName || 
+                                        (photo.roomType && photo.roomType !== 'autre' ? 
+                                          (() => {
+                                            const roomTypeNames: { [key: string]: string } = {
+                                              'salon': 'Salon',
+                                              'cuisine': 'Cuisine',
+                                              'chambre': 'Chambre',
+                                              'bureau': 'Bureau',
+                                              'salle_de_bain': 'Salle de bain',
+                                              'couloir': 'Couloir',
+                                              'entree': 'Entrée',
+                                              'jardin': 'Jardin',
+                                              'terrasse': 'Terrasse',
+                                              'garage': 'Garage',
+                                              'cave': 'Cave',
+                                              'grenier': 'Grenier',
+                                              'salle_a_manger': 'Salle à manger'
+                                            };
+                                            const roomName = roomTypeNames[photo.roomType] || photo.roomType;
+                                            // S'assurer que la première lettre est en majuscule
+                                            return roomName.charAt(0).toUpperCase() + roomName.slice(1);
+                                          })() 
+                                        : 'Terminé')
+                                      )}
                                       {photo.status === 'error' && 'Erreur'}
                                     </span>
                                   </div>
@@ -1647,22 +1799,18 @@ export default function Home() {
             )}
             
             {/* Bouton Étape suivante - EXACTEMENT identique au bouton du haut */}
-            {currentStep < 4 ? (
+            {currentStep < 5 ? (
                             <button
                 onClick={() => {
-                  console.log('🎯 Bouton "Étape suivante" cliqué, passage à l\'étape', currentStep + 1);
-                  // Si on est à l'étape 1, passer à l'étape 1.5 (validation des pièces)
-                  if (currentStep === 1) {
-                    setCurrentStep(1.5);
-                  } else {
-                    setCurrentStep(currentStep + 1);
-                  }
+                  const nextStep = currentStep + 1;
+                  console.log('🎯 Bouton "Étape suivante" cliqué, passage à l\'étape', nextStep);
+                  setCurrentStep(nextStep);
                 }}
                 disabled={
                   (currentStep === 1 && currentRoom.photos.length === 0) ||
-                  (currentStep === 1.5 && roomGroups.length === 0) ||
-                  (currentStep === 2 && !currentRoom.photos.some(p => p.status === 'completed')) ||
-                  (currentStep === 3 && !quoteFormData)
+                  (currentStep === 2 && roomGroups.length === 0) ||
+                  (currentStep === 3 && !currentRoom.photos.some(p => p.status === 'completed')) ||
+                  (currentStep === 4 && !quoteFormData)
                 }
                 className="inline-flex items-center px-4 py-2 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:text-gray-400 disabled:bg-gray-50"
               >
@@ -1677,8 +1825,8 @@ export default function Home() {
                   </div>
                 </div>
 
-        {/* Étape 4 - Envoyer un devis */}
-        {currentStep === 4 && (
+        {/* Étape 5 - Envoyer un devis */}
+        {currentStep === 5 && (
           <div className="max-w-7xl mx-auto px-4">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               
@@ -2452,11 +2600,36 @@ export default function Home() {
                   <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                     {getBuildInfo()}
                   </span>
-                  <div className="flex items-center space-x-1">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-xs text-gray-400">
-                      Last update: {currentTime ? currentTime.toLocaleTimeString('fr-FR') : '--:--:--'}
-                    </span>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={async () => {
+                        if (confirm('🗑️ Supprimer toutes les photos ? Cette action est irréversible.')) {
+                          try {
+                            const response = await fetch('/api/photos/reset', { method: 'POST' });
+                            if (response.ok) {
+                              const result = await response.json();
+                              alert(`✅ ${result.deletedCount} photos supprimées`);
+                              // Recharger la page pour un état propre
+                              window.location.reload();
+                            } else {
+                              alert('❌ Erreur lors de la suppression');
+                            }
+                          } catch (error) {
+                            alert('❌ Erreur de connexion');
+                          }
+                        }
+                      }}
+                      className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full hover:bg-red-200 transition-colors"
+                      title="Supprimer toutes les photos (reset complet)"
+                    >
+                      🗑️ Reset
+                    </button>
+                    <div className="flex items-center space-x-1">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs text-gray-400">
+                        Last update: {currentTime ? currentTime.toLocaleTimeString('fr-FR') : '--:--:--'}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2549,22 +2722,18 @@ export default function Home() {
                 )}
                 
                 {/* Bouton Étape suivante - à droite */}
-                {currentStep < 4 && (
+                {currentStep < 5 && (
                   <button
                     onClick={() => {
-                      console.log('🎯 Bouton "Étape suivante" cliqué, passage à l\'étape', currentStep + 1);
-                      // Si on est à l'étape 1, passer à l'étape 1.5 (validation des pièces)
-                      if (currentStep === 1) {
-                        setCurrentStep(1.5);
-                      } else {
-                        setCurrentStep(currentStep + 1);
-                      }
+                      const nextStep = currentStep + 1;
+                      console.log('🎯 Bouton "Étape suivante" cliqué, passage à l\'étape', nextStep);
+                      setCurrentStep(nextStep);
                     }}
                     disabled={
                       (currentStep === 1 && currentRoom.photos.length === 0) ||
-                      (currentStep === 1.5 && roomGroups.length === 0) ||
-                      (currentStep === 2 && !currentRoom.photos.some(p => p.status === 'completed')) ||
-                      (currentStep === 3 && !quoteFormData)
+                      (currentStep === 2 && roomGroups.length === 0) ||
+                      (currentStep === 3 && !currentRoom.photos.some(p => p.status === 'completed')) ||
+                      (currentStep === 4 && !quoteFormData)
                     }
                     className="inline-flex items-center px-4 py-2 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:text-gray-400 disabled:bg-gray-50"
                   >

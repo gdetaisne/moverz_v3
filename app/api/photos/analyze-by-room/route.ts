@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     const photos = await prisma.photo.findMany({
       where: {
         id: { in: photoIds },
-        project: { userId }
+        project: { is: { userId: userId } }
       },
       select: {
         id: true,

@@ -33,7 +33,33 @@ export function PhotoCard({ photo, index, onRoomNameChange, className = "" }: Ph
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'completed': return 'Terminé';
+      case 'completed': 
+        // Afficher le nom de la pièce si détectée, sinon "Terminé"
+        if (photo.roomName) {
+          return photo.roomName;
+        }
+        if (photo.roomType && photo.roomType !== 'autre') {
+          // Convertir le type de pièce en nom lisible
+          const roomTypeNames: { [key: string]: string } = {
+            'salon': 'Salon',
+            'cuisine': 'Cuisine',
+            'chambre': 'Chambre',
+            'bureau': 'Bureau',
+            'salle_de_bain': 'Salle de bain',
+            'couloir': 'Couloir',
+            'entree': 'Entrée',
+            'jardin': 'Jardin',
+            'terrasse': 'Terrasse',
+            'garage': 'Garage',
+            'cave': 'Cave',
+            'grenier': 'Grenier',
+            'salle_a_manger': 'Salle à manger'
+          };
+          const roomName = roomTypeNames[photo.roomType] || photo.roomType;
+          // S'assurer que la première lettre est en majuscule
+          return roomName.charAt(0).toUpperCase() + roomName.slice(1);
+        }
+        return 'Terminé';
       case 'processing': return 'En cours...';
       case 'error': return 'Erreur';
       default: return 'Chargé';

@@ -2,8 +2,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { RoomGroup, PhotoData, ROOM_TYPES } from '@/lib/roomValidation';
-import { RoomPhotoCarousel } from './RoomPhotoCarousel';
-import { InventoryItemCard } from './InventoryItemCard';
+import { RoomPhotoGrid } from './RoomPhotoGrid';
+import { InventoryItemInline } from './InventoryItemInline';
 
 interface RoomInventoryCardProps {
   roomGroup: RoomGroup;
@@ -19,9 +19,34 @@ export function RoomInventoryCard({
   const roomTypeInfo = ROOM_TYPES.find(t => t.value === roomGroup.roomType);
   
   // Calculer l'inventaire total de la pièce
-  const allItems = roomGroup.photos.flatMap(photo => photo.analysis?.items || []);
+  const allItems = roomGroup.photos.flatMap(photo => {
+    console.log(`🔍 Photo ${photo.id} analysis:`, {
+      hasAnalysis: !!photo.analysis,
+      hasItems: !!(photo.analysis?.items),
+      itemsLength: photo.analysis?.items?.length || 0,
+      analysisKeys: photo.analysis ? Object.keys(photo.analysis) : []
+    });
+    
+    // Vérifier que l'analyse existe et a des items
+    if (photo.analysis && photo.analysis.items && Array.isArray(photo.analysis.items)) {
+      console.log(`✅ Photo ${photo.id} a ${photo.analysis.items.length} objets`);
+      return photo.analysis.items;
+    } else {
+      console.log(`❌ Photo ${photo.id} n'a pas d'objets dans l'analyse`);
+      return [];
+    }
+  });
   const totalVolume = allItems.reduce((sum, item) => sum + (item.volume_m3 || 0), 0);
   const totalPackagedVolume = allItems.reduce((sum, item) => sum + (item.packaged_volume_m3 || 0), 0);
+  
+  // Debug: vérifier les données
+  console.log(`🔍 [RoomInventoryCard] ${roomGroup.roomType}:`, {
+    photosCount: roomGroup.photos.length,
+    itemsCount: allItems.length,
+    totalVolume,
+    totalPackagedVolume,
+    photosWithAnalysis: roomGroup.photos.filter(p => p.analysis?.items?.length > 0).length
+  });
   
   // Grouper les objets par catégorie
   const itemsByCategory = allItems.reduce((acc, item) => {
@@ -72,73 +97,77 @@ export function RoomInventoryCard({
         </div>
       </div>
 
-      <div className="p-6">
-        {/* Carrousel de photos */}
-        <div className="mb-6">
-          <h4 className="text-lg font-medium text-gray-800 mb-3">Photos de la pièce</h4>
-          <RoomPhotoCarousel
+      {/* Layout: Photos à gauche, Inventaire à droite */}
+      <div className="flex flex-col lg:flex-row gap-6 p-6 h-full">
+        {/* Colonne gauche: Photos - Prend toute la hauteur disponible */}
+        <div className="lg:w-1/3 flex flex-col">
+          <RoomPhotoGrid
             photos={roomGroup.photos}
             roomType={roomGroup.roomType}
-            className="max-w-md mx-auto"
+            className="flex-1"
+            maxHeight="100%"
           />
-        </div>
-
-        {/* Résumé de l'inventaire */}
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-          <h4 className="text-lg font-medium text-gray-800 mb-3">Résumé de l'inventaire</h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{allItems.length}</div>
-              <div className="text-sm text-gray-600">Objets détectés</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{totalVolume.toFixed(2)} m³</div>
-              <div className="text-sm text-gray-600">Volume brut</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">{totalPackagedVolume.toFixed(2)} m³</div>
-              <div className="text-sm text-gray-600">Volume emballé</div>
+          
+          {/* Résumé compact - Toujours en bas */}
+          <div className="mt-4 p-3 bg-gray-50 rounded-lg flex-shrink-0">
+            <div className="text-sm text-gray-600 space-y-1">
+              <div><span className="font-medium">{allItems.length}</span> Objets détectés</div>
+              <div><span className="font-medium">{totalVolume.toFixed(2)} m³</span> Volume brut</div>
+              <div><span className="font-medium">{totalPackagedVolume.toFixed(2)} m³</span> Volume emballé</div>
             </div>
           </div>
         </div>
 
-        {/* Inventaire détaillé par catégorie */}
-        {Object.keys(itemsByCategory).length > 0 ? (
-          <div>
-            <h4 className="text-lg font-medium text-gray-800 mb-4">Inventaire détaillé</h4>
-            <div className="space-y-4">
+        {/* Colonne droite: Inventaire en lignes - Prend toute la hauteur */}
+        <div className="lg:w-2/3 flex flex-col">
+          <h4 className="text-lg font-medium text-gray-800 mb-4">Inventaire détaillé</h4>
+
+          {Object.keys(itemsByCategory).length > 0 ? (
+            <div className="space-y-4 flex-1 overflow-y-auto">
               {Object.entries(itemsByCategory).map(([category, items]) => (
-                <div key={category} className="border border-gray-200 rounded-lg p-4">
-                  <h5 className="font-medium text-gray-700 mb-3 capitalize">
-                    {category === 'furniture' ? 'Mobilier' :
-                     category === 'electronics' ? 'Électronique' :
-                     category === 'decoration' ? 'Décoration' :
-                     category === 'other' ? 'Autres' : category} 
-                    ({items.length})
-                  </h5>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div key={category} className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
+                    <h5 className="font-medium text-gray-700 capitalize">
+                      {category === 'furniture' ? 'Mobilier' :
+                       category === 'electronics' ? 'Électronique' :
+                       category === 'decoration' ? 'Décoration' :
+                       category === 'art' ? 'Art' :
+                       category === 'box' ? 'Boîtes' :
+                       category === 'appliance' ? 'Électroménager' :
+                       category === 'misc' ? 'Divers' :
+                       category === 'other' ? 'Autres' : category} 
+                      ({items.length})
+                    </h5>
+                  </div>
+                  <div className="divide-y divide-gray-100">
                     {items.map((item, index) => (
-                      <InventoryItemCard
+                      <InventoryItemInline
                         key={`${item.label}-${index}`}
-                        item={item}
+                        item={{
+                          ...item,
+                          photoId: roomGroup.photos[0]?.id || '',
+                          itemIndex: index
+                        }}
                         isSelected={false}
-                        onToggleSelection={() => {}}
-                        showSelection={false}
+                        onToggle={() => {}}
+                        onDismountableToggle={() => {}}
+                        onFragileToggle={() => {}}
                       />
                     ))}
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-        ) : (
-          <div className="text-center py-8 text-gray-500">
-            <div className="text-4xl mb-2">📦</div>
-            <p>Aucun objet détecté dans cette pièce</p>
-            <p className="text-sm">Les objets seront analysés après validation des pièces</p>
-          </div>
-        )}
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <div className="text-4xl mb-2">📦</div>
+              <p>Aucun objet détecté dans cette pièce</p>
+              <p className="text-sm">Les objets seront analysés après validation des pièces</p>
+            </div>
+          )}
+        </div>
       </div>
     </motion.div>
   );
 }
+

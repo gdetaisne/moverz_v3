@@ -148,6 +148,12 @@ export const DISMOUNTABLE_DATABASE: Record<string, DismountableConfig> = {
  * Trouve la configuration de démontabilité pour un objet
  */
 export function getDismountableConfig(label: string): DismountableConfig | null {
+  // S'assurer que label est une string
+  if (!label || typeof label !== 'string') {
+    console.warn('⚠️ getDismountableConfig: label invalide:', label);
+    return null;
+  }
+  
   const normalizedLabel = label.toLowerCase().trim();
   
   // Recherche exacte

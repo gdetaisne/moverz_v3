@@ -46,7 +46,7 @@ export async function analyzePhotoWithClaude(opts: {
 
   try {
     // Préparer l'image pour Claude
-    const imageBuffer = await prepareImageForClaude(opts.imageUrl);
+    const imageBuffer = await optimizeImageForAI(Buffer.from(opts.imageUrl.replace(/^data:image\/[a-z]+;base64,/, ''), 'base64')).then(result => result.buffer);
     const base64Image = imageBuffer.toString('base64');
     
     console.log(`Image Claude préparée: ${base64Image.length} bytes`);
@@ -199,15 +199,3 @@ export async function analyzePhotoWithClaude(opts: {
   }
 }
 
-async function prepareImageForClaude(imageUrl: string): Promise<Buffer> {
-  if (imageUrl.startsWith('data:')) {
-    // Image Base64
-    const base64Data = imageUrl.split(',')[1];
-    return Buffer.from(base64Data, 'base64');
-  } else {
-    // URL d'image
-    const response = await fetch(imageUrl);
-    const arrayBuffer = await response.arrayBuffer();
-    return Buffer.from(arrayBuffer);
-  }
-}

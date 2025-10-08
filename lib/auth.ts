@@ -2,20 +2,24 @@ import { NextRequest } from 'next/server';
 import { prisma } from './db';
 
 /**
- * Récupère ou crée l'ID utilisateur depuis les cookies/headers
+ * Récupère l'ID utilisateur depuis les cookies/headers
  * 
  * Priorité :
  * 1. Header x-user-id (dev/test)
  * 2. Query param userId (dev/test)  
- * 3. Cookie user_id (prod)
- * 4. Création auto d'un nouvel user
+ * 3. Cookie moverz_user_id (nouveau système)
+ * 
+ * Ne crée plus d'utilisateur automatiquement - la gestion se fait côté client
  */
-export async function getUserId(req: NextRequest): Promise<string> {
+export async function getUserId(req: NextRequest): Promise<string | null> {
   // Dev: accepte header x-user-id (insensible à la casse)
   const headerUserId = req.headers.get('x-user-id') || req.headers.get('X-User-Id');
   if (headerUserId) {
-    // Assurer que l'user existe en DB
-    await ensureUserExists(headerUserId);
+    // En mode dev, créer l'user s'il n'existe pas
+    const exists = await userExists(headerUserId);
+    if (!exists) {
+      await createUser(headerUserId);
+    }
     return headerUserId;
   }
 
@@ -23,40 +27,39 @@ export async function getUserId(req: NextRequest): Promise<string> {
   const url = new URL(req.url);
   const queryUserId = url.searchParams.get('userId');
   if (queryUserId) {
-    await ensureUserExists(queryUserId);
-    return queryUserId;
+    const exists = await userExists(queryUserId);
+    return exists ? queryUserId : null;
   }
 
-  // Prod: lit cookie
-  const cookieUserId = req.cookies.get('user_id')?.value;
+  // Nouveau système: lit cookie moverz_user_id
+  const cookieUserId = req.cookies.get('moverz_user_id')?.value;
   if (cookieUserId) {
-    await ensureUserExists(cookieUserId);
-    return cookieUserId;
+    const exists = await userExists(cookieUserId);
+    return exists ? cookieUserId : null;
   }
 
-  // Nouveau: génère ID et crée user
-  const newUserId = crypto.randomUUID();
-  await prisma.user.create({
-    data: { id: newUserId }
-  });
-  
-  return newUserId;
+  // Aucun user ID trouvé
+  return null;
 }
 
 /**
- * Assure qu'un user existe en DB (créé si nécessaire)
+ * Vérifie si un user existe en DB (sans créer)
  */
-async function ensureUserExists(userId: string): Promise<void> {
+async function userExists(userId: string): Promise<boolean> {
   const existing = await prisma.user.findUnique({
     where: { id: userId },
     select: { id: true }
   });
+  return !!existing;
+}
 
-  if (!existing) {
-    await prisma.user.create({
-      data: { id: userId }
-    });
-  }
+/**
+ * Crée un utilisateur en DB
+ */
+async function createUser(userId: string): Promise<void> {
+  await prisma.user.create({
+    data: { id: userId }
+  });
 }
 
 

@@ -1,4 +1,6 @@
 import { TPhotoAnalysis } from "@/lib/schemas";
+import { optimizeImageForAI } from "@/lib/imageOptimization";
+import { normalizeRoomType } from "@/lib/roomTypeNormalizer";
 
 export interface RoomDetectionResult {
   roomType: string;
@@ -42,6 +44,17 @@ async function detectRoomTypeWithClaude(photoAnalysis: TPhotoAnalysis, imageUrl?
 
   // Sinon, analyser les objets détectés (fallback)
   console.log('⚠️ Fallback: analyse basée sur les objets détectés');
+  
+  // Vérification de sécurité pour photoAnalysis.items
+  if (!photoAnalysis.items || !Array.isArray(photoAnalysis.items) || photoAnalysis.items.length === 0) {
+    console.log('⚠️ Aucun objet détecté, retour type par défaut');
+    return {
+      roomType: 'pièce inconnue',
+      confidence: 0.1,
+      reasoning: 'Aucun objet détecté pour classification'
+    };
+  }
+  
   const prompt = `Analyse cette liste d'objets détectés dans une photo et détermine le type de pièce.
 
 Objets détectés:
@@ -84,7 +97,10 @@ Réponds UNIQUEMENT avec un JSON:
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   
   if (jsonMatch) {
-    return JSON.parse(jsonMatch[0]);
+    const result = JSON.parse(jsonMatch[0]);
+    // Normaliser le type de pièce détecté
+    result.roomType = normalizeRoomType(result.roomType);
+    return result;
   }
   
   throw new Error('Réponse Claude invalide pour la détection de pièce');
@@ -92,7 +108,7 @@ Réponds UNIQUEMENT avec un JSON:
 
 async function detectRoomTypeFromImage(anthropic: any, imageUrl: string): Promise<RoomDetectionResult> {
   // Préparer l'image pour Claude
-  const imageBuffer = await prepareImageForClaude(imageUrl);
+  const imageBuffer = await optimizeImageForAI(Buffer.from(imageUrl.replace(/^data:image\/[a-z]+;base64,/, ''), 'base64')).then(result => result.buffer);
   const base64Image = imageBuffer.toString('base64');
 
   const prompt = `Analyse cette image et détermine le type de pièce visible.
@@ -153,19 +169,15 @@ Réponds UNIQUEMENT avec un JSON:
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   
   if (jsonMatch) {
-    return JSON.parse(jsonMatch[0]);
+    const result = JSON.parse(jsonMatch[0]);
+    // Normaliser le type de pièce détecté
+    result.roomType = normalizeRoomType(result.roomType);
+    return result;
   }
   
   throw new Error('Réponse Claude invalide pour la détection de pièce');
 }
 
-async function prepareImageForClaude(imageUrl: string): Promise<Buffer> {
-  if (imageUrl.startsWith('data:')) {
-    const base64Data = imageUrl.split(',')[1];
-    return Buffer.from(base64Data, 'base64');
-  }
-  throw new Error("Unsupported image URL type for Claude preparation.");
-}
 
 async function detectRoomTypeWithOpenAI(photoAnalysis: TPhotoAnalysis): Promise<RoomDetectionResult> {
   const OpenAI = (await import("openai")).default;
