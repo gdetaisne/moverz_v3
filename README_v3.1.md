@@ -1,5 +1,7 @@
 # Moverz v3.1 - Inventaire par Pièce avec Carrousel
 
+![CI](https://github.com/guillaumestehelin/moverz_v3/actions/workflows/ci.yml/badge.svg)
+
 ## 🎯 Nouvelles Fonctionnalités
 
 ### ✨ Workflow Optimisé

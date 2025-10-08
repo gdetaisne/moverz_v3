@@ -1,0 +1,222 @@
+name: CI
+
+# Déclencheurs : push sur main/develop, pull requests
+on:
+  push:
+    branches: [main, develop, chore/cleanup-step4]
+  pull_request:
+    branches: [main, develop]
+
+# Permissions minimales
+permissions:
+  contents: read
+
+jobs:
+  # Job 1 : Lint (ESLint)
+  lint:
+    name: 🔍 Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+      
+      - name: 📦 Install dependencies
+        run: npm ci --legacy-peer-deps
+      
+      - name: 🔍 Run ESLint
+        run: npm run lint -- --max-warnings=0
+
+  # Job 2 : TypeCheck
+  typecheck:
+    name: 📝 TypeCheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+      
+      - name: 📦 Install dependencies
+        run: npm ci --legacy-peer-deps
+      
+      - name: 📝 Run TypeScript compiler
+        run: npx tsc --noEmit
+
+  # Job 3 : Build
+  build:
+    name: 🏗️ Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+      
+      - name: 📦 Install dependencies
+        run: npm ci --legacy-peer-deps
+      
+      - name: 🔨 Generate Prisma Client
+        run: npm run prisma:generate
+      
+      - name: 🏗️ Build project
+        run: npm run build
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
+          DIRECT_URL: postgresql://test:test@localhost:5432/test
+
+  # Job 4 : Tests Unitaires
+  test:
+    name: 🧪 Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+      
+      - name: 📦 Install dependencies
+        run: npm ci --legacy-peer-deps
+      
+      - name: 🧪 Run unit tests
+        run: npm run test:unit
+        env:
+          NODE_ENV: test
+      
+      - name: 📊 Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: reports/
+          retention-days: 30
+
+  # Job 5 : Smoke Tests API
+  smoke:
+    name: 🔥 Smoke Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [build]
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+      
+      - name: 📦 Install dependencies
+        run: npm ci --legacy-peer-deps
+      
+      - name: 🔨 Generate Prisma Client
+        run: npm run prisma:generate
+      
+      - name: 🗄️ Setup database
+        run: npm run prisma:migrate:deploy
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
+          DIRECT_URL: postgresql://test:test@localhost:5432/test
+      
+      - name: 🚀 Start dev server
+        run: npm run dev &
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
+          DIRECT_URL: postgresql://test:test@localhost:5432/test
+          PORT: 3001
+      
+      - name: ⏳ Wait for server
+        run: |
+          timeout 60 bash -c 'until curl -f http://localhost:3001/api/ai-status 2>/dev/null; do sleep 2; done' || true
+      
+      - name: 🔥 Run smoke tests
+        run: npm run smoke:api
+        continue-on-error: true
+        env:
+          API_URL: http://localhost:3001
+      
+      - name: 📊 Upload smoke results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-results
+          path: reports/smoke-results.json
+          retention-days: 30
+      
+      - name: 📋 Display smoke results
+        if: always()
+        run: |
+          if [ -f reports/smoke-results.json ]; then
+            echo "📊 Smoke Test Results:"
+            cat reports/smoke-results.json | jq '.results[] | "[\(.pass | if . then "✅" else "❌" end)] \(.test): \(.status) (\(.latency)ms)"' -r
+          fi
+
+  # Job 6 : Summary
+  summary:
+    name: 📊 Summary
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck, build, test, smoke]
+    if: always()
+    
+    steps:
+      - name: 📊 Job Summary
+        run: |
+          echo "## CI Pipeline Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint | ${{ needs.lint.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| TypeCheck | ${{ needs.typecheck.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Smoke | ${{ needs.smoke.result }} |" >> $GITHUB_STEP_SUMMARY
+      
+      - name: ❌ Fail if any job failed
+        if: |
+          needs.lint.result == 'failure' ||
+          needs.typecheck.result == 'failure' ||
+          needs.build.result == 'failure' ||
+          needs.test.result == 'failure'
+        run: exit 1
