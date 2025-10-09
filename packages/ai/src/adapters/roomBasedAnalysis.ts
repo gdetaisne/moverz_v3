@@ -1,11 +1,5 @@
-// Room-based analysis adapter (simplified)
-export async function analyzeRoomPhotos(roomType: string, photos: any[]): Promise<any> {
-  // Mock implementation
-  return {
-    roomType,
-    items: [
-      { name: 'Meuble', category: 'mobilier', dismountable: true, fragile: false }
-    ],
-    confidence: 0.9
-  };
-}
+// NOTE: ancien mock. Redirection vers la vraie implémentation.
+// Ce fichier ne doit plus être utilisé directement.
+// Tous les imports doivent pointer vers services/roomBasedAnalysis.ts
+
+export { analyzeRoomPhotos } from '@services/roomBasedAnalysis';

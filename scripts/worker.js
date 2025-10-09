@@ -1,46 +1,12 @@
 #!/usr/bin/env node
-// BullMQ Workers - Background job processing
+// BullMQ Workers - Background job processing (LOT 10)
 const { createPhotoAnalyzeWorker, createInventorySyncWorker, shutdownWorkers } = require('../packages/core/src/queue/worker');
 
-console.log('🚀 Starting BullMQ workers...\n');
+console.log('🚀 Starting BullMQ workers (LOT 10 - AI Pipeline)...\n');
 
-// Worker processors
-const photoAnalyzeProcessor = async (job) => {
-  console.log(`📸 [Photo Analyze] Processing job ${job.id}`);
-  const { photoId, userId, assetId, roomType } = job.data;
-  
-  // Simulate AI analysis (replace with real engine call)
-  await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-  
-  return {
-    photoId,
-    items: [
-      { name: 'Table', category: 'mobilier', dismountable: true },
-      { name: 'Chaise', category: 'mobilier', dismountable: true },
-    ],
-    roomType: roomType || 'salon',
-    confidence: 0.9,
-  };
-};
-
-const inventorySyncProcessor = async (job) => {
-  console.log(`📦 [Inventory Sync] Processing job ${job.id}`);
-  const { projectId, userId } = job.data;
-  
-  // Simulate inventory aggregation
-  await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
-  
-  return {
-    projectId,
-    totalItems: 15,
-    totalVolume: 25.5,
-    rooms: ['salon', 'cuisine', 'chambre'],
-  };
-};
-
-// Create workers
-const photoWorker = createPhotoAnalyzeWorker(photoAnalyzeProcessor);
-const inventoryWorker = createInventorySyncWorker(inventorySyncProcessor);
+// Create workers (logic intégrée directement dans les workers)
+const photoWorker = createPhotoAnalyzeWorker();
+const inventoryWorker = createInventorySyncWorker();
 
 // Event listeners
 photoWorker.on('completed', (job) => {

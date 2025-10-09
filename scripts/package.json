@@ -1,0 +1,16 @@
+{
+  "name": "bullboard-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Bull Board Dashboard for monitoring BullMQ queues",
+  "dependencies": {
+    "@bull-board/api": "^5.10.2",
+    "@bull-board/express": "^5.10.2",
+    "bullmq": "^5.1.0",
+    "express": "^4.18.2",
+    "ioredis": "^5.3.2"
+  }
+}
+
+
+

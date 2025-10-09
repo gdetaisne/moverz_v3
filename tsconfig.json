@@ -22,7 +22,12 @@
       "@/*": ["./*"],
       "@core/*": ["./packages/core/src/*"],
       "@ai/*": ["./packages/ai/src/*"],
-      "@ui/*": ["./packages/ui/src/*"]
+      "@services/*": ["./services/*"],
+      "@ui/*": ["./packages/ui/src/*"],
+      "@moverz/core": ["./packages/core/src/index.ts"],
+      "@moverz/core/*": ["./packages/core/src/*"],
+      "@moverz/ai": ["./packages/ai/src/index.ts"],
+      "@moverz/ai/*": ["./packages/ai/src/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

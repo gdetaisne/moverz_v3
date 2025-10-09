@@ -30,6 +30,9 @@ const nextConfig: NextConfig = {
         // Externaliser PDFKit pour qu'il utilise directement node_modules
         'pdfkit': 'commonjs pdfkit',
         'blob-stream': 'commonjs blob-stream',
+        // Externaliser BullMQ et Redis (server-only)
+        'bullmq': 'commonjs bullmq',
+        'ioredis': 'commonjs ioredis',
       });
     }
     

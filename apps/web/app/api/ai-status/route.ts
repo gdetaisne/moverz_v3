@@ -127,13 +127,22 @@ async function checkAWSRekognition(): Promise<AIServiceStatus> {
 
 export async function GET() {
   try {
-    // Vérifier tous les services en parallèle
-    const [openai, claude, google, aws] = await Promise.all([
+    // Vérifier tous les services en parallèle avec timeout global
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Timeout global')), 10000)
+    );
+
+    const checkPromise = Promise.all([
       checkOpenAI(),
       checkClaude(),
       checkGoogleVision(),
       checkAWSRekognition()
     ]);
+
+    const [openai, claude, google, aws] = await Promise.race([
+      checkPromise,
+      timeoutPromise
+    ]) as any[];
 
     const services = [openai, claude, google, aws];
     const activeCount = services.filter(s => s.status === 'active').length;
@@ -148,15 +157,19 @@ export async function GET() {
       },
       services,
       timestamp: new Date().toISOString()
-    });
+    }, { status: 200 });
   } catch (error) {
     console.error('Erreur lors de la vérification des services IA:', error);
+    
+    // Retourner un JSON valide même en cas d'erreur, avec status 503 (Service Unavailable)
     return NextResponse.json(
       { 
         success: false, 
-        error: 'Erreur lors de la vérification des services' 
+        error: 'Services IA temporairement indisponibles',
+        message: error instanceof Error ? error.message : 'Erreur inconnue',
+        timestamp: new Date().toISOString()
       },
-      { status: 500 }
+      { status: 503 }
     );
   }
 }

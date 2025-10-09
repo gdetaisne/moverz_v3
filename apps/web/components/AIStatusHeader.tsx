@@ -24,18 +24,40 @@ export default function AIStatusHeader() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const checkStatus = async () => {
     setIsLoading(true);
+    setError(null);
+    
     try {
-      const response = await fetch('/api/ai-status');
+      // Timeout de 5 secondes
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const response = await fetch('/api/ai-status', {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`Status ${response.status}: ${response.statusText}`);
+      }
+      
       const data = await response.json();
+      
       if (data.success) {
         setStatusData(data);
         setLastChecked(new Date());
+        setError(null);
+      } else {
+        setError(data.error || 'Erreur inconnue');
       }
-    } catch (error) {
-      console.error('Erreur lors de la vérification du statut des IA:', error);
+    } catch (err) {
+      console.error('Erreur lors de la vérification du statut des IA:', err);
+      setError(err instanceof Error ? err.message : 'Services IA indisponibles ⛔');
+      // En cas d'erreur, on garde les données précédentes si elles existent
     } finally {
       setIsLoading(false);
     }
@@ -73,6 +95,7 @@ export default function AIStatusHeader() {
   };
 
   const getStatusBadgeColor = () => {
+    if (error) return 'bg-red-500';
     if (!statusData) return 'bg-gray-500';
     const { active, total } = statusData.summary;
     if (active === total) return 'bg-green-500';
@@ -86,24 +109,29 @@ export default function AIStatusHeader() {
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex items-center gap-2 px-3 py-1.5 text-xs bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors border border-gray-700"
-        title="Statut des services IA"
+        title={error ? `Erreur: ${error}` : "Statut des services IA"}
       >
         <span className="text-gray-400">IA</span>
-        {statusData && (
+        {error ? (
+          <>
+            <span className="w-2 h-2 rounded-full bg-red-500" />
+            <span className="text-red-400">⛔</span>
+          </>
+        ) : statusData ? (
           <>
             <span className={`w-2 h-2 rounded-full ${getStatusBadgeColor()}`} />
             <span className="text-gray-300">
               {statusData.summary.active}/{statusData.summary.total}
             </span>
           </>
-        )}
+        ) : null}
         {isLoading && (
           <span className="inline-block w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
         )}
       </button>
 
       {/* Panel déroulant */}
-      {isExpanded && statusData && (
+      {isExpanded && (statusData || error) && (
         <div className="absolute right-0 mt-2 w-72 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
           {/* Header */}
           <div className="px-4 py-3 bg-gray-900 border-b border-gray-700">
@@ -127,9 +155,20 @@ export default function AIStatusHeader() {
             )}
           </div>
 
+          {/* Affichage erreur */}
+          {error && (
+            <div className="px-4 py-3 bg-red-500/10 border-l-4 border-red-500">
+              <p className="text-sm text-red-400">⛔ {error}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Les services IA sont temporairement indisponibles.
+              </p>
+            </div>
+          )}
+
           {/* Liste des services */}
-          <div className="py-2">
-            {statusData.services.map((service) => (
+          {statusData && (
+            <div className="py-2">
+              {statusData.services.map((service) => (
               <div
                 key={service.name}
                 className="px-4 py-2.5 hover:bg-gray-750 transition-colors"
@@ -167,16 +206,19 @@ export default function AIStatusHeader() {
                   </span>
                 </div>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* Footer avec résumé */}
           <div className="px-4 py-3 bg-gray-900 border-t border-gray-700">
             <div className="flex items-center justify-between text-xs">
               <span className="text-gray-400">
-                {statusData.summary.allActive
+                {error
+                  ? '⚠️ Erreur de connexion'
+                  : statusData?.summary.allActive
                   ? '✓ Tous les services actifs'
-                  : `${statusData.summary.active} service(s) actif(s)`}
+                  : `${statusData?.summary.active || 0} service(s) actif(s)`}
               </span>
               <button
                 onClick={() => setIsExpanded(false)}

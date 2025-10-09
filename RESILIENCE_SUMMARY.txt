@@ -1,0 +1,121 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                   🛡️  CORRECTIONS DE RÉSILIENCE MOVERZ                      ║
+║                          Toutes les tâches terminées ✅                      ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+📋 RÉSUMÉ DES CORRECTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ 1. LOGGER NON IMPORTÉ
+   → Corrigé dans 4 fichiers (lib/ et packages/core/src/)
+   → logger.debug() remplacé par console.debug()
+   → Plus d'erreur "ReferenceError: logger is not defined"
+
+✅ 2. INITIALISATION AUTH
+   → Déjà sécurisée avec try/catch dans page.tsx
+   → Aucune modification nécessaire
+
+✅ 3. ENDPOINT /api/ai-status
+   → Timeout global de 10s ajouté
+   → Retour 503 au lieu de 500 en cas d'erreur
+   → JSON toujours valide avec structure cohérente
+
+✅ 4. TOKEN ADMIN AUTO-INJECTÉ
+   → Nouveau: apps/web/lib/api-client.ts
+   → Helpers: apiFetch, apiGet, apiPost, apiPut, apiDelete
+   → Token injecté automatiquement si NEXT_PUBLIC_ADMIN_BYPASS_TOKEN défini
+
+✅ 5. SAFEBOUNDARY REACT
+   → Nouveau: apps/web/components/SafeBoundary.tsx
+   → Intégré dans apps/web/app/layout.tsx
+   → Intercepte toutes les erreurs React pour éviter les crashs UI
+
+✅ 6. APPELS FETCH SÉCURISÉS
+   → AIStatusHeader.tsx amélioré
+   → Timeout de 5s sur tous les appels
+   → Gestion d'erreurs avec fallback visuel (⛔)
+
+✅ 7. SCRIPT DE VÉRIFICATION
+   → Nouveau: scripts/test-resilience.mjs
+   → Vérifie: routes API, JSON valide, logger, SafeBoundary
+   → Usage: node scripts/test-resilience.mjs
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📁 FICHIERS MODIFIÉS (7)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ✏️  lib/user-storage.ts
+  ✏️  lib/auth-client.ts
+  ✏️  packages/core/src/user-storage.ts
+  ✏️  packages/core/src/auth-client.ts
+  ✏️  apps/web/app/api/ai-status/route.ts
+  ✏️  apps/web/components/AIStatusHeader.tsx
+  ✏️  apps/web/app/layout.tsx
+
+📁 FICHIERS CRÉÉS (3)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  🆕 apps/web/lib/api-client.ts           (~100 lignes)
+  🆕 apps/web/components/SafeBoundary.tsx (~100 lignes)
+  🆕 scripts/test-resilience.mjs          (~280 lignes)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🚀 COMMANDES UTILES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Tester la résilience
+node scripts/test-resilience.mjs
+
+# Lancer le frontend (port 3000)
+cd apps/web && pnpm dev
+
+# Tester manuellement /api/ai-status
+curl -sS http://localhost:3000/api/ai-status | jq
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📖 DOCUMENTATION COMPLÈTE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Voir le fichier RESILIENCE_FIXES.md pour:
+  - Détails techniques de chaque correction
+  - Exemples de code avant/après
+  - Variables d'environnement recommandées
+  - Prochaines étapes suggérées
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 RÉSULTATS ATTENDUS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ✅ Plus d'erreur "logger is not defined"
+  ✅ Plus d'erreur "Initialisation auth failed"
+  ✅ /api/ai-status retourne 200/503 (jamais 500)
+  ✅ UI toujours visible même en cas d'erreur React
+  ✅ Messages d'erreur clairs dans la console
+  ✅ Fallbacks visuels pour les erreurs réseau
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 PROCHAINES ÉTAPES RECOMMANDÉES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  1. Créer .env.local avec NEXT_PUBLIC_ADMIN_BYPASS_TOKEN
+  2. Tester avec: node scripts/test-resilience.mjs
+  3. Lancer le dev: cd apps/web && pnpm dev
+  4. Vérifier que l'UI se charge sans erreur console
+  5. Migrer progressivement les fetch() vers apiFetch()
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ AUCUNE ERREUR DE LINT DÉTECTÉE
+
+🎉 Toutes les corrections ont été appliquées avec succès !
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                        Corrections terminées - 8 oct 2025                    ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+

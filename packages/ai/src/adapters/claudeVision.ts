@@ -1,13 +1,5 @@
-// Claude Vision adapter (simplified)
-import { getApiConfig } from '@core/config/app';
+// NOTE: ancien mock. Redirection vers la vraie implémentation.
+// Ce fichier ne doit plus être utilisé directement.
+// Tous les imports doivent pointer vers services/claudeVision.ts
 
-export async function analyzePhotoWithClaude(imageBuffer: Buffer, options: any = {}): Promise<any> {
-  // Mock implementation
-  return {
-    items: [
-      { name: 'Table', category: 'mobilier', dismountable: true, fragile: false }
-    ],
-    roomType: 'salon',
-    confidence: 0.9
-  };
-}
+export { analyzePhotoWithClaude } from '@services/claudeVision';

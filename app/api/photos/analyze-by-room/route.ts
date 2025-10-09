@@ -14,6 +14,10 @@ export async function POST(req: NextRequest) {
     const userId = await getUserId(req);
     const { roomType, photoIds } = await req.json();
 
+    if (!userId) {
+      return NextResponse.json({ error: "User ID required" }, { status: 401 });
+    }
+
     if (!roomType || !photoIds || !Array.isArray(photoIds)) {
       return NextResponse.json({ error: "roomType and photoIds required" }, { status: 400 });
     }
@@ -26,7 +30,7 @@ export async function POST(req: NextRequest) {
     const photos = await prisma.photo.findMany({
       where: {
         id: { in: photoIds },
-        project: { is: { userId: userId } }
+        project: { is: { userId } }
       },
       select: {
         id: true,
@@ -42,7 +46,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Import dynamique pour éviter les erreurs de build
-    const { analyzeRoomPhotos } = await import("@ai/adapters/roomBasedAnalysis");
+    const { analyzeRoomPhotos } = await import("@services/roomBasedAnalysis");
 
     // 🎯 NOUVELLE LOGIQUE : Analyse par groupe de pièces
     const analysis = await analyzeRoomPhotos({
@@ -55,13 +59,20 @@ export async function POST(req: NextRequest) {
       userId
     });
 
-    console.log(`✅ Analyse pièce "${roomType}" terminée:`, analysis.items?.length, "objets, temps:", analysis.processingTime, "ms");
+    console.log(`✅ Analyse pièce "${roomType}" terminée:`, analysis.items?.length, "objets");
 
-    // Mettre à jour toutes les photos du groupe avec l'analyse
-    await prisma.photo.updateMany({
-      where: { id: { in: photoIds } },
+    // ✅ Stocker l'analyse uniquement sur la première photo du groupe
+    // Cela évite la duplication des analyses en DB
+    const primaryPhotoId = photoIds[0];
+    await prisma.photo.update({
+      where: { id: primaryPhotoId },
       data: {
-        analysis: analysis
+        analysis: {
+          ...(analysis as any),
+          _isGroupAnalysis: true,
+          _groupPhotoIds: photoIds,
+          _analysisVersion: 1
+        } as any
       }
     });
 

@@ -148,7 +148,7 @@ export class UserStorage {
       }
     });
     
-    logger.debug(`🗑️ Données supprimées pour l'utilisateur: ${this.userId}`);
+    console.debug(`🗑️ Données supprimées pour l'utilisateur: ${this.userId}`);
   }
   
   /**
@@ -171,7 +171,7 @@ export class UserStorage {
       }
     });
     
-    logger.debug(`🔄 Migration des données: ${this.userId} → ${newUserId}`);
+    console.debug(`🔄 Migration des données: ${this.userId} → ${newUserId}`);
   }
   
   /**
@@ -227,7 +227,7 @@ export class StorageCleanup {
       localStorage.removeItem(key);
     });
     
-    logger.debug('🧹 Données legacy supprimées');
+    console.debug('🧹 Données legacy supprimées');
   }
   
   /**
@@ -242,7 +242,7 @@ export class StorageCleanup {
       }
     });
     
-    logger.debug('🧹 Toutes les données utilisateur supprimées');
+    console.debug('🧹 Toutes les données utilisateur supprimées');
   }
   
   /**

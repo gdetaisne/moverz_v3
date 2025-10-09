@@ -139,3 +139,157 @@ export function readMetricsFromFile(): AIMetric[] {
     return [];
   }
 }
+
+/**
+ * Métrique spécifique pour le classifieur de pièces (A/B test)
+ * LOT 18 - Room Classifier A/B Testing
+ */
+export interface RoomClassifierMetric {
+  variant: 'A' | 'B';
+  success: boolean;
+  latencyMs: number;
+  roomType: string;
+  confidence: number;
+  userId?: string;
+  batchId?: string;
+  photoId?: string;
+  fallback?: boolean;  // true si B a échoué et on est revenu à A
+  errorCode?: string;
+  timestamp: string;
+}
+
+// Stockage en mémoire des métriques du classifier
+const classifierMetrics: RoomClassifierMetric[] = [];
+
+/**
+ * Enregistre une métrique de classification de pièce
+ */
+export async function recordRoomClassifierMetric(
+  metric: Omit<RoomClassifierMetric, 'timestamp'>
+): Promise<void> {
+  const fullMetric: RoomClassifierMetric = {
+    ...metric,
+    timestamp: new Date().toISOString(),
+  };
+
+  classifierMetrics.push(fullMetric);
+
+  // Aussi enregistrer dans le système de métriques AI général
+  recordMetric({
+    operation: 'room_classify',
+    timestamp: fullMetric.timestamp,
+    latency_ms: metric.latencyMs,
+    success: metric.success,
+    model: `classifier_v${metric.variant}`,
+    input_size_bytes: 0, // N/A pour classifier
+    error_code: metric.errorCode,
+  });
+
+  // Logger en debug
+  if (process.env.LOG_LEVEL === 'debug') {
+    console.log('[Room Classifier Metric]', JSON.stringify(fullMetric));
+  }
+}
+
+/**
+ * Obtenir les métriques du classifier (pour observabilité)
+ */
+export function getRoomClassifierMetrics(
+  options?: {
+    since?: Date;
+    variant?: 'A' | 'B';
+  }
+): RoomClassifierMetric[] {
+  let filtered = [...classifierMetrics];
+
+  if (options?.since) {
+    filtered = filtered.filter(m => new Date(m.timestamp) >= options.since!);
+  }
+
+  if (options?.variant) {
+    filtered = filtered.filter(m => m.variant === options.variant);
+  }
+
+  return filtered;
+}
+
+/**
+ * Statistiques agrégées du classifier A/B
+ */
+export function getRoomClassifierStats(since?: Date): {
+  enabled: boolean;
+  split: number;
+  counts: {
+    A: number;
+    B: number;
+    fallbackToA: number;
+    errorsA: number;
+    errorsB: number;
+  };
+  avgLatency: {
+    A: number;
+    B: number;
+  };
+  avgConfidence: {
+    A: number;
+    B: number;
+  };
+} {
+  // Import dynamique pour éviter circular dependency
+  const { getAbTestConfig } = require('@/lib/flags');
+  const config = getAbTestConfig();
+
+  const metricsToAnalyze = since 
+    ? classifierMetrics.filter(m => new Date(m.timestamp) >= since)
+    : classifierMetrics;
+
+  const variantA = metricsToAnalyze.filter(m => m.variant === 'A' && !m.fallback);
+  const variantB = metricsToAnalyze.filter(m => m.variant === 'B');
+  const fallbacks = metricsToAnalyze.filter(m => m.fallback === true);
+
+  const errorsA = variantA.filter(m => !m.success).length;
+  const errorsB = variantB.filter(m => !m.success).length;
+
+  const avgLatencyA = variantA.length > 0
+    ? variantA.reduce((sum, m) => sum + m.latencyMs, 0) / variantA.length
+    : 0;
+
+  const avgLatencyB = variantB.length > 0
+    ? variantB.reduce((sum, m) => sum + m.latencyMs, 0) / variantB.length
+    : 0;
+
+  const avgConfidenceA = variantA.length > 0
+    ? variantA.reduce((sum, m) => sum + m.confidence, 0) / variantA.length
+    : 0;
+
+  const avgConfidenceB = variantB.length > 0
+    ? variantB.reduce((sum, m) => sum + m.confidence, 0) / variantB.length
+    : 0;
+
+  return {
+    enabled: config.enabled,
+    split: config.split,
+    counts: {
+      A: variantA.length,
+      B: variantB.length,
+      fallbackToA: fallbacks.length,
+      errorsA,
+      errorsB,
+    },
+    avgLatency: {
+      A: Math.round(avgLatencyA),
+      B: Math.round(avgLatencyB),
+    },
+    avgConfidence: {
+      A: Math.round(avgConfidenceA * 100) / 100,
+      B: Math.round(avgConfidenceB * 100) / 100,
+    },
+  };
+}
+
+/**
+ * Réinitialiser les métriques du classifier (pour tests)
+ */
+export function clearRoomClassifierMetrics(): void {
+  classifierMetrics.length = 0;
+}

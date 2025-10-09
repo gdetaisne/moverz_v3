@@ -129,3 +129,56 @@ Pour la production, remplacez `lib/storage.ts` par une implémentation S3 ou sim
 - **TypeScript strict** : Code entièrement typé
 - **Base64** : Images converties en base64 pour OpenAI
 - **Erreurs** : Gestion d'erreurs robuste avec logs détaillés
+
+## 📊 Monitoring (LOT 12.1)
+
+### Bull Board Dashboard
+
+Interface d'administration pour surveiller les files d'attente BullMQ (workers en background).
+
+**Démarrage :**
+```bash
+# Via npm (recommandé)
+npm run bullboard
+
+# Ou directement
+node scripts/bullboard.js
+```
+
+**Accès :**
+- URL : [http://localhost:3010/admin/queues](http://localhost:3010/admin/queues)
+- Auth : Header `x-access-token` avec la valeur de `BULLBOARD_TOKEN` (définie dans `.env`)
+
+**Fonctionnalités :**
+- 📈 Statistiques en temps réel des queues
+- 🔍 Visualisation des jobs (waiting, active, completed, failed)
+- ⏱️ Temps de traitement moyens
+- ❌ Logs d'erreurs détaillés
+- 🔄 Retry des jobs échoués
+- 🧹 Nettoyage des jobs complétés
+
+**API Endpoints :**
+```bash
+# Statistiques des queues
+curl -H "x-access-token: secret123" http://localhost:3010/admin/api/stats
+
+# Jobs échoués récents
+curl -H "x-access-token: secret123" http://localhost:3010/admin/api/failed?queue=photo-analyze
+
+# Retry tous les jobs échoués
+curl -X POST -H "x-access-token: secret123" http://localhost:3010/admin/api/retry-failed
+
+# Nettoyer les jobs complétés (> 1h)
+curl -X POST -H "x-access-token: secret123" http://localhost:3010/admin/api/clean?queue=photo-analyze
+```
+
+**Queues surveillées :**
+- `photo-analyze` : Analyse IA des photos uploadées
+- `inventory-sync` : Synchronisation de l'inventaire
+
+**Variables d'environnement requises :**
+```bash
+REDIS_URL=redis://localhost:6379          # Connexion Redis
+BULLBOARD_TOKEN=secret123                 # Token d'authentification
+BULLBOARD_PORT=3010                       # Port du dashboard (optionnel)
+```

@@ -1,0 +1,31 @@
+[
+  {
+    "id": "de3af623-ccce-4e4c-831e-461c2b779ec2",
+    "filename": "de3af623-ccce-4e4c-831e-461c2b779ec2.jpeg",
+    "url": "/api/uploads/de3af623-ccce-4e4c-831e-461c2b779ec2.jpeg",
+    "filePath": "/Users/guillaumestehelin/moverz_v3/uploads/de3af623-ccce-4e4c-831e-461c2b779ec2.jpeg",
+    "roomType": "salon",
+    "analysis": {
+      "items": [
+        {
+          "name": "Meuble",
+          "fragile": false,
+          "category": "mobilier",
+          "dismountable": true
+        }
+      ],
+      "roomType": {
+        "photos": [
+          {
+            "id": "de3af623-ccce-4e4c-831e-461c2b779ec2",
+            "url": "/api/uploads/de3af623-ccce-4e4c-831e-461c2b779ec2.jpeg",
+            "filename": "de3af623-ccce-4e4c-831e-461c2b779ec2.jpeg"
+          }
+        ],
+        "userId": "temp-ece35736-9e2d-4365-ac8b-5245c8894a17",
+        "roomType": "salon"
+      },
+      "confidence": 0.9
+    }
+  }
+]

@@ -133,3 +133,7 @@ export function getRoomTypeLabel(roomType: string): string {
   return labels[roomType] || 'Pièce inconnue';
 }
 
+
+
+
+

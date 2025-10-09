@@ -1,0 +1,193 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+/* CSS Variables - Style bordeaux-demenageur.fr */
+:root {
+  --bd-navy: #1e3a8a;        /* Bleu foncé principal */
+  --bd-teal: #0d9488;        /* Teal pour les accents */
+  --bd-cyan: #06b6d4;        /* Cyan pour les boutons */
+  --bd-blue: #3b82f6;        /* Bleu standard */
+  --bd-bg: #f8fafc;          /* Arrière-plan clair */
+  --bd-card: #ffffff;        /* Cartes blanches */
+  --bd-text: #1e293b;        /* Texte principal */
+  --bd-text-light: #64748b;  /* Texte secondaire */
+  --bd-accent-orange: #f97316; /* Orange pour les accents */
+  --bd-accent-green: #10b981;  /* Vert pour les succès */
+  --bd-accent-red: #ef4444;    /* Rouge pour les erreurs */
+  
+  /* Override Tailwind defaults */
+  --background: var(--mz-bg);
+  --foreground: #0f172a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji';
+  --font-mono: 'Fira Code', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+}
+
+body {
+  background: var(--mz-bg);
+  color: var(--foreground);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji';
+  scroll-behavior: smooth;
+}
+
+/* Headings */
+.h1 { @apply text-4xl md:text-5xl font-bold tracking-tight; }
+.h2 { @apply text-3xl font-semibold; }
+.h3 { @apply text-xl font-medium; }
+.body { @apply text-base leading-relaxed; }
+.small { @apply text-sm text-gray-600; }
+
+/* Buttons - Style moverz.fr */
+.btn { 
+  @apply inline-flex items-center justify-center rounded-xl px-6 py-3 font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2; 
+}
+.btn-primary { 
+  @apply text-white shadow-lg; 
+  background-color: var(--mz-teal); 
+  box-shadow: 0 4px 14px 0 rgba(43, 122, 120, 0.3);
+}
+.btn-primary:hover { 
+  opacity: 0.9; 
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px 0 rgba(43, 122, 120, 0.4);
+}
+.btn-outline { 
+  @apply border-2 text-[color:var(--mz-teal)]; 
+  border-color: var(--mz-teal); 
+}
+.btn-outline:hover { 
+  @apply text-white; 
+  background-color: var(--mz-teal); 
+}
+
+/* Card - Style moverz.fr */
+.card { 
+  @apply bg-[color:var(--mz-card)] rounded-2xl p-6 shadow-md transition-all duration-200; 
+  transform: translateY(0); 
+}
+.card:hover { 
+  transform: translateY(-2px); 
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Mobile-first responsive design */
+@media (max-width: 768px) {
+  .mobile-optimized {
+    font-size: 14px;
+    padding: 0.75rem;
+  }
+  
+  .mobile-optimized .text-2xl {
+    font-size: 1.25rem;
+  }
+  
+  .mobile-optimized .text-3xl {
+    font-size: 1.5rem;
+  }
+  
+  .mobile-optimized .p-4 {
+    padding: 0.75rem;
+  }
+  
+  .mobile-optimized .p-6 {
+    padding: 1rem;
+  }
+  
+  .mobile-optimized .card {
+    padding: 1rem;
+    border-radius: 1rem;
+  }
+}
+
+/* Styles pour le mode iframe */
+.iframe-mode {
+  margin: 0;
+  padding: 0;
+  background: var(--mz-bg);
+}
+
+.iframe-mode .min-h-screen {
+  min-height: 100vh;
+}
+
+/* Optimisations pour mobile en mode iframe */
+@media (max-width: 768px) {
+  .iframe-mode {
+    font-size: 14px;
+  }
+  
+  .iframe-mode .p-4 {
+    padding: 0.75rem;
+  }
+  
+  .iframe-mode .text-2xl {
+    font-size: 1.25rem;
+  }
+  
+  .iframe-mode .text-3xl {
+    font-size: 1.5rem;
+  }
+  
+  .iframe-mode .card {
+    padding: 1rem;
+    border-radius: 1rem;
+  }
+}
+
+/* Motion-safe animation utility */
+@keyframes fadeIn { 
+  from { opacity: 0; transform: translateY(6px); } 
+  to { opacity: 1; transform: translateY(0); } 
+}
+
+.fade-in {
+  animation: fadeIn 0.7s ease 0.1s both;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--mz-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--mz-teal);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--mz-navy);
+}
+
+/* Focus styles */
+:focus-visible { 
+  outline: none; 
+  box-shadow: 0 0 0 3px rgba(43, 122, 120, 0.35); 
+  border-radius: 8px; 
+}
+
+/* Loading animation */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Pulse animation for loading states */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

@@ -2,6 +2,7 @@
 import { prisma } from '../db';
 import { BatchStatus, PhotoStatus } from '@prisma/client';
 import crypto from 'crypto';
+import { notifyBatchUpdate } from '../queue/pubsub';
 
 export interface CreateBatchInput {
   projectId: string;
@@ -182,6 +183,11 @@ export async function updateBatchCounts(batchId: string) {
 
   console.log(`📊 Batch ${batchId} mis à jour: ${newStatus} (${counts.completed}/${total} OK, ${counts.failed} KO)`);
 
+  // LOT 13: Notifier via Redis Pub/Sub et invalider le cache
+  await notifyBatchUpdate(batchId).catch((err) => {
+    console.error(`⚠️  Error notifying batch update for ${batchId}:`, err.message);
+  });
+
   return {
     batch: updated,
     counts,
@@ -191,8 +197,22 @@ export async function updateBatchCounts(batchId: string) {
 
 /**
  * Calcule la progression d'un batch (0-100)
+ * LOT 13: Cache Redis avec TTL 10s pour éviter queries DB répétées
  */
-export async function computeBatchProgress(batchId: string): Promise<BatchProgress> {
+export async function computeBatchProgress(batchId: string, useCache = true): Promise<BatchProgress> {
+  // LOT 13: Vérifier le cache Redis d'abord
+  if (useCache) {
+    try {
+      const { getCachedProgress } = await import('../../../lib/redis');
+      const cached = await getCachedProgress(batchId);
+      if (cached) {
+        return cached;
+      }
+    } catch (error: any) {
+      console.warn(`⚠️  Cache read failed for batch ${batchId}:`, error.message);
+    }
+  }
+
   const batch = await prisma.batch.findUnique({
     where: { id: batchId },
     include: {
@@ -276,6 +296,16 @@ export async function computeBatchProgress(batchId: string): Promise<BatchProgre
     };
   }
 
+  // LOT 13: Mettre en cache le résultat (TTL 10s)
+  if (useCache) {
+    try {
+      const { setCachedProgress } = await import('../../../lib/redis');
+      await setCachedProgress(batchId, result, 10);
+    } catch (error: any) {
+      console.warn(`⚠️  Cache write failed for batch ${batchId}:`, error.message);
+    }
+  }
+
   return result;
 }
 
@@ -318,4 +348,5 @@ export async function shouldTriggerInventorySync(batchId: string): Promise<boole
 
   return false;
 }
+
 

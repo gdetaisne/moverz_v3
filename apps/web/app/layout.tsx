@@ -1,42 +1,28 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import AIStatusHeader from "@/components/AIStatusHeader";
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
+import { SafeBoundary } from '../components/SafeBoundary';
+import { Header } from '../components/Header';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: "Analyse IA - Inventaire Déménagement",
-  description: "Détection automatique des objets pour votre déménagement avec l'IA",
-};
-
-export const viewport = {
-  width: "device-width",
-  initialScale: 1,
+  title: 'Moverz v4 - Estimation de déménagement',
+  description: 'Estimez votre déménagement automatiquement grâce à l\'IA',
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <header className="fixed top-0 right-0 p-4 z-50">
-          <AIStatusHeader />
-        </header>
-        {children}
+    <html lang="fr">
+      <body className={`${inter.className} antialiased bg-gray-50`}>
+        <SafeBoundary>
+          <Header />
+          <main className="pt-20 min-h-screen">{children}</main>
+        </SafeBoundary>
       </body>
     </html>
   );

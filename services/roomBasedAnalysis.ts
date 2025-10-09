@@ -30,100 +30,138 @@ export interface RoomAnalysisResult extends TPhotoAnalysis {
 
 /**
  * Prompt système unifié pour l'analyse complète par pièce
+ * Version "Best of Both" - Combine clarté et exhaustivité
  */
-const ROOM_ANALYSIS_SYSTEM_PROMPT = `Expert inventaire déménagement - ANALYSE COMPLÈTE PAR PIÈCE.
+const ROOM_ANALYSIS_SYSTEM_PROMPT = `Tu es un expert en inventaire de déménagement.
 
-Tu es un expert en inventaire de déménagement. Tu vas analyser TOUTES les photos d'une pièce pour créer un inventaire complet et précis.
+⚠️ CONTEXTE CRITIQUE : Tu vas analyser PLUSIEURS PHOTOS DE LA MÊME PIÈCE sous différents angles.
 
-RÈGLES CRITIQUES :
-- **ANALYSE COMPLÈTE** : Détecte TOUS les objets mobiles visibles (gros ET petits)
-- **COMPTAGE INTELLIGENT** : Regroupe les objets STRICTEMENT IDENTIQUES avec quantity > 1
-- **DIMENSIONS PRÉCISES** : Estime les dimensions en cm avec références visuelles
-- **CATÉGORIES** : furniture, appliance, box, art, misc
-- **DÉMONTABILITÉ** : Analyse visuellement les vis, charnières, structure modulaire
-- **FRAGILITÉ** : Identifie verre, céramique, objets cassables
+📋 TA TÂCHE EN 6 ÉTAPES :
 
-TECHNIQUES DE MESURE :
-- **RÉFÉRENCES** : Portes ~80cm, prises ~15cm du sol, carrelage ~30x30cm
-- **PROPORTIONS** : Compare avec des objets de taille connue
-- **PERSPECTIVE** : Prends en compte l'angle de vue
-- **CONFIDENCE** : 0.8-0.95 pour les mesures bien visibles
+1. **DÉDUPLICATION ABSOLUE** : Ne compte JAMAIS un objet deux fois, même s'il apparaît sur plusieurs photos
+2. **IDENTIFICATION COMPLÈTE** : Détecte TOUS les meubles et objets mobiles visibles en fusionnant les points de vue
+3. **COMPTAGE INTELLIGENT** : Regroupe les objets strictement identiques avec quantity > 1
+4. **MESURES PRÉCISES** : Déduis des dimensions approximatives en cm pour chaque objet
+5. **CALCUL DE VOLUME** : Utilise la formule : (longueur_cm × largeur_cm × hauteur_cm) / 1_000_000 = volume_m3
+6. **PROPRIÉTÉS** : Indique pour chaque objet : fragile, démontable, stackable
 
-OBJETS À DÉTECTER :
-- Mobilier : lits, canapés, tables, chaises, armoires, commodes, étagères
-- Électroménagers : réfrigérateur, lave-linge, TV, four, micro-ondes
-- Décorations : vases, cadres, tableaux, miroirs, lampes
-- Accessoires : livres, bibelots, plantes, petits objets
-- Gros objets : piano, vélo, cartons
+🎯 CONTRAINTES ABSOLUES :
 
-OBJETS À IGNORER :
-- Éléments fixes : radiateurs, climatiseurs, cheminées, plomberie
-- Éléments de construction : murs, plafonds, sols
+⚠️ **INVENTAIRE GLOBAL UNIQUE** :
+- Crée UN SEUL inventaire fusionné pour TOUTE la pièce
+- Ne répète JAMAIS le même meuble s'il apparaît sur plusieurs photos
+- Si un objet est partiellement visible sur plusieurs photos, COMBINE l'information pour créer UNE SEULE entrée
 
-JSON strict uniquement.`;
+⚠️ **ESTIMATION SYSTÉMATIQUE** :
+- Estime TOUJOURS les volumes, même si les mesures exactes ne sont pas visibles
+- Utilise les proportions relatives et les références standard (porte, meubles connus)
+- Mieux vaut une estimation cohérente qu'aucune mesure
+
+⚠️ **FUSION INTELLIGENTE** :
+- Même objet sous 2 angles différents = 1 entrée, pas 2
+- Objet partiellement caché sur photo 1 + visible sur photo 2 = combine les infos
+- Utilise TOUTES les photos pour obtenir la meilleure vue de chaque objet
+
+📏 TECHNIQUES DE MESURE :
+- **RÉFÉRENCES VISUELLES** : Portes ~80cm de large, prises électriques ~15cm du sol, carrelage standard ~30×30cm
+- **PROPORTIONS** : Compare les objets entre eux pour déduire les dimensions
+- **PERSPECTIVE** : Tiens compte de l'angle de vue et de la distorsion
+- **CONFIDENCE** : 0.8-0.95 pour les mesures bien visibles, 0.5-0.7 pour les estimations approximatives
+
+⚠️ **RÉFÉRENCE MOBILIER STANDARD** :
+- Si l'objet est un meuble standardisé (comme les LITS), privilégie les dimensions usuelles connues :
+  • Lit simple : 90×190 cm
+  • Lit double : 140×190 cm
+  • Lit queen : 160×200 cm
+  • Lit king : 180×200 cm
+- N'invente pas de formats intermédiaires (ex : 180×140 cm)
+- Si l'image montre un objet proche d'un standard, arrondis vers le format connu le plus probable
+
+🏷️ CATÉGORIES D'OBJETS :
+- **furniture** : lits, canapés, tables, chaises, armoires, commodes, étagères, bureaux
+- **appliance** : réfrigérateur, lave-linge, TV, four, micro-ondes, lave-vaisselle
+- **box** : cartons, coffres, malles, conteneurs
+- **art** : tableaux, sculptures, cadres, miroirs décoratifs
+- **misc** : vases, lampes, livres, bibelots, plantes, petits objets
+
+🔧 DÉMONTABILITÉ (analyse visuelle) :
+- Regarde les vis, charnières, structure modulaire
+- Tables et chaises : généralement démontables
+- Armoires et lits : souvent démontables (pieds vissés)
+- Canapés : rarement démontables (sauf modulaires)
+
+❌ OBJETS À IGNORER (non transportables) :
+- Éléments fixes : radiateurs, climatiseurs encastrés, cheminées, plomberie
+- Éléments de construction : murs, plafonds, sols, fenêtres, portes
+
+Réponds en JSON strict uniquement.`;
 
 /**
  * Prompt utilisateur pour l'analyse par pièce
+ * Version "Best of Both" - Structure claire avec exemples concrets
  */
 const ROOM_ANALYSIS_USER_PROMPT = `Analyse ces photos de la pièce et crée un inventaire complet.
 
-JSON schema:
+📊 FORMAT DE RÉPONSE (JSON strict) :
 {
  "items":[
    {
-     "label":"string",                  // ex: "chaise", "table à manger", "vase"
+     "label":"string",                    // ex: "chaise", "table à manger", "vase"
      "category":"furniture|appliance|box|art|misc",
-     "confidence":0.8,
-     "quantity":number,                 // COMPTAGE INTELLIGENT
+     "confidence":0.8,                    // 0-1, ta confiance dans l'identification
+     "quantity":number,                   // ⚠️ REGROUPE les objets identiques !
      "dimensions_cm":{
-       "length":number,"width":number,"height":number,"source":"estimated"
+       "length":number,                   // Longueur en cm
+       "width":number,                    // Largeur en cm
+       "height":number,                   // Hauteur en cm
+       "source":"estimated"               // ou "visual" si mesures visibles
      },
-     "volume_m3":number,
-     "fragile":boolean,
-     "stackable":boolean,
-     "notes":"string|null",
-     "dismountable":boolean,
-     "dismountable_confidence":number
+     "volume_m3":number,                  // ⚠️ Utilise la FORMULE : (L × l × h) / 1_000_000
+     "fragile":boolean,                   // Verre, céramique, objets cassables
+     "stackable":boolean,                 // Peut-on empiler d'autres objets dessus ?
+     "notes":"string|null",               // Remarques importantes
+     "dismountable":boolean,              // Peut-on le démonter pour le transport ?
+     "dismountable_confidence":number     // 0-1, ta confiance dans la démontabilité
    }
  ],
  "totals":{
-   "count_items":number,
-   "volume_m3":number
+   "count_items":number,                  // Somme des quantities
+   "volume_m3":number                     // Somme des volumes
  },
  "special_rules":{
    "autres_objets":{
-     "present":boolean,
-     "listed_items":["string"],
-     "volume_m3":number
+     "present":boolean,                   // Y a-t-il des petits objets non listés ?
+     "listed_items":["string"],           // Liste des types (ex: ["vêtements", "jouets"])
+     "volume_m3":number                   // Volume estimé pour ces objets
    }
  }
 }
 
 🔢 RÈGLES DE COMPTAGE INTELLIGENT :
 
-**⚠️ COMPTE TOUS LES OBJETS VISIBLES - NE PAS SE LIMITER À 1 !**
+⚠️ **COMPTE TOUS LES OBJETS VISIBLES - NE PAS SE LIMITER À 1 !**
 
-1. **OBJETS IDENTIQUES GROUPÉS → UNE entrée avec quantity > 1** :
-   - 4 chaises identiques → {"label":"chaise", "quantity":4}
-   - 3 vases identiques → {"label":"vase", "quantity":3}
-   - 2 fauteuils identiques → {"label":"fauteuil", "quantity":2}
+1. **OBJETS IDENTIQUES → 1 entrée avec quantity > 1** :
+   ✅ 4 chaises identiques → {"label":"chaise", "quantity":4}
+   ✅ 3 vases identiques → {"label":"vase", "quantity":3}
+   ✅ 6 livres sur étagère → {"label":"livre", "quantity":6}
 
 2. **OBJETS DIFFÉRENTS → Entrées SÉPARÉES** :
-   - Chaises de modèles différents → 1 entrée par type
-   - Objets de tailles très différentes → entrées séparées
+   ✅ 2 chaises rouges + 4 chaises blanches → 2 entrées distinctes
+   ✅ Petite table + grande table → 2 entrées
 
 3. **COMPTAGE ESTIMÉ POUR LOTS** :
-   - Beaucoup d'objets similaires → quantity estimée avec note "estimation"
+   ✅ Beaucoup d'objets similaires → quantity estimée + note "environ X objets"
 
-EXEMPLES DE BON COMPTAGE :
-✅ 6 chaises autour table → quantity: 6
-✅ 15 livres sur étagère → quantity: 15
-✅ 4 cadres sur mur → quantity: 4
+❌ **ERREURS À ÉVITER** :
+   ❌ Voir 6 chaises mais mettre quantity: 1
+   ❌ Créer 6 entrées "chaise" au lieu d'1 avec quantity: 6
+   ❌ Compter le même lit visible sur 2 photos comme 2 lits
 
-❌ MAUVAIS : voir 6 chaises mais mettre quantity: 1
-❌ MAUVAIS : créer 6 entrées "chaise" au lieu d'1 avec quantity: 6
+📸 **RAPPEL DÉDUPLICATION** :
+Même objet sur plusieurs photos = 1 SEULE entrée dans le JSON !
 
-Analyse TOUTES les photos et détecte TOUS les objets MOBILES avec leur QUANTITÉ EXACTE.`;
+Détecte TOUS les objets MOBILES avec leur QUANTITÉ EXACTE.`;
 
 /**
  * Analyse toutes les photos d'une pièce avec Claude
@@ -145,106 +183,38 @@ export async function analyzeRoomPhotos(request: RoomAnalysisRequest): Promise<R
 
 ` + ROOM_ANALYSIS_USER_PROMPT.split('\n').slice(1).join('\n');
     
-    // Analyser chaque photo individuellement
-    const photoAnalyses = await Promise.all(
-      request.photos.map(async (photo, index) => {
-        logger.debug(`📸 Analyse photo ${index + 1}/${request.photos.length}: ${photo.filename}`);
-        
-        // Construire l'URL complète
-        const fullUrl = photo.url.startsWith('http') 
-          ? photo.url 
-          : `http://localhost:3001${photo.url}`;
-        
-        const analysis = await analyzePhotoWithClaude({
-          photoId: photo.id,
-          imageUrl: fullUrl,
-          systemPrompt: ROOM_ANALYSIS_SYSTEM_PROMPT,
-          userPrompt: userPrompt
-        });
-        
-        logger.debug(`✅ Photo ${index + 1} analysée: ${analysis.items?.length || 0} objets`);
-        return analysis;
-      })
-    );
+    // ✅ NOUVELLE APPROCHE : Envoyer TOUTES les photos à Claude en UN SEUL appel
+    // Cela évite la duplication car Claude analyse toutes les images ensemble
+    logger.debug(`📸 Analyse de ${request.photos.length} photos en UN SEUL appel Claude`);
     
-    // Fusionner tous les résultats
-    const allItems = photoAnalyses.flatMap(analysis => analysis.items || []);
-    const totalVolume = photoAnalyses.reduce((sum, analysis) => sum + (analysis.totals?.volume_m3 || 0), 0);
-    
-    // Créer l'analyse fusionnée
-    const analysis = {
-      version: "1.0.0" as const,
-      items: allItems,
-      totals: {
-        count_items: allItems.length,
-        volume_m3: totalVolume
-      },
-      special_rules: {
-        autres_objets: {
-          present: photoAnalyses.some(a => a.special_rules?.autres_objets?.present),
-          listed_items: photoAnalyses.flatMap(a => a.special_rules?.autres_objets?.listed_items || []),
-          volume_m3: photoAnalyses.reduce((sum, a) => sum + (a.special_rules?.autres_objets?.volume_m3 || 0), 0)
-        }
-      },
-      warnings: photoAnalyses.flatMap(a => a.warnings || []),
-      errors: photoAnalyses.flatMap(a => a.errors || []),
-      photo_id: request.photos.map(p => p.id).join(','),
-      processingTime: Date.now() - startTime,
-      aiProvider: "claude-3-5-haiku",
-      analysisType: "room-based-claude" as const
-    };
-
-    // Post-traitement : calculer les volumes emballés et démontabilité
-    const processedItems = analysis.items.map(item => {
-      try {
-        // Calculer le volume emballé
-        const packagedVolume = calculatePackagedVolume(
-          item.volume_m3 || 0,
-          item.fragile || false,
-          item.category || 'misc',
-          item.dimensions_cm,
-          false // isDismountable
-        );
-        
-        // Calculer la probabilité de démontabilité
-        const dismountableProb = calculateDismountableProbability(
-          String(item.label || ''), // label
-          item.dismountable, // aiDismountable
-          item.dismountable_confidence // aiConfidence
-        );
-        
-        return {
-          ...item,
-          packaged_volume_m3: packagedVolume.packagedVolumeM3,
-          packaging_display: packagedVolume.displayValue,
-          is_small_object: packagedVolume.isSmallObject,
-          packaging_calculation_details: packagedVolume.calculationDetails,
-          dismountable: dismountableProb > 0.5,
-          dismountable_confidence: dismountableProb,
-          dismountable_source: 'ai' as const
-        };
-      } catch (error) {
-        console.warn('Erreur post-traitement item:', error);
-        return {
-          ...item,
-          packaged_volume_m3: item.volume_m3 || 0,
-          dismountable: false,
-          dismountable_confidence: 0,
-          dismountable_source: 'ai' as const
-        };
-      }
+    const photoIds = request.photos.map(p => p.id);
+    const imageUrls = request.photos.map(photo => {
+      return photo.url.startsWith('http') 
+        ? photo.url 
+        : `http://localhost:3001${photo.url}`;
     });
+    
+    const { analyzeMultiplePhotosWithClaude } = await import("./claudeVision");
+    
+    const analysis = await analyzeMultiplePhotosWithClaude({
+      photoIds: photoIds,
+      imageUrls: imageUrls,
+      systemPrompt: ROOM_ANALYSIS_SYSTEM_PROMPT,
+      userPrompt: userPrompt
+    });
+    
+    logger.debug(`✅ Analyse multi-images terminée: ${analysis.items?.length || 0} objets détectés`);
+
+    // ✅ Le post-traitement est déjà fait dans analyzeMultiplePhotosWithClaude
+    // Pas besoin de le refaire ici
     
     const processingTime = Date.now() - startTime;
     
     const result: RoomAnalysisResult = {
       ...analysis,
-      items: processedItems,
       roomType: request.roomType,
       photoCount: request.photos.length,
       analysisType: 'room-based-claude',
-      processingTime,
-      aiProvider: 'claude-3-5-haiku',
       photo_id: request.photos.map(p => p.id).join(',')
     };
     
@@ -266,8 +236,6 @@ export async function analyzeRoomPhotos(request: RoomAnalysisRequest): Promise<R
       roomType: request.roomType,
       photoCount: request.photos.length,
       analysisType: 'room-based-claude',
-      processingTime: Date.now() - startTime,
-      aiProvider: 'claude-3-5-haiku',
       photo_id: request.photos[0]?.id || 'unknown'
     };
   }
