@@ -57,9 +57,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/google-credentials.json ./google-credentials.json
 COPY --from=builder /app/prisma ./prisma
-# ❌ SUPPRIMÉ: COPY --from=builder /app/dev.db ./dev.db
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+# Next.js standalone inclut déjà node_modules/.prisma via .next/standalone/node_modules
 
 # Create uploads directory
 RUN mkdir -p /app/uploads && chown -R nextjs:nodejs /app/uploads
