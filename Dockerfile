@@ -57,6 +57,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/google-credentials.json ./google-credentials.json
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/scripts ./scripts
 # Next.js standalone inclut déjà node_modules/.prisma via .next/standalone/node_modules
 
 # Create uploads directory
@@ -69,6 +70,6 @@ EXPOSE 3001
 ENV PORT 3001
 ENV HOSTNAME "0.0.0.0"
 
-# Script de démarrage qui initialise les credentials Google puis lance l'app
-CMD ["sh", "-c", "node scripts/init-google-credentials.js || echo 'Google credentials init failed, continuing...' && node server.js"]
+# Script de démarrage : initialise DB, credentials Google, puis lance l'app
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss --skip-generate || true; node scripts/init-google-credentials.js || true; node server.js"]
 
