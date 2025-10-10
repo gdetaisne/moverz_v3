@@ -357,6 +357,23 @@ export default function Home() {
     }));
   }, []);
 
+  // Fonction helper pour convertir une image URL en base64
+  const convertImageToBase64 = async (url: string): Promise<string> => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Erreur conversion image en base64:', error);
+      return '';
+    }
+  };
+
   // Fonction pour télécharger le PDF
   const handleDownloadPDF = useCallback(async () => {
     try {
@@ -365,15 +382,27 @@ export default function Home() {
       // Détecter le nom réel de la pièce depuis les photos
       const detectedRoomName = currentRoom.photos.find(photo => photo.roomName)?.roomName || 'Pièce';
       
+      // Convertir les photos en base64
+      const photosWithBase64 = await Promise.all(
+        currentRoom.photos
+          .filter(photo => photo.status === 'completed' && photo.analysis?.items)
+          .map(async (photo) => {
+            const photoData = photo.fileUrl ? await convertImageToBase64(photo.fileUrl) : '';
+            return {
+              ...photo,
+              photoDataBase64: photoData
+            };
+          })
+      );
+      
       // Préparer les données des pièces avec les items sélectionnés
       const rooms = [{
         id: currentRoom.id,
         name: detectedRoomName,
-        photos: currentRoom.photos
-          .filter(photo => photo.status === 'completed' && photo.analysis?.items)
+        photos: photosWithBase64
           .map(photo => ({
             fileUrl: photo.fileUrl,
-            photoData: photo.fileUrl, // On pourrait convertir en base64 si nécessaire
+            photoData: photo.photoDataBase64, // Image en base64
             items: photo.analysis.items
               .map((item: any, idx: number) => {
                 if (isObjectSelected(photo.photoId || `photo-${currentRoom.photos.indexOf(photo)}`, idx)) {
