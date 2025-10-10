@@ -1,0 +1,43 @@
+# Dockerfile pour les Workers BullMQ (LOT 9-13)
+# Usage: docker build -f Dockerfile.worker -t moverz-worker .
+
+FROM node:20-alpine AS deps
+RUN apk add --no-cache libc6-compat python3 make g++
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+COPY scripts/ ./scripts/
+
+RUN npm ci
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV production
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy dependencies
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy source files nécessaires pour les workers
+COPY --chown=nextjs:nodejs prisma ./prisma
+COPY --chown=nextjs:nodejs packages ./packages
+COPY --chown=nextjs:nodejs lib ./lib
+COPY --chown=nextjs:nodejs services ./services
+COPY --chown=nextjs:nodejs scripts/worker.js ./scripts/
+COPY --chown=nextjs:nodejs scripts/init-google-credentials.js ./scripts/
+
+# Generate Prisma Client
+RUN npx prisma generate
+
+USER nextjs
+
+# Les workers n'exposent pas de port (juste consommateurs)
+# Mais on peut exposer un port pour health check si besoin
+EXPOSE 3002
+
+# Démarrer les workers
+CMD ["node", "scripts/worker.js"]
+
