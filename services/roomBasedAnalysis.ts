@@ -30,20 +30,24 @@ export interface RoomAnalysisResult extends TPhotoAnalysis {
 
 /**
  * Prompt système unifié pour l'analyse complète par pièce
- * Version "Best of Both" - Combine clarté et exhaustivité
+ * Version améliorée avec gestion textile et contenu des meubles fermés
  */
 const ROOM_ANALYSIS_SYSTEM_PROMPT = `Tu es un expert en inventaire de déménagement.
 
-⚠️ CONTEXTE CRITIQUE : Tu vas analyser PLUSIEURS PHOTOS DE LA MÊME PIÈCE sous différents angles.
+🏠 **CONTEXTE GLOBAL** :
+- Les photos sont déjà regroupées par pièce (le type de pièce te sera fourni)
+- Tu analyses PLUSIEURS PHOTOS DE LA MÊME PIÈCE sous différents angles
+- Tu dois créer UN SEUL inventaire fusionné pour TOUTE la pièce
 
-📋 TA TÂCHE EN 6 ÉTAPES :
+📋 TA TÂCHE EN 7 ÉTAPES :
 
 1. **DÉDUPLICATION ABSOLUE** : Ne compte JAMAIS un objet deux fois, même s'il apparaît sur plusieurs photos
 2. **IDENTIFICATION COMPLÈTE** : Détecte TOUS les meubles et objets mobiles visibles en fusionnant les points de vue
 3. **COMPTAGE INTELLIGENT** : Regroupe les objets strictement identiques avec quantity > 1
 4. **MESURES PRÉCISES** : Déduis des dimensions approximatives en cm pour chaque objet
 5. **CALCUL DE VOLUME** : Utilise la formule : (longueur_cm × largeur_cm × hauteur_cm) / 1_000_000 = volume_m3
-6. **PROPRIÉTÉS** : Indique pour chaque objet : fragile, démontable, stackable
+6. **PROPRIÉTÉS** : Indique pour chaque objet : fragile, démontable, stackable, textile_included
+7. **CONTENU ÉVENTUEL** : Pour les meubles fermés, ajoute une ligne pour le contenu estimé
 
 🎯 CONTRAINTES ABSOLUES :
 
@@ -51,6 +55,11 @@ const ROOM_ANALYSIS_SYSTEM_PROMPT = `Tu es un expert en inventaire de déménage
 - Crée UN SEUL inventaire fusionné pour TOUTE la pièce
 - Ne répète JAMAIS le même meuble s'il apparaît sur plusieurs photos
 - Si un objet est partiellement visible sur plusieurs photos, COMBINE l'information pour créer UNE SEULE entrée
+
+⚠️ **FORMAT JSON STRICT** :
+- Respecte EXACTEMENT le schéma fourni dans le prompt utilisateur
+- Tous les champs obligatoires doivent être présents
+- Utilise TOUJOURS les types de données corrects (number, boolean, string)
 
 ⚠️ **ESTIMATION SYSTÉMATIQUE** :
 - Estime TOUJOURS les volumes, même si les mesures exactes ne sont pas visibles
@@ -77,12 +86,53 @@ const ROOM_ANALYSIS_SYSTEM_PROMPT = `Tu es un expert en inventaire de déménage
 - N'invente pas de formats intermédiaires (ex : 180×140 cm)
 - Si l'image montre un objet proche d'un standard, arrondis vers le format connu le plus probable
 
+🛏️ **RÈGLES SPÉCIALES POUR LES LITS ET LITERIE** :
+1. **TOUJOURS créer des entrées SÉPARÉES** :
+   - Entrée 1 : Structure du lit (cadre + sommier)
+   - Entrée 2 : Matelas
+   - Entrée 3+ : Textiles visibles (couette, oreillers, plaid, traversin, etc.)
+
+2. **Si textiles NON distinguables clairement** :
+   - Ajoute "textile_included": true au matelas
+   - Ne crée pas d'entrées séparées pour les textiles
+
+3. **Exemple d'un lit complet bien visible** :
+   ```json
+   {"label":"lit double (structure)", "category":"furniture", "quantity":1, "dimensions_cm":{"length":140,"width":190,"height":40,"source":"estimated"}, "volume_m3":1.064, "textile_included":false, ...},
+   {"label":"matelas double", "category":"furniture", "quantity":1, "dimensions_cm":{"length":140,"width":190,"height":20,"source":"estimated"}, "volume_m3":0.532, "textile_included":false, ...},
+   {"label":"couette", "category":"misc", "quantity":1, "dimensions_cm":{"length":200,"width":200,"height":15,"source":"estimated"}, "volume_m3":0.6, "textile_included":false, ...},
+   {"label":"oreiller", "category":"misc", "quantity":2, "dimensions_cm":{"length":60,"width":60,"height":15,"source":"estimated"}, "volume_m3":0.054, "textile_included":false, ...}
+   ```
+
+4. **Exemple d'un lit avec textiles non distinguables** :
+   ```json
+   {"label":"lit double (structure)", "category":"furniture", "quantity":1, "dimensions_cm":{"length":140,"width":190,"height":40,"source":"estimated"}, "volume_m3":1.064, "textile_included":false, ...},
+   {"label":"matelas double", "category":"furniture", "quantity":1, "dimensions_cm":{"length":140,"width":190,"height":20,"source":"estimated"}, "volume_m3":0.532, "textile_included":true, "notes":"Inclut literie (couette, oreillers)", ...}
+   ```
+
+🗄️ **RÈGLES POUR MEUBLES DE RANGEMENT FERMÉS** :
+- **Armoires, commodes, buffets, bibliothèques fermées** :
+  1. Créer l'entrée pour le meuble lui-même
+  2. **AJOUTER UNE LIGNE SUPPLÉMENTAIRE** pour le contenu éventuel :
+     - Label : "{nom du meuble} (contenu éventuel)"
+     - Category : "misc"
+     - Volume : **50% du volume du meuble**
+     - Notes : "Estimation contenu - à ajuster selon réalité"
+
+- **Exemple d'armoire fermée** :
+   ```json
+   {"label":"armoire 3 portes", "category":"furniture", "quantity":1, "dimensions_cm":{"length":180,"width":60,"height":200,"source":"estimated"}, "volume_m3":2.16, "textile_included":false, ...},
+   {"label":"armoire 3 portes (contenu éventuel)", "category":"misc", "quantity":1, "dimensions_cm":{"length":180,"width":60,"height":100,"source":"estimated"}, "volume_m3":1.08, "textile_included":false, "notes":"Estimation contenu 50% - à ajuster selon réalité", ...}
+   ```
+
+- **Meubles ouverts ou vides visibles** : Ne PAS ajouter de ligne de contenu
+
 🏷️ CATÉGORIES D'OBJETS :
 - **furniture** : lits, canapés, tables, chaises, armoires, commodes, étagères, bureaux
 - **appliance** : réfrigérateur, lave-linge, TV, four, micro-ondes, lave-vaisselle
 - **box** : cartons, coffres, malles, conteneurs
 - **art** : tableaux, sculptures, cadres, miroirs décoratifs
-- **misc** : vases, lampes, livres, bibelots, plantes, petits objets
+- **misc** : vases, lampes, livres, bibelots, plantes, petits objets, textiles, contenu de meubles
 
 🔧 DÉMONTABILITÉ (analyse visuelle) :
 - Regarde les vis, charnières, structure modulaire
@@ -106,7 +156,7 @@ const ROOM_ANALYSIS_USER_PROMPT = `Analyse ces photos de la pièce et crée un i
 {
  "items":[
    {
-     "label":"string",                    // ex: "chaise", "table à manger", "vase"
+     "label":"string",                    // ex: "chaise", "table à manger", "lit double (structure)", "armoire (contenu éventuel)"
      "category":"furniture|appliance|box|art|misc",
      "confidence":0.8,                    // 0-1, ta confiance dans l'identification
      "quantity":number,                   // ⚠️ REGROUPE les objets identiques !
@@ -119,6 +169,7 @@ const ROOM_ANALYSIS_USER_PROMPT = `Analyse ces photos de la pièce et crée un i
      "volume_m3":number,                  // ⚠️ Utilise la FORMULE : (L × l × h) / 1_000_000
      "fragile":boolean,                   // Verre, céramique, objets cassables
      "stackable":boolean,                 // Peut-on empiler d'autres objets dessus ?
+     "textile_included":boolean,          // ⚠️ NOUVEAU : true si literie/textiles inclus mais non distinguables
      "notes":"string|null",               // Remarques importantes
      "dismountable":boolean,              // Peut-on le démonter pour le transport ?
      "dismountable_confidence":number     // 0-1, ta confiance dans la démontabilité
