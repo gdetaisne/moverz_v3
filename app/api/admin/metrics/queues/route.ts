@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '../_utils/auth';
-import { getQueuesMetrics } from '../../../../../../../packages/core/src/metrics/queues';
+import { getQueuesMetrics } from '@core/metrics/queues';
 
 export async function GET(request: NextRequest) {
   // Guard admin

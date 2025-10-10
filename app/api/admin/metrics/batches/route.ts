@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '../_utils/auth';
-import { getBatchDailyMetrics, getBatchSummary } from '../../../../../../../packages/core/src/metrics/batches';
+import { getBatchDailyMetrics, getBatchSummary } from '@core/metrics/batches';
 
 export async function GET(request: NextRequest) {
   // Guard admin
