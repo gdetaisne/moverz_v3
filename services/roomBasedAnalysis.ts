@@ -97,18 +97,18 @@ const ROOM_ANALYSIS_SYSTEM_PROMPT = `Tu es un expert en inventaire de déménage
    - Ne crée pas d'entrées séparées pour les textiles
 
 3. **Exemple d'un lit complet bien visible** :
-   ```json
-   {"label":"lit double (structure)", "category":"furniture", "quantity":1, "dimensions_cm":{"length":140,"width":190,"height":40,"source":"estimated"}, "volume_m3":1.064, "textile_included":false, ...},
-   {"label":"matelas double", "category":"furniture", "quantity":1, "dimensions_cm":{"length":140,"width":190,"height":20,"source":"estimated"}, "volume_m3":0.532, "textile_included":false, ...},
-   {"label":"couette", "category":"misc", "quantity":1, "dimensions_cm":{"length":200,"width":200,"height":15,"source":"estimated"}, "volume_m3":0.6, "textile_included":false, ...},
-   {"label":"oreiller", "category":"misc", "quantity":2, "dimensions_cm":{"length":60,"width":60,"height":15,"source":"estimated"}, "volume_m3":0.054, "textile_included":false, ...}
-   ```
+   [
+     {"label":"lit double (structure)", "category":"furniture", "quantity":1, "dimensions_cm":{"length":140,"width":190,"height":40,"source":"estimated"}, "volume_m3":1.064, "textile_included":false, ...},
+     {"label":"matelas double", "category":"furniture", "quantity":1, "dimensions_cm":{"length":140,"width":190,"height":20,"source":"estimated"}, "volume_m3":0.532, "textile_included":false, ...},
+     {"label":"couette", "category":"misc", "quantity":1, "dimensions_cm":{"length":200,"width":200,"height":15,"source":"estimated"}, "volume_m3":0.6, "textile_included":false, ...},
+     {"label":"oreiller", "category":"misc", "quantity":2, "dimensions_cm":{"length":60,"width":60,"height":15,"source":"estimated"}, "volume_m3":0.054, "textile_included":false, ...}
+   ]
 
 4. **Exemple d'un lit avec textiles non distinguables** :
-   ```json
-   {"label":"lit double (structure)", "category":"furniture", "quantity":1, "dimensions_cm":{"length":140,"width":190,"height":40,"source":"estimated"}, "volume_m3":1.064, "textile_included":false, ...},
-   {"label":"matelas double", "category":"furniture", "quantity":1, "dimensions_cm":{"length":140,"width":190,"height":20,"source":"estimated"}, "volume_m3":0.532, "textile_included":true, "notes":"Inclut literie (couette, oreillers)", ...}
-   ```
+   [
+     {"label":"lit double (structure)", "category":"furniture", "quantity":1, "dimensions_cm":{"length":140,"width":190,"height":40,"source":"estimated"}, "volume_m3":1.064, "textile_included":false, ...},
+     {"label":"matelas double", "category":"furniture", "quantity":1, "dimensions_cm":{"length":140,"width":190,"height":20,"source":"estimated"}, "volume_m3":0.532, "textile_included":true, "notes":"Inclut literie (couette, oreillers)", ...}
+   ]
 
 🗄️ **RÈGLES POUR MEUBLES DE RANGEMENT FERMÉS** :
 - **Armoires, commodes, buffets, bibliothèques fermées** :
@@ -120,10 +120,10 @@ const ROOM_ANALYSIS_SYSTEM_PROMPT = `Tu es un expert en inventaire de déménage
      - Notes : "Estimation contenu - à ajuster selon réalité"
 
 - **Exemple d'armoire fermée** :
-   ```json
-   {"label":"armoire 3 portes", "category":"furniture", "quantity":1, "dimensions_cm":{"length":180,"width":60,"height":200,"source":"estimated"}, "volume_m3":2.16, "textile_included":false, ...},
-   {"label":"armoire 3 portes (contenu éventuel)", "category":"misc", "quantity":1, "dimensions_cm":{"length":180,"width":60,"height":100,"source":"estimated"}, "volume_m3":1.08, "textile_included":false, "notes":"Estimation contenu 50% - à ajuster selon réalité", ...}
-   ```
+   [
+     {"label":"armoire 3 portes", "category":"furniture", "quantity":1, "dimensions_cm":{"length":180,"width":60,"height":200,"source":"estimated"}, "volume_m3":2.16, "textile_included":false, ...},
+     {"label":"armoire 3 portes (contenu éventuel)", "category":"misc", "quantity":1, "dimensions_cm":{"length":180,"width":60,"height":100,"source":"estimated"}, "volume_m3":1.08, "textile_included":false, "notes":"Estimation contenu 50% - à ajuster selon réalité", ...}
+   ]
 
 - **Meubles ouverts ou vides visibles** : Ne PAS ajouter de ligne de contenu
 
