@@ -16,6 +16,7 @@ const nextConfig: NextConfig = {
   },
   
   // Optimisations
+  swcMinify: true,
   compress: true,
   poweredByHeader: false,
   
