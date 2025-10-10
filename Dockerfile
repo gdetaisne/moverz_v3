@@ -1,17 +1,27 @@
 # Stage 1: Dependencies
 FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat python3 make g++
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 WORKDIR /app
 
 # Copy package files and scripts first
-COPY package.json package-lock.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY scripts/ ./scripts/
+COPY packages/ ./packages/
+COPY apps/ ./apps/
 
 # Install dependencies
-RUN npm ci --legacy-peer-deps
+RUN pnpm install --frozen-lockfile
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
@@ -29,7 +39,7 @@ RUN npx prisma generate
 # Build Next.js with environment variables
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV NODE_ENV production
-RUN npm run build
+RUN pnpm build
 
 # Stage 3: Runner
 FROM node:20-alpine AS runner
