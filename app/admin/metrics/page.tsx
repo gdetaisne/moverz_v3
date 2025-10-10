@@ -53,13 +53,21 @@ export default function AdminMetricsPage() {
   const [tokenChecked, setTokenChecked] = useState(false);
 
   useEffect(() => {
-    // Vérifier si token en localStorage
+    // 1. Vérifier si token dans les variables d'environnement
+    const envToken = process.env.NEXT_PUBLIC_ADMIN_BYPASS_TOKEN;
+    if (envToken) {
+      setAdminToken(envToken);
+      setTokenChecked(true);
+      return;
+    }
+
+    // 2. Vérifier si token en localStorage
     const stored = localStorage.getItem('admin_token');
     if (stored) {
       setAdminToken(stored);
       setTokenChecked(true);
     } else {
-      // Demander le token
+      // 3. Demander le token en dernier recours
       const token = prompt('Token admin requis (ADMIN_BYPASS_TOKEN):');
       if (token) {
         localStorage.setItem('admin_token', token);
