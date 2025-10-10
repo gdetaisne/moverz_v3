@@ -8,7 +8,7 @@ COPY package.json package-lock.json ./
 COPY scripts/ ./scripts/
 
 # Install dependencies
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
