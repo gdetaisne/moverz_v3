@@ -1,5 +1,5 @@
 'use client';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { RoomGroup, ROOM_TYPES } from '@core/roomValidation';
 import RoomPhotoGrid from './RoomPhotoGrid';
 import { InventoryItemInline } from './InventoryItemInline';
@@ -20,6 +20,21 @@ type Item = {
   fragile?: boolean;
   dismountable?: boolean;
   selected?: boolean;
+  // Détails supplémentaires
+  dimensions_cm?: {
+    length: number;
+    width: number;
+    height: number;
+    source?: string;
+  };
+  packaged_volume_m3?: number;
+  packaging_display?: string;
+  notes?: string;
+  confidence?: number;
+  stackable?: boolean;
+  is_small_object?: boolean;
+  packaging_calculation_details?: string;
+  quantity?: number;
 };
 
 function getItems(analysis: any): Item[] {
@@ -45,7 +60,12 @@ export function RoomInventoryCard({
   onItemUpdate,
   className = "" 
 }: RoomInventoryCardProps) {
+  const [expandedItemIndex, setExpandedItemIndex] = useState<number | null>(null);
   const roomTypeInfo = ROOM_TYPES.find(t => t.value === roomGroup.roomType);
+  
+  const toggleDetails = (index: number) => {
+    setExpandedItemIndex(expandedItemIndex === index ? null : index);
+  };
   
   // Calculer l'inventaire total de la pièce
   const { items, totalVolume } = useMemo(() => {
@@ -117,51 +137,188 @@ export function RoomInventoryCard({
           {items.length > 0 ? (
             <div className="border border-gray-200 rounded-lg overflow-hidden">
               {/* En-tête du tableau */}
-              <div className="grid grid-cols-[2fr_1fr_120px_120px_120px] gap-3 px-4 py-3 bg-gray-100 border-b border-gray-300 font-semibold text-sm text-gray-700">
+              <div className="grid grid-cols-[2fr_1fr_120px_120px_120px_100px] gap-3 px-4 py-3 bg-gray-100 border-b border-gray-300 font-semibold text-sm text-gray-700">
                 <div>Article</div>
                 <div className="text-right">Volume</div>
                 <div className="text-center">Démontable</div>
                 <div className="text-center">Fragile</div>
                 <div className="text-center">À déménager</div>
+                <div className="text-center">Détails</div>
               </div>
               
               {/* Lignes des articles */}
               <div className="divide-y divide-gray-100">
                 {items.map((item, index) => (
-                  <InventoryItemInline
-                    key={`${getItemName(item)}-${index}`}
-                    item={{
-                      ...item,
-                      label: getItemName(item),
-                      photoId: roomGroup.photos[0]?.id || '',
-                      itemIndex: index
-                    }}
-                    isSelected={item.selected !== false}
-                    onToggle={(photoId, itemIndex) => {
-                      console.log('🖱️ Toggle cliqué:', { photoId, itemIndex });
-                      if (onItemUpdate) {
-                        onItemUpdate(index, { selected: !(item.selected !== false) });
-                      } else {
-                        console.log('❌ onItemUpdate non défini');
-                      }
-                    }}
-                    onDismountableToggle={(photoId, itemIndex, isDismountable) => {
-                      console.log('🖱️ Démontable cliqué:', { photoId, itemIndex, isDismountable });
-                      if (onItemUpdate) {
-                        onItemUpdate(index, { dismountable: isDismountable });
-                      } else {
-                        console.log('❌ onItemUpdate non défini');
-                      }
-                    }}
-                    onFragileToggle={(photoId, itemIndex, isFragile) => {
-                      console.log('🖱️ Fragile cliqué:', { photoId, itemIndex, isFragile });
-                      if (onItemUpdate) {
-                        onItemUpdate(index, { fragile: isFragile });
-                      } else {
-                        console.log('❌ onItemUpdate non défini');
-                      }
-                    }}
-                  />
+                  <React.Fragment key={`${getItemName(item)}-${index}`}>
+                    <div className="grid grid-cols-[2fr_1fr_120px_120px_120px_100px] gap-3 px-4 py-3 items-center hover:bg-gray-50 transition-colors">
+                      {/* Article */}
+                      <div className="flex flex-col">
+                        <span className="font-medium text-gray-900">{getItemName(item)}</span>
+                        <span className="text-xs text-gray-500">{getItemVolume(item).toFixed(3)} m³</span>
+                      </div>
+                      
+                      {/* Volume */}
+                      <div className="text-right">
+                        <div className="text-sm text-gray-900 font-medium">
+                          {item.packaging_display || `${getItemVolume(item).toFixed(3)} m³`}
+                        </div>
+                        {item.packaged_volume_m3 && (
+                          <div className="text-xs text-blue-600">Emb: {item.packaged_volume_m3.toFixed(3)} m³</div>
+                        )}
+                      </div>
+                      
+                      {/* Démontable */}
+                      <div className="text-center">
+                        <button
+                          onClick={() => {
+                            if (onItemUpdate) {
+                              onItemUpdate(index, { dismountable: !item.dismountable });
+                            }
+                          }}
+                          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                            item.dismountable
+                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                          }`}
+                        >
+                          {item.dismountable ? '✓ OUI' : '✗ NON'}
+                        </button>
+                      </div>
+                      
+                      {/* Fragile */}
+                      <div className="text-center">
+                        <button
+                          onClick={() => {
+                            if (onItemUpdate) {
+                              onItemUpdate(index, { fragile: !item.fragile });
+                            }
+                          }}
+                          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                            item.fragile
+                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                          }`}
+                        >
+                          {item.fragile ? '✓ OUI' : '✗ NON'}
+                        </button>
+                      </div>
+                      
+                      {/* À déménager */}
+                      <div className="text-center">
+                        <button
+                          onClick={() => {
+                            if (onItemUpdate) {
+                              onItemUpdate(index, { selected: !(item.selected !== false) });
+                            }
+                          }}
+                          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                            item.selected !== false
+                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                          }`}
+                        >
+                          {item.selected !== false ? '✓ OUI' : '✗ NON'}
+                        </button>
+                      </div>
+                      
+                      {/* Détails */}
+                      <div className="text-center">
+                        <button
+                          onClick={() => toggleDetails(index)}
+                          className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                          title="Voir les détails"
+                        >
+                          <span className="mr-1">ℹ️</span>
+                          {expandedItemIndex === index ? 'Masquer' : 'Détails'}
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Ligne étendue avec détails */}
+                    {expandedItemIndex === index && (
+                      <div className="px-4 py-4 bg-blue-50 border-t border-blue-100">
+                        <div className="text-sm space-y-3">
+                          <h5 className="font-semibold text-gray-900 mb-3">
+                            📏 Détails complets - {getItemName(item)}
+                          </h5>
+                          
+                          {item.dimensions_cm && (
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <span className="font-medium text-gray-700">Dimensions :</span>
+                                <div className="text-gray-600 mt-1">
+                                  {item.dimensions_cm.length} × {item.dimensions_cm.width} × {item.dimensions_cm.height} cm
+                                  {item.dimensions_cm.source && (
+                                    <span className="text-xs text-gray-500 ml-2">
+                                      (source: {item.dimensions_cm.source})
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <div>
+                                <span className="font-medium text-gray-700">Volume :</span>
+                                <div className="text-gray-600 mt-1">
+                                  {item.volume_m3 !== undefined && (
+                                    <div>Original : {item.volume_m3.toFixed(3)} m³</div>
+                                  )}
+                                  {item.packaged_volume_m3 !== undefined && (
+                                    <div>Emballé : {item.packaged_volume_m3.toFixed(3)} m³</div>
+                                  )}
+                                  {item.packaging_display && (
+                                    <div className="text-blue-600 font-medium">{item.packaging_display}</div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          <div className="grid grid-cols-2 gap-4 mt-3">
+                            {item.confidence !== undefined && (
+                              <div>
+                                <span className="font-medium text-gray-700">Confiance IA :</span>
+                                <span className="text-gray-600 ml-2">{(item.confidence * 100).toFixed(0)}%</span>
+                              </div>
+                            )}
+                            
+                            {item.stackable !== undefined && (
+                              <div>
+                                <span className="font-medium text-gray-700">Empilable :</span>
+                                <span className="text-gray-600 ml-2">{item.stackable ? 'Oui ✓' : 'Non ✗'}</span>
+                              </div>
+                            )}
+                            
+                            {item.quantity !== undefined && item.quantity > 1 && (
+                              <div>
+                                <span className="font-medium text-gray-700">Quantité :</span>
+                                <span className="text-gray-600 ml-2">{item.quantity}</span>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {item.notes && (
+                            <div className="mt-3">
+                              <span className="font-medium text-gray-700">Notes :</span>
+                              <div className="text-gray-600 mt-1 italic">{item.notes}</div>
+                            </div>
+                          )}
+                          
+                          {item.packaging_calculation_details && (
+                            <div className="mt-3">
+                              <details className="cursor-pointer">
+                                <summary className="font-medium text-gray-700 hover:text-gray-900">
+                                  📦 Détails du calcul d'emballage
+                                </summary>
+                                <pre className="mt-2 text-xs text-gray-600 bg-white p-3 rounded border overflow-x-auto whitespace-pre-wrap">
+                                  {item.packaging_calculation_details}
+                                </pre>
+                              </details>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </React.Fragment>
                 ))}
               </div>
             </div>
