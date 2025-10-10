@@ -13,6 +13,21 @@ export interface InventoryItem {
   dismountable: boolean;
   volume?: number;
   quantity?: number;
+  // Détails supplémentaires
+  dimensions_cm?: {
+    length: number;
+    width: number;
+    height: number;
+    source?: string;
+  };
+  volume_m3?: number;
+  packaged_volume_m3?: number;
+  packaging_display?: string;
+  notes?: string;
+  confidence?: number;
+  stackable?: boolean;
+  is_small_object?: boolean;
+  packaging_calculation_details?: string;
 }
 
 export function useInventory(batchId?: string) {
@@ -63,6 +78,7 @@ export function useInventory(batchId?: string) {
     refresh: fetchInventory,
   };
 }
+
 
 
 
