@@ -741,20 +741,20 @@ function RoomGroupCardV2({
               return (
                 <motion.div
                   key={photo.id}
-                  className={`relative group cursor-grab active:cursor-grabbing transition-opacity duration-200 ${
+                  className={`relative group transition-opacity duration-200 select-none ${
                     isBeingDragged ? 'opacity-30' : 'opacity-100'
                   }`}
-                  draggable
-                  onDragStart={(e) => onPhotoDragStart(e, photo)}
-                  drag={false}
                   layout
-                  whileHover={{ scale: isBeingDragged ? 1 : 1.05 }}
-                  whileTap={{ scale: 0.95 }}
                 >
-                  <div className="relative">
+                  <div 
+                    className="relative cursor-grab active:cursor-grabbing"
+                    draggable
+                    onDragStart={(e) => onPhotoDragStart(e, photo)}
+                    onMouseDown={(e) => e.stopPropagation()}
+                  >
                     <UnifiedImage
                       photo={photo}
-                      className="w-full h-20 object-cover rounded-lg shadow-sm border border-gray-200"
+                      className="w-full h-20 object-cover rounded-lg shadow-sm border border-gray-200 pointer-events-none"
                     />
                   
                   {/* Overlay au survol */}

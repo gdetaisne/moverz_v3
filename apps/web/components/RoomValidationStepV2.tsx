@@ -681,18 +681,18 @@ function RoomGroupCardV2({
             {group.photos.map((photo) => (
               <motion.div
                 key={photo.id}
-                className="relative group cursor-grab active:cursor-grabbing"
-                draggable
-                onDragStart={(e) => onPhotoDragStart(e, photo)}
-                drag={false}
+                className="relative group select-none"
                 layout
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
               >
-                <div className="relative">
+                <div 
+                  className="relative cursor-grab active:cursor-grabbing"
+                  draggable
+                  onDragStart={(e) => onPhotoDragStart(e, photo)}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
                   <UnifiedImage
                     photo={photo}
-                    className="w-full h-20 object-cover rounded-lg shadow-sm border border-gray-200"
+                    className="w-full h-20 object-cover rounded-lg shadow-sm border border-gray-200 pointer-events-none"
                   />
                   
                   {/* Overlay au survol - CORRIGÉ POUR NE PAS MASQUER L'IMAGE */}

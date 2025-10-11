@@ -3,7 +3,10 @@
 ## ✅ Corrections Appliquées
 
 **Date** : 2025-10-11  
-**Bug corrigé** : Photo introuvable lors du drag & drop entre pièces  
+**Bugs corrigés** : 
+1. ❌ Photo introuvable lors du drag & drop entre pièces
+2. ❌ Double-clic nécessaire avant que le drag fonctionne
+
 **Fichiers modifiés** :
 - `/components/RoomValidationStepV2.tsx`
 - `/apps/web/components/RoomValidationStepV2.tsx`
