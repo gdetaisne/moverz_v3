@@ -552,20 +552,98 @@ export default function Home() {
     setIsSubmittingQuote(true);
     
     try {
-      // Simuler l'envoi (remplacer par un vrai appel API)
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log('📤 Envoi du devis en cours...');
+      
+      // 1. Créer ou récupérer le projet
+      console.log('1️⃣  Création du projet...');
+      const projectResponse = await fetch('/api/projects', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUserId
+        },
+        body: JSON.stringify({
+          name: 'Projet Moverz',
+          customerName: quoteFormData.name,
+          customerEmail: quoteFormData.email,
+          customerPhone: quoteFormData.phone,
+          customerAddress: quoteFormData.address,
+          currentStep: 5
+        })
+      });
+      
+      if (!projectResponse.ok) {
+        const errorData = await projectResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || `Erreur projet: ${projectResponse.status}`);
+      }
+      
+      const project = await projectResponse.json();
+      console.log('✅ Projet créé:', project.id);
+      
+      // 2. Préparer les imageUrls depuis roomGroups (localStorage)
+      console.log('2️⃣  Préparation des photos...');
+      const imageUrls: any[] = [];
+      
+      roomGroups.forEach(room => {
+        if (room.photos && room.photos.length > 0) {
+          room.photos.forEach(photo => {
+            imageUrls.push({
+              filename: photo.file?.name || `photo-${Date.now()}.jpg`,
+              filePath: photo.fileUrl || `/uploads/${photo.file?.name || 'photo.jpg'}`,
+              url: photo.fileUrl || `/uploads/${photo.file?.name || 'photo.jpg'}`,
+              roomType: room.roomType || 'unknown'
+            });
+          });
+        }
+      });
+      
+      console.log(`📸 ${imageUrls.length} photos à sauvegarder`);
+      
+      if (imageUrls.length === 0) {
+        console.warn('⚠️  Aucune photo à sauvegarder');
+        alert('✅ Demande de devis envoyée (aucune photo)');
+        return;
+      }
+      
+      // 3. Créer le batch (sauvegarde en DB + enqueue jobs)
+      console.log('3️⃣  Création du batch et sauvegarde en DB...');
+      const batchResponse = await fetch('/api/batches', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUserId
+        },
+        body: JSON.stringify({
+          projectId: project.id,
+          imageUrls: imageUrls
+        })
+      });
+      
+      if (!batchResponse.ok) {
+        const errorData = await batchResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || `Erreur batch: ${batchResponse.status}`);
+      }
+      
+      const batch = await batchResponse.json();
+      console.log('✅ Batch créé:', batch.batchId);
+      console.log(`📊 ${batch.photosCount} photos sauvegardées en DB`);
+      console.log(`⚡ ${batch.jobsEnqueued} jobs d'analyse enqueued`);
       
       // Succès
-      alert('✅ Demande de devis envoyée avec succès !\n\nNous vous contacterons dans les plus brefs délais pour finaliser votre devis personnalisé.');
+      alert(`✅ Demande de devis envoyée avec succès !\n\n${batch.photosCount} photos sauvegardées et en cours d'analyse.\n\nNous vous contacterons dans les plus brefs délais pour finaliser votre devis personnalisé.`);
       
-      // Optionnel : réinitialiser l'application ou rediriger
-      // setCurrentStep(1);
-      // setCurrentRoom({ id: 'room-1', name: 'Pièce 1', photos: [] });
-      // setQuoteFormData(null);
+      // Optionnel : Sauvegarder le batchId pour suivi
+      if (userStorage) {
+        userStorage.saveInventoryData({
+          ...userStorage.loadInventoryData(),
+          batchId: batch.batchId,
+          projectId: project.id
+        });
+      }
       
-    } catch (error) {
-      alert('❌ Erreur lors de l\'envoi de votre demande. Veuillez réessayer.');
-      console.error('Erreur envoi devis:', error);
+    } catch (error: any) {
+      console.error('❌ Erreur envoi devis:', error);
+      alert(`❌ Erreur lors de l'envoi de votre demande.\n\n${error.message}\n\nVeuillez réessayer.`);
     } finally {
       setIsSubmittingQuote(false);
     }
@@ -1086,8 +1164,8 @@ export default function Home() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'uploaded': return 'text-blue-500';
-      case 'processing': return 'text-blue-600';
+      case 'uploaded': return 'text-brand-soft';
+      case 'processing': return 'text-brand-accent';
       case 'completed': return 'text-green-600';
       case 'error': return 'text-red-600';
       default: return 'text-gray-400';
@@ -1300,7 +1378,7 @@ export default function Home() {
                     <p className="text-gray-600 mb-4">Retournez à l'étape précédente pour charger des photos.</p>
                       <button
                       onClick={() => setCurrentStep(1)}
-                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                      className="inline-flex items-center px-4 py-2 bg-brand-accent text-white font-medium rounded-lg hover:bg-brand-accent hover:brightness-110 transition-colors"
                       >
                       <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -1367,7 +1445,7 @@ export default function Home() {
                                                       }
                                                     });
                                                   }}
-                                                  className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                                                  className="text-xs text-brand-accent hover:text-brand-primary font-medium"
                                                 >
                                                   Tout sélectionner
                                                 </button>
@@ -1404,7 +1482,7 @@ export default function Home() {
                                                         e.stopPropagation();
                                                         toggleObjectSelection(photo.photoId || `photo-${photoIndex}`, originalIndex);
                                                       }}
-                                                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                                      className="w-4 h-4 text-brand-accent bg-gray-100 border-gray-300 rounded focus:ring-brand-accent"
                                                       title={isObjectSelected(photo.photoId || `photo-${photoIndex}`, originalIndex) ? "Désélectionner cet objet" : "Sélectionner cet objet"}
                                                     />
                                                     <div className="flex-1">
@@ -1433,7 +1511,7 @@ export default function Home() {
                                                   <div className="flex items-center space-x-2">
                                                     {item.packaging_display && (
                                                       <span 
-                                                        className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full cursor-help hover:bg-blue-100 transition-colors"
+                                                        className="text-xs font-medium text-brand-accent bg-brand-soft/10 px-2 py-1 rounded-full cursor-help hover:bg-brand-soft/20 transition-colors"
                                                         title={getPackagingDetails(item)}
                                                       >
                                                         📦 {item.packaging_display}
@@ -1444,7 +1522,7 @@ export default function Home() {
                                                     onClick={() => {
                                                       // TODO: Implémenter l'édition de description
                                                     }}
-                                                    className="p-1 text-gray-400 hover:text-blue-500 transition-colors"
+                                                    className="p-1 text-gray-400 hover:text-brand-soft transition-colors"
                                                     title="Modifier la description"
                                                   >
                                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1482,7 +1560,7 @@ export default function Home() {
                                                         }
                                                       });
                                                     }}
-                                                    className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                                                    className="text-xs text-brand-accent hover:text-brand-primary font-medium"
                                                   >
                                                     Tout sélectionner
                     </button>
@@ -1538,7 +1616,7 @@ export default function Home() {
                                                               e.stopPropagation();
                                                               toggleObjectSelection(photo.photoId || `photo-${photoIndex}`, originalIndex);
                                                             }}
-                                                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                                            className="w-4 h-4 text-brand-accent bg-gray-100 border-gray-300 rounded focus:ring-brand-accent"
                                                             title={isObjectSelected(photo.photoId || `photo-${photoIndex}`, originalIndex) ? "Désélectionner cet objet" : "Sélectionner cet objet"}
                                                           />
                                                           <div className="flex-1">
@@ -1578,7 +1656,7 @@ export default function Home() {
                                                           onClick={() => {
                                                             // TODO: Implémenter l'édition de description
                                                           }}
-                                                          className="p-1 text-gray-400 hover:text-blue-500 transition-colors"
+                                                          className="p-1 text-gray-400 hover:text-brand-soft transition-colors"
                                                           title="Modifier la description"
                                                         >
                                                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1652,12 +1730,12 @@ export default function Home() {
                       }}
                       className={`relative border-2 border-dashed rounded-xl p-12 text-center transition-all duration-300 cursor-pointer ${
                         isDragOver
-                          ? 'border-blue-400 bg-blue-50 scale-[1.02]'
+                          ? 'border-brand-soft bg-brand-soft/10 scale-[1.02]'
                           : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
                       }`}
                     >
                       <div className="max-w-md mx-auto">
-                        <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
+                        <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-brand-accent to-brand-primary rounded-2xl flex items-center justify-center shadow-lg">
                           <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                           </svg>
@@ -1684,7 +1762,7 @@ export default function Home() {
                             e.stopPropagation(); // Empêcher la propagation vers la zone drag & drop
                             fileInputRef.current?.click();
                           }}
-                          className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                          className="inline-flex items-center px-6 py-3 bg-brand-accent text-white font-medium rounded-xl hover:bg-brand-accent hover:brightness-110 transition-all duration-200 shadow-sm hover:shadow-md"
                         >
                           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -1790,7 +1868,7 @@ export default function Home() {
                                       <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
                                     )}
                                     {photo.status === 'processing' && (
-                                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                                      <div className="w-2 h-2 bg-brand-accent rounded-full animate-pulse"></div>
                                     )}
                                     {photo.status === 'completed' && (
                                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
@@ -1846,7 +1924,7 @@ export default function Home() {
                           {photo.status === 'processing' && (
                                   <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
                               <div 
-                                      className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-500" 
+                                      className="h-full bg-gradient-to-r from-brand-accent to-brand-primary rounded-full transition-all duration-500" 
                                 style={{ width: `${photo.progress || 0}%` }}
                                     />
                             </div>
@@ -1869,7 +1947,7 @@ export default function Home() {
 
                       {/* Bouton continuer */}
                       <div className="text-center">
-                        <p className="text-sm text-blue-600 mb-4">
+                        <p className="text-sm text-brand-accent mb-4">
                           {currentRoom.photos.length}/100 photos chargées
                         </p>
                             {/* Bouton supprimé - maintenant géré par le bouton en haut */}
@@ -1933,7 +2011,7 @@ export default function Home() {
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               
               {/* Header */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-5 border-b border-gray-100">
+              <div className="bg-gradient-to-r from-brand-soft/10 to-brand-accent/10 px-6 py-5 border-b border-gray-100">
                 <div className="text-center">
                   <h3 className="text-2xl font-bold text-gray-900 mb-2">📋 État Synthétique de votre Déménagement</h3>
                   <p className="text-sm text-gray-600">
@@ -1946,7 +2024,7 @@ export default function Home() {
                 {/* Section 1 : Résumé des Volumes */}
                 <div className="mb-8">
                   <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 mr-2 text-brand-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                     </svg>
                     📦 Inventaire et Volumes
@@ -1984,9 +2062,9 @@ export default function Home() {
                     </div>
 
                     {/* Volume brut */}
-                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200">
-                      <div className="text-sm text-blue-700 font-medium mb-1">Volume brut</div>
-                      <div className="text-3xl font-bold text-blue-900">
+                    <div className="bg-gradient-to-br from-brand-soft/10 to-brand-soft/20 rounded-xl p-5 border border-brand-soft/30">
+                      <div className="text-sm text-brand-primary font-medium mb-1">Volume brut</div>
+                      <div className="text-3xl font-bold text-brand-primary">
                         {(() => {
                           let totalVolume = 0;
                           currentRoom.photos.forEach(photo => {
@@ -2001,7 +2079,7 @@ export default function Home() {
                           return totalVolume.toFixed(1);
                         })()} m³
                       </div>
-                      <div className="text-xs text-blue-600 mt-1">avant emballage et démontage</div>
+                      <div className="text-xs text-brand-accent mt-1">avant emballage et démontage</div>
                     </div>
 
                     {/* Volume emballé */}
@@ -2072,15 +2150,15 @@ export default function Home() {
                             if (cat === 'Meubles') {
                               // MEUBLES : affichage simple sans flèche
                               return (
-                                <div key={cat} className="rounded-lg p-4 border-2 border-blue-300 bg-blue-50">
+                                <div key={cat} className="rounded-lg p-4 border-2 border-brand-accent/40 bg-brand-soft/10">
                                   <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center">
                                       <span className="text-2xl mr-2">🪑</span>
                                       <div className="font-semibold text-gray-900">{cat}</div>
                                     </div>
                                     <div className="text-right">
-                                      <div className="text-lg font-bold text-blue-900">{data.volumeEmballe.toFixed(2)} m³</div>
-                                      <div className="text-xs text-blue-700">volume emballé</div>
+                                      <div className="text-lg font-bold text-brand-primary">{data.volumeEmballe.toFixed(2)} m³</div>
+                                      <div className="text-xs text-brand-primary">volume emballé</div>
                                     </div>
                                   </div>
                                   <div className="text-xs text-gray-600">
@@ -2216,28 +2294,28 @@ export default function Home() {
                               return (
                                 <div className="grid grid-cols-2 gap-4">
                                   {/* Colonne gauche : Meubles (non-fragiles) */}
-                                  <div className="bg-blue-50 rounded-lg p-3 border-2 border-blue-300">
-                                    <h6 className="font-semibold text-blue-900 mb-2 flex flex-col gap-1">
+                                  <div className="bg-brand-soft/10 rounded-lg p-3 border-2 border-brand-accent/40">
+                                    <h6 className="font-semibold text-brand-primary mb-2 flex flex-col gap-1">
                                       <div className="flex items-center">
                                         <span className="text-base mr-1">🪑</span>
                                         <span className="text-sm">Meubles standards</span>
                                       </div>
-                                      <span className="text-xs font-normal text-blue-700">
+                                      <span className="text-xs font-normal text-brand-primary">
                                         {meublesData.count} objet{meublesData.count > 1 ? 's' : ''}
                                       </span>
                                     </h6>
-                                    <div className="text-[10px] text-gray-600 mb-2 italic px-1.5 py-1 bg-blue-100 rounded leading-tight">
+                                    <div className="text-[10px] text-gray-600 mb-2 italic px-1.5 py-1 bg-brand-soft/20 rounded leading-tight">
                                       💡 Cliquez → pour marquer fragile
                                     </div>
                                     <div className="space-y-2 max-h-96 overflow-y-auto">
                                       {Object.keys(meublesItemsByRoom).length > 0 ? (
                                         Object.entries(meublesItemsByRoom).map(([roomName, items]) => (
                                           <div key={roomName} className="space-y-0.5">
-                                            <div className="text-[10px] font-semibold text-blue-700 uppercase tracking-wide px-1 sticky top-0 bg-blue-50">
+                                            <div className="text-[10px] font-semibold text-brand-primary uppercase tracking-wide px-1 sticky top-0 bg-brand-soft/10">
                                               {roomName}
                                             </div>
                                             {items.map((itemData, displayIdx) => (
-                                              <div key={displayIdx} className="flex justify-between items-center text-[11px] bg-white rounded px-1.5 py-1 hover:bg-blue-100 transition-all duration-200 group">
+                                              <div key={displayIdx} className="flex justify-between items-center text-[11px] bg-white rounded px-1.5 py-1 hover:bg-brand-soft/20 transition-all duration-200 group">
                                                 <span className="text-gray-900 font-medium flex-1 truncate pr-1">
                                                   {itemData.item.quantity > 1 && `${itemData.item.quantity}× `}{itemData.item.label}
                                                 </span>
@@ -2291,7 +2369,7 @@ export default function Home() {
                                                     e.stopPropagation();
                                                     handleFragileToggle(itemData.photoId, itemData.itemIndex, false);
                                                   }}
-                                                  className="mr-1 px-2 py-0.5 text-blue-600 hover:bg-blue-100 rounded transition-colors font-bold text-sm opacity-60 group-hover:opacity-100 flex-shrink-0"
+                                                  className="mr-1 px-2 py-0.5 text-brand-accent hover:bg-brand-soft/20 rounded transition-colors font-bold text-sm opacity-60 group-hover:opacity-100 flex-shrink-0"
                                                   title="← Retirer le statut fragile"
                                                 >
                                                   ←
@@ -2428,8 +2506,8 @@ export default function Home() {
                       </div>
                       
                       {/* Arrivée */}
-                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200">
-                        <h5 className="font-semibold text-blue-900 mb-3 flex items-center">
+                      <div className="bg-gradient-to-br from-brand-soft/10 to-brand-soft/20 rounded-xl p-5 border border-brand-soft/30">
+                        <h5 className="font-semibold text-brand-primary mb-3 flex items-center">
                           <span className="text-xl mr-2">🎯</span>
                           Adresse d'arrivée
                         </h5>
@@ -2528,8 +2606,8 @@ export default function Home() {
                       </div>
 
                       {/* Arrivée */}
-                      <div className="bg-gradient-to-br from-blue-50 to-sky-50 rounded-xl p-5 border border-blue-200">
-                        <h5 className="font-semibold text-blue-900 mb-3 flex items-center">
+                      <div className="bg-gradient-to-br from-brand-soft/10 to-brand-accent/10 rounded-xl p-5 border border-brand-soft/30">
+                        <h5 className="font-semibold text-brand-primary mb-3 flex items-center">
                           <span className="text-xl mr-2">🎯</span>
                           Adresse d'arrivée
                         </h5>
@@ -2542,25 +2620,25 @@ export default function Home() {
                           {quoteFormData.arrivalArea && (
                             <div><span className="font-medium">Superficie :</span> {quoteFormData.arrivalArea}</div>
                           )}
-                          <div className="pt-2 border-t border-blue-200">
+                          <div className="pt-2 border-t border-brand-soft/30">
                             <div className="flex flex-wrap gap-2">
                               <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                                 quoteFormData.arrivalElevator 
-                                  ? 'bg-white text-blue-700' 
+                                  ? 'bg-white text-brand-primary' 
                                   : 'bg-gray-200 text-gray-500'
                               }`}>
                                 {quoteFormData.arrivalElevator ? '✓' : '✗'} Ascenseur
                               </span>
                               <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                                 quoteFormData.arrivalTruckAccess 
-                                  ? 'bg-white text-blue-700' 
+                                  ? 'bg-white text-brand-primary' 
                                   : 'bg-gray-200 text-gray-500'
                               }`}>
                                 {quoteFormData.arrivalTruckAccess ? '✓' : '✗'} Accès camion
                               </span>
                               <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                                 quoteFormData.arrivalMonteCharge 
-                                  ? 'bg-white text-blue-700' 
+                                  ? 'bg-white text-brand-primary' 
                                   : 'bg-gray-200 text-gray-500'
                               }`}>
                                 {quoteFormData.arrivalMonteCharge ? '✓' : '✗'} Monte-charge
@@ -2652,9 +2730,9 @@ export default function Home() {
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* CTA 1 : Télécharger mon dossier */}
-                    <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl p-8 border-2 border-blue-300 hover:border-blue-400 transition-all duration-200 hover:shadow-lg">
+                    <div className="bg-gradient-to-br from-brand-soft/10 to-brand-accent/20 rounded-2xl p-8 border-2 border-brand-accent/40 hover:border-brand-soft transition-all duration-200 hover:shadow-lg">
                       <div className="text-center">
-                        <div className="w-16 h-16 mx-auto mb-4 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-brand-accent rounded-2xl flex items-center justify-center shadow-lg">
                           <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                           </svg>
@@ -2667,7 +2745,7 @@ export default function Home() {
                           <button
                             onClick={handleDownloadPDF}
                             disabled={loading || !quoteFormData}
-                            className="w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full px-6 py-3 bg-brand-accent text-white font-semibold rounded-xl hover:bg-brand-accent hover:brightness-110 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {loading ? '⏳ Génération...' : '📄 PDF Complet'}
                           </button>
@@ -2676,7 +2754,7 @@ export default function Home() {
                               // TODO: Implémenter l'export Excel
                               alert('Export Excel en cours de développement');
                             }}
-                            className="w-full px-6 py-3 bg-white text-blue-600 font-semibold rounded-xl hover:bg-gray-50 transition-colors border-2 border-blue-200"
+                            className="w-full px-6 py-3 bg-white text-brand-accent font-semibold rounded-xl hover:bg-gray-50 transition-colors border-2 border-brand-soft/30"
                           >
                             📊 Excel
                           </button>
@@ -2685,7 +2763,7 @@ export default function Home() {
                               // TODO: Implémenter l'export CSV
                               alert('Export CSV en cours de développement');
                             }}
-                            className="w-full px-6 py-3 bg-white text-blue-600 font-semibold rounded-xl hover:bg-gray-50 transition-colors border-2 border-blue-200"
+                            className="w-full px-6 py-3 bg-white text-brand-accent font-semibold rounded-xl hover:bg-gray-50 transition-colors border-2 border-brand-soft/30"
                           >
                             📋 CSV
                           </button>
@@ -2742,9 +2820,9 @@ export default function Home() {
                               <span className="font-bold text-green-600 mr-2">⏱️</span>
                               <span className="font-semibold"><strong>3 à 5 jours</strong> en moyenne (max 7j)</span>
                             </div>
-                            <div className="flex items-start bg-blue-50 rounded-lg p-2 -mx-1">
-                              <span className="font-bold text-blue-600 mr-2">🛡️</span>
-                              <span className="font-semibold text-blue-900"><strong>Zéro effort</strong> de votre côté !</span>
+                            <div className="flex items-start bg-brand-soft/10 rounded-lg p-2 -mx-1">
+                              <span className="font-bold text-brand-accent mr-2">🛡️</span>
+                              <span className="font-semibold text-brand-primary"><strong>Zéro effort</strong> de votre côté !</span>
                             </div>
                           </div>
                         </div>
@@ -2768,7 +2846,7 @@ export default function Home() {
 
                 {/* Info supplémentaire */}
                 <div className="mt-8 text-center">
-                  <div className="inline-flex items-center px-6 py-3 bg-blue-50 text-blue-700 rounded-xl border border-blue-200">
+                  <div className="inline-flex items-center px-6 py-3 bg-brand-soft/10 text-brand-primary rounded-xl border border-brand-soft/30">
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
@@ -2783,7 +2861,8 @@ export default function Home() {
   );
 
   return (
-    <main className={`min-h-screen ${isEmbedded ? 'iframe-mode' : 'bg-[var(--mz-bg)]'}`}>
+    <main className={`min-h-screen relative ${isEmbedded ? 'iframe-mode' : 'bg-hero'}`}>
+      {!isEmbedded && <div className="halo" />}
       {/* Header moderne - seulement si pas en mode embed */}
       {!isEmbedded && (
         <div className="bg-white shadow-sm border-b border-gray-100">
@@ -2873,7 +2952,7 @@ export default function Home() {
                 onClick={() => setActiveTab('tests')}
                 className={`py-3 lg:py-4 px-2 lg:px-1 border-b-2 font-medium text-sm transition-colors ${
                   activeTab === 'tests'
-                    ? 'border-blue-500 text-blue-600'
+                    ? 'border-blue-500 text-brand-accent'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -2883,7 +2962,7 @@ export default function Home() {
                 onClick={() => setActiveTab('backoffice')}
                 className={`py-3 lg:py-4 px-2 lg:px-1 border-b-2 font-medium text-sm transition-colors ${
                   activeTab === 'backoffice'
-                    ? 'border-blue-500 text-blue-600'
+                    ? 'border-blue-500 text-brand-accent'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
