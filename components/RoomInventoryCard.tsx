@@ -165,7 +165,9 @@ export function RoomInventoryCard({
                           {getItemVolume(item).toFixed(3)} m³
                         </div>
                         {item.packaged_volume_m3 && (
-                          <div className="text-xs text-brand-accent">Emb: {item.packaged_volume_m3.toFixed(3)}</div>
+                          <div className="text-xs font-semibold" style={{ color: '#04163a' }}>
+                            Emb: {item.packaged_volume_m3.toFixed(3)}
+                          </div>
                         )}
                       </div>
                       
@@ -180,7 +182,7 @@ export function RoomInventoryCard({
                           className={`w-8 h-8 rounded-full text-sm font-bold transition-all flex items-center justify-center ${
                             item.dismountable
                               ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                              : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                           }`}
                           title={item.dismountable ? 'Démontable' : 'Non démontable'}
                         >
@@ -199,7 +201,7 @@ export function RoomInventoryCard({
                           className={`w-8 h-8 rounded-full text-sm font-bold transition-all flex items-center justify-center ${
                             item.fragile
                               ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
-                              : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                           }`}
                           title={item.fragile ? 'Fragile' : 'Non fragile'}
                         >
@@ -215,11 +217,12 @@ export function RoomInventoryCard({
                               onItemUpdate(index, { selected: !(item.selected !== false) });
                             }
                           }}
-                          className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+                          className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
                             item.selected !== false
-                              ? 'bg-brand-accent text-white hover:brightness-110'
-                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                              ? 'hover:brightness-110 shadow-sm'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                           }`}
+                          style={item.selected !== false ? { backgroundColor: '#2b7a78', color: '#ffffff' } : undefined}
                           title={item.selected !== false ? 'À déménager' : 'Ne pas déménager'}
                         >
                           {item.selected !== false ? '✓ OUI' : '✗ NON'}
@@ -270,7 +273,7 @@ export function RoomInventoryCard({
                                     <div>Emballé : {item.packaged_volume_m3.toFixed(3)} m³</div>
                                   )}
                                   {item.packaging_display && (
-                                    <div className="text-brand-accent font-medium">{item.packaging_display}</div>
+                                    <div className="font-semibold" style={{ color: '#04163a' }}>{item.packaging_display}</div>
                                   )}
                                 </div>
                               </div>
