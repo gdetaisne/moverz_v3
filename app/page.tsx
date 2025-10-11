@@ -1714,13 +1714,9 @@ export default function Home() {
 
               <div className="p-6">
                 {/* Zone d'upload principale (visible seulement si aucune photo) */}
-                <AnimatePresence>
+                {/* Zone d'upload principale (visible seulement si aucune photo) */}
                   {currentRoom.photos.length === 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ duration: 0.4, ease: "easeOut" }}
+                    <div
                       onDrop={onDrop}
                       onDragOver={onDragOver}
                       onDragLeave={onDragLeave}
@@ -1741,12 +1737,12 @@ export default function Home() {
                           </svg>
             </div>
                         
-                        <h4 className="text-xl font-semibold text-gray-900 mb-2">
+                        <h4 className="text-xl font-semibold mb-2" style={{ color: '#1f2937' }}>
                           Ajoutez vos photos d'inventaire
                         </h4>
-                        <p className="text-gray-600 mb-6">
+                        <p className="mb-6" style={{ color: '#4b5563' }}>
                           Glissez-déposez vos photos ici ou cliquez pour sélectionner.<br />
-                          <span className="text-sm text-gray-500">Formats acceptés : JPG, PNG, WEBP, HEIC, AVIF, TIFF, BMP</span>
+                          <span className="text-sm" style={{ color: '#6b7280' }}>Formats acceptés : JPG, PNG, WEBP, HEIC, AVIF, TIFF, BMP</span>
                         </p>
                         
                         <input
@@ -1762,7 +1758,8 @@ export default function Home() {
                             e.stopPropagation(); // Empêcher la propagation vers la zone drag & drop
                             fileInputRef.current?.click();
                           }}
-                          className="inline-flex items-center px-6 py-3 bg-brand-accent text-white font-medium rounded-xl hover:bg-brand-accent hover:brightness-110 transition-all duration-200 shadow-sm hover:shadow-md"
+                          className="inline-flex items-center px-6 py-3 font-medium rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
+                          style={{ backgroundColor: '#2b7a78', color: '#ffffff' }}
                         >
                           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -1771,9 +1768,8 @@ export default function Home() {
                           Sélectionner des photos
               </button>
             </div>
-                    </motion.div>
+                    </div>
                   )}
-                </AnimatePresence>
 
                 {/* Grille des photos */}
                 <AnimatePresence>
@@ -2828,13 +2824,11 @@ export default function Home() {
                         </div>
                         
                         <button
-                          onClick={() => {
-                            // TODO: Implémenter l'envoi de demande de devis
-                            alert('Envoi de la demande de devis en cours de développement');
-                          }}
-                          className="w-full px-8 py-4 bg-green-600 text-white font-bold text-lg rounded-xl hover:bg-green-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                          onClick={handleSubmitQuote}
+                          disabled={isSubmittingQuote}
+                          className="w-full px-8 py-4 bg-green-600 text-white font-bold text-lg rounded-xl hover:bg-green-700 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          📨 Envoyer ma demande
+                          {isSubmittingQuote ? '⏳ Envoi en cours...' : '📨 Envoyer ma demande'}
                         </button>
                         <p className="text-xs text-gray-500 mt-4">
                           ✓ Sans engagement • ✓ Réponse sous 24h • ✓ Déménageurs certifiés
@@ -2865,55 +2859,17 @@ export default function Home() {
       {!isEmbedded && <div className="halo" />}
       {/* Header moderne - seulement si pas en mode embed */}
       {!isEmbedded && (
-        <div className="bg-white shadow-sm border-b border-gray-100">
+        <div className="bg-white/10 backdrop-blur-md shadow-lg border-b border-white/20 relative z-10">
           <div className="max-w-7xl mx-auto px-6 py-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-[var(--mz-teal)] rounded-xl flex items-center justify-center">
-                    <span className="text-white font-bold text-lg">M</span>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">
-                      Analyse automatique pour déménagement
-                    </p>
-                  </div>
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-[var(--mz-teal)] rounded-xl flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">M</span>
                 </div>
-                <div className="flex flex-col items-end space-y-1">
-                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                    {getBuildInfo()}
-                  </span>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={async () => {
-                        if (confirm('🗑️ Supprimer toutes les photos ? Cette action est irréversible.')) {
-                          try {
-                            const response = await fetch('/api/photos/reset', { method: 'POST' });
-                            if (response.ok) {
-                              const result = await response.json();
-                              alert(`✅ ${result.deletedCount} photos supprimées`);
-                              // Recharger la page pour un état propre
-                              window.location.reload();
-                            } else {
-                              alert('❌ Erreur lors de la suppression');
-                            }
-                          } catch (error) {
-                            alert('❌ Erreur de connexion');
-                          }
-                        }
-                      }}
-                      className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full hover:bg-red-200 transition-colors"
-                      title="Supprimer toutes les photos (reset complet)"
-                    >
-                      🗑️ Reset
-                    </button>
-                    <div className="flex items-center space-x-1">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-xs text-gray-400">
-                        Last update: {currentTime ? currentTime.toLocaleTimeString('fr-FR') : '--:--:--'}
-                      </span>
-                    </div>
-                  </div>
+                <div>
+                  <p className="text-sm text-white/80">
+                    Analyse automatique pour déménagement
+                  </p>
                 </div>
               </div>
               <div className="flex space-x-2">
@@ -2921,8 +2877,8 @@ export default function Home() {
                   onClick={() => setActiveTab('tests')}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                     activeTab === 'tests' 
-                      ? 'bg-[var(--mz-teal)] text-white shadow-lg' 
-                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+                      ? 'bg-brand-soft text-brand-primary shadow-lg' 
+                      : 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
                   }`}
                 >
                   🧪 Tests
@@ -2931,43 +2887,13 @@ export default function Home() {
                   onClick={() => setActiveTab('backoffice')}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                     activeTab === 'backoffice' 
-                      ? 'bg-[var(--mz-teal)] text-white shadow-lg' 
-                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+                      ? 'bg-brand-soft text-brand-primary shadow-lg' 
+                      : 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
                   }`}
                 >
                   🔧 Back-office
                 </button>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Navigation par onglets - seulement si pas en mode embed */}
-      {!isEmbedded && (
-        <div className="bg-white border-b">
-          <div className="max-w-7xl mx-auto px-4 lg:px-6">
-            <div className="flex space-x-4 lg:space-x-8">
-              <button
-                onClick={() => setActiveTab('tests')}
-                className={`py-3 lg:py-4 px-2 lg:px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === 'tests'
-                    ? 'border-blue-500 text-brand-accent'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                🧪 Tests
-              </button>
-              <button
-                onClick={() => setActiveTab('backoffice')}
-                className={`py-3 lg:py-4 px-2 lg:px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === 'backoffice'
-                    ? 'border-blue-500 text-brand-accent'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                🔧 Back-office
-              </button>
             </div>
           </div>
         </div>
@@ -3018,7 +2944,7 @@ export default function Home() {
                       (currentStep === 3 && !currentRoom.photos.some(p => p.status === 'completed')) ||
                       (currentStep === 4 && !quoteFormData)
                     }
-                    className="inline-flex items-center px-4 py-2 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:text-gray-400 disabled:bg-gray-50"
+                    className="inline-flex items-center px-4 py-2 text-sm text-white/80 bg-white/10 border border-white/20 rounded-md hover:bg-white/20 hover:border-white/30 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Étape suivante
                     <svg className="w-3 h-3 ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3044,6 +2970,47 @@ export default function Home() {
         onSend={handleSendContinuationLink}
         projectId={currentProjectId || 'temp-project-id'}
       />
+
+      {/* Footer avec informations de déploiement - seulement visible pour le développeur */}
+      {!isEmbedded && (
+        <footer className="bg-white/5 backdrop-blur-sm border-t border-white/10 py-3 mt-8">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="flex items-center justify-between text-xs text-white/50">
+              <div className="flex items-center space-x-4">
+                <span className="bg-white/5 px-2 py-1 rounded">
+                  {getBuildInfo()}
+                </span>
+                <div className="flex items-center space-x-1">
+                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                  <span>Last update: {currentTime ? currentTime.toLocaleTimeString('fr-FR') : '--:--:--'}</span>
+                </div>
+              </div>
+              <button
+                onClick={async () => {
+                  if (confirm('🗑️ Supprimer toutes les photos ? Cette action est irréversible.')) {
+                    try {
+                      const response = await fetch('/api/photos/reset', { method: 'POST' });
+                      if (response.ok) {
+                        const result = await response.json();
+                        alert(`✅ ${result.deletedCount} photos supprimées`);
+                        window.location.reload();
+                      } else {
+                        alert('❌ Erreur lors de la suppression');
+                      }
+                    } catch (error) {
+                      alert('❌ Erreur de connexion');
+                    }
+                  }
+                }}
+                className="text-xs bg-red-900/30 text-red-300 px-2 py-1 rounded hover:bg-red-900/50 transition-colors"
+                title="Supprimer toutes les photos (reset complet)"
+              >
+                🗑️ Reset DB
+              </button>
+            </div>
+          </div>
+        </footer>
+      )}
     </main>
   );
 }
