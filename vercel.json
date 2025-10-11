@@ -4,16 +4,8 @@
       "source": "/(.*)",
       "headers": [
         {
-          "key": "X-Frame-Options",
-          "value": "ALLOWALL"
-        },
-        {
-          "key": "Content-Security-Policy",
-          "value": "frame-ancestors 'self' https://moverz.fr https://*.moverz.fr https://www.moverz.fr; frame-src 'self' https://moverz.fr https://*.moverz.fr;"
-        },
-        {
           "key": "Access-Control-Allow-Origin",
-          "value": "https://moverz.fr"
+          "value": "*"
         },
         {
           "key": "Access-Control-Allow-Methods",

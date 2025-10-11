@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Support du basePath pour reverse proxy
+  basePath: process.env.BASE_PATH || '',
+  
   // Mode standalone pour déploiement CapRover
   output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
   
@@ -45,20 +48,12 @@ const nextConfig: NextConfig = {
     return config;
   },
   
-  // Headers pour permettre l'intégration iframe
+  // Headers CORS (headers iframe supprimés car reverse proxy)
   async headers() {
     return [
       {
         source: '/(.*)',
         headers: [
-          {
-            key: 'X-Frame-Options',
-            value: 'ALLOWALL',
-          },
-          {
-            key: 'Content-Security-Policy',
-                value: "frame-ancestors 'self' https://moverz.fr https://*.moverz.fr https://www.moverz.fr https://moverz-bordeaux.gslv.cloud https://*.gslv.cloud https://www.bordeaux-demenageur.fr https://bordeaux-demenageur.fr http://localhost:3002; frame-src 'self' https://moverz.fr https://*.moverz.fr https://moverz-bordeaux.gslv.cloud https://*.gslv.cloud https://www.bordeaux-demenageur.fr https://bordeaux-demenageur.fr http://localhost:3002;",
-          },
           {
             key: 'Access-Control-Allow-Origin',
             value: '*',
