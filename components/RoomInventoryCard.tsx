@@ -82,7 +82,7 @@ export function RoomInventoryCard({
   return (
     <div className={`room-inventory-card bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden ${className}`}>
       {/* En-tête de la pièce */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
+      <div className="bg-gradient-to-r from-brand-soft/10 to-brand-accent/10 px-6 py-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="text-3xl">
@@ -103,7 +103,7 @@ export function RoomInventoryCard({
             <select
               value={roomGroup.roomType}
               onChange={(e) => onRoomTypeChange(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-accent"
             >
               {ROOM_TYPES.map(type => (
                 <option key={type.value} value={type.value}>
@@ -137,106 +137,110 @@ export function RoomInventoryCard({
           {items.length > 0 ? (
             <div className="border border-gray-200 rounded-lg overflow-hidden">
               {/* En-tête du tableau */}
-              <div className="grid grid-cols-[2fr_1fr_120px_120px_120px_100px] gap-3 px-4 py-3 bg-gray-100 border-b border-gray-300 font-semibold text-sm text-gray-700">
+              <div className="grid grid-cols-[3fr_1.5fr_70px_70px_90px_80px] gap-2 px-4 py-3 bg-gray-100 border-b border-gray-300 font-semibold text-xs text-gray-700">
                 <div>Article</div>
                 <div className="text-right">Volume</div>
-                <div className="text-center">Démontable</div>
-                <div className="text-center">Fragile</div>
-                <div className="text-center">À déménager</div>
-                <div className="text-center">Détails</div>
+                <div className="text-center">Dém.</div>
+                <div className="text-center">Frag.</div>
+                <div className="text-center">Déménager</div>
+                <div className="text-center">+</div>
               </div>
               
               {/* Lignes des articles */}
               <div className="divide-y divide-gray-100">
                 {items.map((item, index) => (
                   <React.Fragment key={`${getItemName(item)}-${index}`}>
-                    <div className="grid grid-cols-[2fr_1fr_120px_120px_120px_100px] gap-3 px-4 py-3 items-center hover:bg-gray-50 transition-colors">
+                    <div className="grid grid-cols-[3fr_1.5fr_70px_70px_90px_80px] gap-2 px-4 py-2.5 items-center hover:bg-gray-50 transition-colors">
                       {/* Article */}
-                      <div className="flex flex-col">
-                        <span className="font-medium text-gray-900">{getItemName(item)}</span>
-                        <span className="text-xs text-gray-500">{getItemVolume(item).toFixed(3)} m³</span>
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-medium text-gray-900 truncate">{getItemName(item)}</span>
+                        {item.quantity && item.quantity > 1 && (
+                          <span className="text-xs text-gray-500">Qté: {item.quantity}</span>
+                        )}
                       </div>
                       
                       {/* Volume */}
                       <div className="text-right">
                         <div className="text-sm text-gray-900 font-medium">
-                          {item.packaging_display || `${getItemVolume(item).toFixed(3)} m³`}
+                          {getItemVolume(item).toFixed(3)} m³
                         </div>
                         {item.packaged_volume_m3 && (
-                          <div className="text-xs text-blue-600">Emb: {item.packaged_volume_m3.toFixed(3)} m³</div>
+                          <div className="text-xs text-brand-accent">Emb: {item.packaged_volume_m3.toFixed(3)}</div>
                         )}
                       </div>
                       
                       {/* Démontable */}
-                      <div className="text-center">
+                      <div className="flex justify-center">
                         <button
                           onClick={() => {
                             if (onItemUpdate) {
                               onItemUpdate(index, { dismountable: !item.dismountable });
                             }
                           }}
-                          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                          className={`w-8 h-8 rounded-full text-sm font-bold transition-all flex items-center justify-center ${
                             item.dismountable
                               ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                              : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
                           }`}
+                          title={item.dismountable ? 'Démontable' : 'Non démontable'}
                         >
-                          {item.dismountable ? '✓ OUI' : '✗ NON'}
+                          {item.dismountable ? '✓' : '✗'}
                         </button>
                       </div>
                       
                       {/* Fragile */}
-                      <div className="text-center">
+                      <div className="flex justify-center">
                         <button
                           onClick={() => {
                             if (onItemUpdate) {
                               onItemUpdate(index, { fragile: !item.fragile });
                             }
                           }}
-                          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                          className={`w-8 h-8 rounded-full text-sm font-bold transition-all flex items-center justify-center ${
                             item.fragile
-                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                              ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                              : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
                           }`}
+                          title={item.fragile ? 'Fragile' : 'Non fragile'}
                         >
-                          {item.fragile ? '✓ OUI' : '✗ NON'}
+                          {item.fragile ? '✓' : '✗'}
                         </button>
                       </div>
                       
                       {/* À déménager */}
-                      <div className="text-center">
+                      <div className="flex justify-center">
                         <button
                           onClick={() => {
                             if (onItemUpdate) {
                               onItemUpdate(index, { selected: !(item.selected !== false) });
                             }
                           }}
-                          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                          className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
                             item.selected !== false
-                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                              ? 'bg-brand-accent text-white hover:brightness-110'
                               : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                           }`}
+                          title={item.selected !== false ? 'À déménager' : 'Ne pas déménager'}
                         >
                           {item.selected !== false ? '✓ OUI' : '✗ NON'}
                         </button>
                       </div>
                       
                       {/* Détails */}
-                      <div className="text-center">
+                      <div className="flex justify-center">
                         <button
                           onClick={() => toggleDetails(index)}
-                          className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
-                          title="Voir les détails"
+                          className="w-8 h-8 rounded-full text-sm font-medium text-brand-accent hover:text-brand-primary hover:bg-brand-soft/20 transition-all flex items-center justify-center"
+                          title={expandedItemIndex === index ? 'Masquer les détails' : 'Voir les détails'}
                         >
-                          <span className="mr-1">ℹ️</span>
-                          {expandedItemIndex === index ? 'Masquer' : 'Détails'}
+                          {expandedItemIndex === index ? '−' : 'ℹ️'}
                         </button>
                       </div>
                     </div>
                     
                     {/* Ligne étendue avec détails */}
                     {expandedItemIndex === index && (
-                      <div className="px-4 py-4 bg-blue-50 border-t border-blue-100">
+                      <div className="px-4 py-4 bg-brand-soft/10 border-t border-brand-soft/30">
                         <div className="text-sm space-y-3">
                           <h5 className="font-semibold text-gray-900 mb-3">
                             📏 Détails complets - {getItemName(item)}
@@ -266,7 +270,7 @@ export function RoomInventoryCard({
                                     <div>Emballé : {item.packaged_volume_m3.toFixed(3)} m³</div>
                                   )}
                                   {item.packaging_display && (
-                                    <div className="text-blue-600 font-medium">{item.packaging_display}</div>
+                                    <div className="text-brand-accent font-medium">{item.packaging_display}</div>
                                   )}
                                 </div>
                               </div>
