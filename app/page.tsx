@@ -1731,11 +1731,16 @@ export default function Home() {
                       }`}
                     >
                       <div className="max-w-md mx-auto">
-                        <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-brand-accent to-brand-primary rounded-2xl flex items-center justify-center shadow-lg">
-                          <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        <div 
+                          className="w-16 h-16 mx-auto mb-6 rounded-2xl flex items-center justify-center shadow-lg"
+                          style={{ 
+                            background: 'linear-gradient(135deg, #2b7a78 0%, #04163a 100%)'
+                          }}
+                        >
+                          <svg className="w-8 h-8" fill="none" stroke="#ffffff" strokeWidth={3} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                           </svg>
-            </div>
+                        </div>
                         
                         <h4 className="text-xl font-semibold mb-2" style={{ color: '#1f2937' }}>
                           Ajoutez vos photos d'inventaire
