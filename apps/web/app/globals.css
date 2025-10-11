@@ -1,5 +1,6 @@
 /**
  * 🎨 Moverz v4 - Global styles
+ * Palette de couleurs inspirée de moverz_main
  */
 
 @tailwind base;
@@ -7,11 +8,17 @@
 @tailwind utilities;
 
 :root {
-  --color-text: #1e293b;
-  --color-accent: #3b82f6;
+  /* Moverz Brand Colors */
+  --brand-primary: 4, 22, 58; /* #04163a */
+  --brand-accent: 43, 122, 120; /* #2b7a78 */
+  --brand-soft: 107, 207, 207; /* #6bcfcf */
+  
+  /* Legacy vars pour compatibilité */
+  --color-text: #04163a;
+  --color-accent: #2b7a78;
   --color-background: #f8fafc;
   --color-error: #ef4444;
-  --color-success: #10b981;
+  --color-success: #2b7a78;
   --color-warning: #f59e0b;
 }
 
@@ -51,11 +58,11 @@
   }
 
   a {
-    @apply text-blue-500 hover:text-blue-600 transition-colors;
+    @apply text-brand-accent hover:text-brand-soft transition-colors;
   }
 
   button {
-    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+    @apply focus:outline-none focus:ring-2 focus:ring-brand-accent focus:ring-offset-2;
   }
 
   input[type='text'],
@@ -63,7 +70,7 @@
   input[type='number'],
   textarea,
   select {
-    @apply border border-gray-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-colors;
+    @apply border border-gray-300 rounded-lg px-4 py-2 focus:border-brand-accent focus:ring-2 focus:ring-brand-accent focus:ring-opacity-50 transition-colors;
   }
 }
 
@@ -79,7 +86,11 @@
   }
 
   .btn-primary {
-    @apply bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700;
+    @apply bg-brand-accent text-white hover:brightness-110 active:brightness-95 transition-all;
+  }
+  
+  .btn-brand {
+    @apply bg-brand-primary text-white hover:bg-opacity-90 active:bg-opacity-80 transition-all;
   }
 
   .btn-secondary {
@@ -182,17 +193,41 @@
     }
   }
 
-  /* Gradient backgrounds */
+  /* Moverz Brand Gradients */
   .bg-gradient-primary {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    background: linear-gradient(135deg, #2b7a78 0%, #04163a 100%);
+  }
+  
+  .bg-hero {
+    background: radial-gradient(1200px 600px at 10% -10%, rgba(43,122,120,0.25), transparent), 
+                linear-gradient(180deg, #04163a 0%, #04163a 60%, #06224d 100%);
   }
 
   .bg-gradient-success {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    background: linear-gradient(135deg, #2b7a78 0%, #1d5f5e 100%);
   }
 
   .bg-gradient-danger {
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  }
+  
+  /* Glassmorphism effect */
+  .card-glass {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .card-glass:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  }
+  
+  /* Glow effect */
+  .glow {
+    filter: blur(60px);
+    background: radial-gradient(400px 200px at 80% 20%, rgba(107,207,207,0.25), transparent);
   }
 }
 

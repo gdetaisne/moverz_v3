@@ -42,15 +42,15 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <div className="container mx-auto px-6 py-16">
         <div className="max-w-4xl mx-auto">
           {/* Hero section */}
           <div className="text-center mb-16">
-            <div className="w-24 h-24 bg-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+            <div className="w-24 h-24 bg-brand-accent rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-marketing-xl">
               <span className="text-white text-5xl font-bold">M</span>
             </div>
-            <h1 className="text-5xl font-bold text-gray-900 mb-4">
+            <h1 className="text-5xl font-bold text-brand-primary mb-4 animate-fade-in-up">
               Bienvenue sur Moverz v4
             </h1>
             <p className="text-xl text-gray-600 mb-8">
@@ -58,7 +58,7 @@ export default function HomePage() {
             </p>
             <Link
               href="/upload"
-              className="inline-block bg-blue-500 hover:bg-blue-600 text-white font-semibold py-4 px-8 rounded-xl transition-colors shadow-lg hover:shadow-xl"
+              className="inline-block bg-brand-accent hover:brightness-110 text-white font-semibold py-4 px-8 rounded-xl transition-all shadow-marketing-xl hover:shadow-marketing-2xl hover:-translate-y-1"
             >
               Commencer maintenant →
             </Link>
@@ -66,11 +66,11 @@ export default function HomePage() {
 
           {/* Features */}
           <div className="grid md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+            <div className="bg-white rounded-2xl p-6 shadow-card border border-gray-100 hover:shadow-soft hover:-translate-y-1 transition-all duration-300">
+              <div className="w-12 h-12 bg-brand-soft/20 rounded-lg flex items-center justify-center mb-4">
                 <span className="text-2xl">📸</span>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg font-semibold text-brand-primary mb-2">
                 Upload de photos
               </h3>
               <p className="text-sm text-gray-600">
@@ -78,11 +78,11 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+            <div className="bg-white rounded-2xl p-6 shadow-card border border-gray-100 hover:shadow-soft hover:-translate-y-1 transition-all duration-300">
+              <div className="w-12 h-12 bg-brand-accent/20 rounded-lg flex items-center justify-center mb-4">
                 <span className="text-2xl">📦</span>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg font-semibold text-brand-primary mb-2">
                 Inventaire intelligent
               </h3>
               <p className="text-sm text-gray-600">
@@ -90,11 +90,11 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+            <div className="bg-white rounded-2xl p-6 shadow-card border border-gray-100 hover:shadow-soft hover:-translate-y-1 transition-all duration-300">
+              <div className="w-12 h-12 bg-brand-soft/20 rounded-lg flex items-center justify-center mb-4">
                 <span className="text-2xl">💰</span>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg font-semibold text-brand-primary mb-2">
                 Devis instantané
               </h3>
               <p className="text-sm text-gray-600">

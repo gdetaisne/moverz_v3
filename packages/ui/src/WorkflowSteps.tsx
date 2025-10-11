@@ -15,7 +15,7 @@ interface WorkflowStepsProps {
 
 export default function WorkflowSteps({ currentStep, onStepChange, steps }: WorkflowStepsProps) {
   return (
-    <div className="bg-white border-b border-gray-200">
+    <div className="bg-white/10 backdrop-blur-md border-b border-white/20">
       <div className="max-w-4xl mx-auto px-4 py-3">
         {/* Étapes ultra-simplifiées */}
         <div className="flex justify-center space-x-8">
@@ -25,12 +25,12 @@ export default function WorkflowSteps({ currentStep, onStepChange, steps }: Work
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-200 ${
                   step.completed
-                    ? 'bg-green-500 text-white cursor-pointer hover:bg-green-600 shadow-md' // ✅ Terminé : cercle vert avec ✓
+                    ? 'bg-brand-accent text-white cursor-pointer hover:bg-brand-accent/90 shadow-md' // ✅ Terminé : cercle vert avec ✓
                     : currentStep === step.id
-                    ? 'bg-blue-600 text-white cursor-pointer hover:bg-blue-700 shadow-lg ring-2 ring-blue-200' // 🎯 En cours : cercle bleu accentué
+                    ? 'bg-brand-soft text-brand-primary cursor-pointer hover:bg-brand-soft/90 shadow-lg ring-2 ring-brand-soft/30' // 🎯 En cours : cercle turquoise accentué
                     : step.disabled
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed' // 🔒 Verrouillé : cercle gris clair
-                    : 'bg-gray-400 text-white cursor-pointer hover:bg-gray-500 hover:shadow-md' // ⏳ Futur : cercle gris moyen
+                    ? 'bg-white/10 text-white/40 cursor-not-allowed' // 🔒 Verrouillé : cercle gris clair
+                    : 'bg-white/20 text-white/80 cursor-pointer hover:bg-white/30 hover:shadow-md' // ⏳ Futur : cercle gris moyen
                 }`}
                 onClick={() => {
                   console.log('🎯 Clic sur étape', step.id, 'disabled:', step.disabled);
@@ -46,12 +46,12 @@ export default function WorkflowSteps({ currentStep, onStepChange, steps }: Work
               {/* Titre avec styles de police selon l'état */}
               <span className={`text-sm font-medium transition-all duration-200 ${
                 step.completed 
-                  ? 'text-green-600 font-semibold' // ✅ Terminé : texte vert, police accentuée
+                  ? 'text-brand-soft font-semibold' // ✅ Terminé : texte turquoise, police accentuée
                   : currentStep === step.id 
-                  ? 'text-gray-900 font-bold' // 🎯 En cours : texte foncé, police très accentuée
+                  ? 'text-white font-bold' // 🎯 En cours : texte blanc, police très accentuée
                   : step.disabled 
-                  ? 'text-gray-400 font-normal' // 🔒 Verrouillé : texte gris clair, police normale
-                  : 'text-gray-500 font-medium' // ⏳ Futur : texte gris moyen, police légèrement accentuée
+                  ? 'text-white/40 font-normal' // 🔒 Verrouillé : texte gris clair, police normale
+                  : 'text-white/70 font-medium' // ⏳ Futur : texte gris moyen, police légèrement accentuée
               }`}>
                 {step.title}
               </span>

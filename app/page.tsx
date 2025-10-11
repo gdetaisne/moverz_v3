@@ -1758,12 +1758,12 @@ export default function Home() {
                             e.stopPropagation(); // Empêcher la propagation vers la zone drag & drop
                             fileInputRef.current?.click();
                           }}
-                          className="inline-flex items-center px-6 py-3 font-medium rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
+                          className="inline-flex items-center px-8 py-4 font-semibold text-base rounded-xl transition-all duration-200 shadow-lg hover:shadow-2xl hover:scale-105"
                           style={{ backgroundColor: '#2b7a78', color: '#ffffff' }}
                         >
-                          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                           </svg>
                           Sélectionner des photos
               </button>
@@ -2872,28 +2872,6 @@ export default function Home() {
                   </p>
                 </div>
               </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => setActiveTab('tests')}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    activeTab === 'tests' 
-                      ? 'bg-brand-soft text-brand-primary shadow-lg' 
-                      : 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
-                  }`}
-                >
-                  🧪 Tests
-                </button>
-                <button
-                  onClick={() => setActiveTab('backoffice')}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    activeTab === 'backoffice' 
-                      ? 'bg-brand-soft text-brand-primary shadow-lg' 
-                      : 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
-                  }`}
-                >
-                  🔧 Back-office
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -2973,10 +2951,35 @@ export default function Home() {
 
       {/* Footer avec informations de déploiement - seulement visible pour le développeur */}
       {!isEmbedded && (
-        <footer className="bg-white/5 backdrop-blur-sm border-t border-white/10 py-3 mt-8">
+        <footer className="bg-white/5 backdrop-blur-sm border-t border-white/10 py-4 mt-8">
           <div className="max-w-7xl mx-auto px-6">
-            <div className="flex items-center justify-between text-xs text-white/50">
-              <div className="flex items-center space-x-4">
+            <div className="flex items-center justify-between">
+              {/* Onglets Tests / Back-office */}
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setActiveTab('tests')}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    activeTab === 'tests' 
+                      ? 'bg-brand-soft text-brand-primary shadow-lg' 
+                      : 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
+                  }`}
+                >
+                  🧪 Tests
+                </button>
+                <button
+                  onClick={() => setActiveTab('backoffice')}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    activeTab === 'backoffice' 
+                      ? 'bg-brand-soft text-brand-primary shadow-lg' 
+                      : 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
+                  }`}
+                >
+                  🔧 Back-office
+                </button>
+              </div>
+
+              {/* Infos techniques */}
+              <div className="flex items-center space-x-4 text-xs text-white/50">
                 <span className="bg-white/5 px-2 py-1 rounded">
                   {getBuildInfo()}
                 </span>
@@ -2984,8 +2987,7 @@ export default function Home() {
                   <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
                   <span>Last update: {currentTime ? currentTime.toLocaleTimeString('fr-FR') : '--:--:--'}</span>
                 </div>
-              </div>
-              <button
+                <button
                 onClick={async () => {
                   if (confirm('🗑️ Supprimer toutes les photos ? Cette action est irréversible.')) {
                     try {
@@ -3002,11 +3004,12 @@ export default function Home() {
                     }
                   }
                 }}
-                className="text-xs bg-red-900/30 text-red-300 px-2 py-1 rounded hover:bg-red-900/50 transition-colors"
-                title="Supprimer toutes les photos (reset complet)"
-              >
-                🗑️ Reset DB
-              </button>
+                  className="text-xs bg-red-900/30 text-red-300 px-2 py-1 rounded hover:bg-red-900/50 transition-colors"
+                  title="Supprimer toutes les photos (reset complet)"
+                >
+                  🗑️ Reset DB
+                </button>
+              </div>
             </div>
           </div>
         </footer>

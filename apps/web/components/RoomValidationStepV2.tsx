@@ -183,12 +183,65 @@ export function RoomValidationStepV2({
   // Déplacer une photo vers une pièce
   const movePhotoToRoom = useCallback((photoId: string, targetRoomId: string) => {
     console.log(`🔍 movePhotoToRoom: photoId=${photoId}, targetRoomId=${targetRoomId}`);
-    console.log(`🔍 Photos disponibles:`, photos.map(p => ({ id: p.id, photoId: p.photoId })));
     
     setRoomGroups(prev => {
       const newGroups = [...prev];
       
-      // Retirer la photo de sa pièce actuelle
+      // 1️⃣ CHERCHER la photo AVANT de la retirer
+      let photoToMove: PhotoData | null = null;
+      let sourceGroupId: string | null = null;
+      
+      for (const group of newGroups) {
+        const found = group.photos.find(p => p.id === photoId);
+        if (found) {
+          photoToMove = found;
+          sourceGroupId = group.id;
+          console.log(`🔍 Photo trouvée dans ${group.roomType}`);
+          break;
+        }
+      }
+      
+      // Si pas trouvée, chercher dans le tableau photos original (fallback)
+      if (!photoToMove) {
+        const originalPhoto = photos.find(p => p.photoId === photoId || p.id === photoId);
+        if (originalPhoto) {
+          console.log(`⚠️ Photo non trouvée dans roomGroups, utilisation fallback depuis props`);
+          photoToMove = {
+            id: originalPhoto.photoId || originalPhoto.id || `photo-${Date.now()}-${Math.random()}`,
+            file: originalPhoto.file,
+            fileUrl: originalPhoto.fileUrl || (originalPhoto.photoId ? `/api/uploads/${originalPhoto.photoId}.jpeg` : undefined),
+            analysis: originalPhoto.analysis,
+            status: originalPhoto.status,
+            error: originalPhoto.error,
+            selectedItems: originalPhoto.selectedItems,
+            photoId: originalPhoto.photoId || originalPhoto.id,
+            progress: originalPhoto.progress,
+            roomName: originalPhoto.roomName,
+            roomConfidence: originalPhoto.roomConfidence,
+            roomType: originalPhoto.roomType
+          };
+        }
+      }
+      
+      if (!photoToMove) {
+        console.error(`❌ Photo ${photoId} introuvable !`);
+        return prev;
+      }
+      
+      // 2️⃣ Vérifier que la pièce cible existe
+      const targetGroup = newGroups.find(g => g.id === targetRoomId);
+      if (!targetGroup) {
+        console.error(`❌ Pièce cible ${targetRoomId} non trouvée !`);
+        return prev;
+      }
+      
+      // 3️⃣ Si la photo est déjà dans la pièce cible, ne rien faire
+      if (sourceGroupId === targetRoomId) {
+        console.log(`ℹ️ Photo déjà dans la pièce ${targetGroup.roomType}, aucune action`);
+        return prev;
+      }
+      
+      // 4️⃣ RETIRER la photo de sa pièce source
       newGroups.forEach(group => {
         const beforeCount = group.photos.length;
         group.photos = group.photos.filter(p => p.id !== photoId);
@@ -198,51 +251,13 @@ export function RoomValidationStepV2({
         }
       });
       
-      // Ajouter la photo à la pièce cible
-      const targetGroup = newGroups.find(g => g.id === targetRoomId);
-      if (targetGroup) {
-        // Chercher la photo dans les groupes existants (photos transformées)
-        let photoToMove = null;
-        for (const group of newGroups) {
-          photoToMove = group.photos.find(p => p.id === photoId);
-          if (photoToMove) break;
-        }
-        
-        // Si pas trouvée dans les groupes, chercher dans le tableau photos original
-        if (!photoToMove) {
-          photoToMove = photos.find(p => p.photoId === photoId || p.id === photoId);
-          if (photoToMove) {
-            // Transformer la photo pour la cohérence - GARDER le photoId original
-            photoToMove = {
-              id: photoToMove.photoId || photoToMove.id || `photo-${Date.now()}-${Math.random()}`,
-              file: photoToMove.file,
-              fileUrl: photoToMove.fileUrl || (photoToMove.photoId ? `/api/uploads/${photoToMove.photoId}.jpeg` : undefined),
-              analysis: photoToMove.analysis,
-              status: photoToMove.status,
-              error: photoToMove.error,
-              selectedItems: photoToMove.selectedItems,
-              photoId: photoToMove.photoId || photoToMove.id, // GARDER l'ID original de la DB
-              progress: photoToMove.progress,
-              roomName: photoToMove.roomName,
-              roomConfidence: photoToMove.roomConfidence,
-              roomType: photoToMove.roomType
-            };
-          }
-        }
-        
-        if (photoToMove) {
-          targetGroup.photos.push(photoToMove);
-          targetGroup.lastModified = new Date();
-          console.log(`✅ Photo ${photoId} déplacée vers ${targetGroup.roomType} (${targetGroup.photos.length} photos)`);
-        } else {
-          console.error(`❌ Photo ${photoId} non trouvée dans les groupes ni dans le tableau photos !`);
-        }
-      } else {
-        console.error(`❌ Pièce cible ${targetRoomId} non trouvée !`);
-      }
+      // 5️⃣ AJOUTER à la pièce cible
+      targetGroup.photos.push(photoToMove);
+      targetGroup.lastModified = new Date();
+      console.log(`✅ Photo ${photoId} déplacée vers ${targetGroup.roomType} (${targetGroup.photos.length} photos)`);
       
-           // Supprimer les pièces vides après le drag & drop
-           return newGroups.filter(group => group.photos.length > 0);
+      // 6️⃣ Supprimer les pièces vides après le drag & drop
+      return newGroups.filter(group => group.photos.length > 0);
     });
   }, [photos]);
 
@@ -294,8 +309,12 @@ export function RoomValidationStepV2({
     setDragOverRoom(roomId);
   };
 
-  const handleDragLeave = () => {
-    setDragOverRoom(null);
+  const handleDragLeave = (e: React.DragEvent) => {
+    // Ne réinitialiser que si on quitte vraiment le conteneur parent
+    // (pas juste un élément enfant)
+    if (e.currentTarget === e.target) {
+      setDragOverRoom(null);
+    }
   };
 
   const handleDrop = (e: React.DragEvent, roomId: string) => {
@@ -665,6 +684,7 @@ function RoomGroupCardV2({
                 className="relative group cursor-grab active:cursor-grabbing"
                 draggable
                 onDragStart={(e) => onPhotoDragStart(e, photo)}
+                drag={false}
                 layout
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}

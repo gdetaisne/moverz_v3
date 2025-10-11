@@ -6,9 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -155,7 +154,7 @@ model AiMetric {
   retries     Int      @default(0)
   tokensIn    Int?
   tokensOut   Int?
-  costUsd     Decimal  @default(0) @db.Decimal(10, 6)
+  costUsd     Float    @default(0)
   meta        Json?    // requestId, userId, roomType, photoId, batchId, etc.
 
   @@index([ts])

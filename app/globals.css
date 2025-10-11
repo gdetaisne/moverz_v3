@@ -1,23 +1,29 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
-/* CSS Variables - Style bordeaux-demenageur.fr */
+/* CSS Variables - Palette Moverz Brand */
 :root {
-  --bd-navy: #1e3a8a;        /* Bleu foncé principal */
-  --bd-teal: #0d9488;        /* Teal pour les accents */
-  --bd-cyan: #06b6d4;        /* Cyan pour les boutons */
-  --bd-blue: #3b82f6;        /* Bleu standard */
-  --bd-bg: #f8fafc;          /* Arrière-plan clair */
-  --bd-card: #ffffff;        /* Cartes blanches */
-  --bd-text: #1e293b;        /* Texte principal */
-  --bd-text-light: #64748b;  /* Texte secondaire */
-  --bd-accent-orange: #f97316; /* Orange pour les accents */
-  --bd-accent-green: #10b981;  /* Vert pour les succès */
-  --bd-accent-red: #ef4444;    /* Rouge pour les erreurs */
+  /* Moverz Brand Colors */
+  --brand-primary: #04163a;   /* Bleu marine foncé */
+  --brand-accent: #2b7a78;    /* Vert/Turquoise foncé */
+  --brand-soft: #6bcfcf;      /* Turquoise clair */
+  
+  /* Legacy variables (bordeaux-demenageur.fr) */
+  --bd-navy: var(--brand-primary);
+  --bd-teal: var(--brand-accent);
+  --bd-cyan: var(--brand-soft);
+  --bd-blue: var(--brand-accent);
+  --bd-bg: #f8fafc;
+  --bd-card: #ffffff;
+  --bd-text: var(--brand-primary);
+  --bd-text-light: #64748b;
+  --bd-accent-orange: #f97316;
+  --bd-accent-green: var(--brand-accent);
+  --bd-accent-red: #ef4444;
   
   /* Override Tailwind defaults */
   --background: var(--mz-bg);
-  --foreground: #0f172a;
+  --foreground: var(--brand-primary);
 }
 
 @theme inline {
@@ -28,10 +34,29 @@
 }
 
 body {
-  background: var(--mz-bg);
-  color: var(--foreground);
+  background: #04163a;
+  color: rgba(255, 255, 255, 0.9); /* Texte blanc par défaut sur fond sombre */
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji';
   scroll-behavior: smooth;
+}
+
+/* Hero background gradient - Moverz style */
+.bg-hero { 
+  background: radial-gradient(1200px 600px at 10% -10%, rgba(43,122,120,0.25), transparent), 
+              linear-gradient(180deg, #04163a 0%, #04163a 60%, #06224d 100%);
+  min-height: 100vh;
+}
+
+/* Halo effect */
+.halo {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(107, 207, 207, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* Headings */
@@ -41,19 +66,29 @@ body {
 .body { @apply text-base leading-relaxed; }
 .small { @apply text-sm text-gray-600; }
 
-/* Buttons - Style moverz.fr */
+/* Buttons - Moverz Brand */
 .btn { 
   @apply inline-flex items-center justify-center rounded-xl px-6 py-3 font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2; 
 }
 .btn-primary { 
   @apply text-white shadow-lg; 
-  background-color: var(--mz-teal); 
+  background-color: var(--brand-accent); 
   box-shadow: 0 4px 14px 0 rgba(43, 122, 120, 0.3);
 }
 .btn-primary:hover { 
   opacity: 0.9; 
   transform: translateY(-1px);
   box-shadow: 0 6px 20px 0 rgba(43, 122, 120, 0.4);
+}
+.btn-brand {
+  @apply text-white shadow-lg;
+  background-color: var(--brand-primary);
+  box-shadow: 0 4px 14px 0 rgba(4, 22, 58, 0.3);
+}
+.btn-brand:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px 0 rgba(4, 22, 58, 0.4);
 }
 .btn-outline { 
   @apply border-2 text-[color:var(--mz-teal)]; 
