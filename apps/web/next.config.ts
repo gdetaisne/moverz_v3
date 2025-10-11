@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Support du basePath pour reverse proxy
   basePath: process.env.BASE_PATH || '',
+  assetPrefix: process.env.BASE_PATH || '',
   
   // Mode standalone pour déploiement CapRover
   output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
