@@ -201,6 +201,25 @@ body {
   background: var(--mz-navy);
 }
 
+/* Form inputs - Force dark text on light background */
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="number"],
+input[type="password"],
+input[type="date"],
+input[type="time"],
+select,
+textarea {
+  color: #1f2937 !important; /* gray-800 */
+  background-color: #ffffff;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af !important; /* gray-400 */
+}
+
 /* Focus styles */
 :focus-visible { 
   outline: none; 
