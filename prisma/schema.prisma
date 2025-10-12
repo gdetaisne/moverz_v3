@@ -218,3 +218,16 @@ model Job {
   @@index([type])
   @@index([createdAt])
 }
+
+// Analytics - Tracking utilisateur
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  eventType String   // 'app_opened', 'step_reached', 'photo_uploaded', etc.
+  metadata  Json?    // { step, photoId, duration_ms, ... }
+  createdAt DateTime @default(now())
+  
+  @@index([userId])
+  @@index([eventType])
+  @@index([createdAt])
+}

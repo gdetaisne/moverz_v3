@@ -23,6 +23,7 @@ import { clearCache } from "@core/cache";
 import { calculatePackagedVolume } from "@core/packaging";
 import { userSession } from "@core/auth-client";
 import { createUserStorage, StorageCleanup } from "@core/user-storage";
+import { track, trackStep } from "@/lib/analytics";
 // 🎯 SUPPRIMÉ : Plus de détection de doublons avec la nouvelle logique par pièce
 
 interface RoomData {
@@ -90,6 +91,9 @@ export default function Home() {
         
         console.log(`🔐 Session initialisée: ${userId}`);
         
+        // 📊 Track ouverture app
+        track('app_opened', { userId });
+        
         // Charger les données sauvegardées pour cet utilisateur
         const savedData = storage.loadInventoryData();
         if (savedData) {
@@ -119,6 +123,8 @@ export default function Home() {
   const handleStepChange = (step: number) => {
     console.log('🎯 handleStepChange appelée avec étape:', step);
     setCurrentStep(step);
+    // 📊 Track changement d'étape
+    trackStep(step);
   };
 
   // Fonction pour gérer la validation des pièces
@@ -126,6 +132,11 @@ export default function Home() {
     console.log('🏠 Validation des pièces terminée:', validatedRoomGroups);
     setRoomGroups(validatedRoomGroups);
     setCurrentStep(3); // Passer à l'étape 3 (Valider l'inventaire)
+    // 📊 Track validation pièces
+    track('room_validation_completed', { 
+      roomCount: validatedRoomGroups.length,
+      totalPhotos: validatedRoomGroups.reduce((sum, g) => sum + g.photos.length, 0)
+    });
   }, []);
 
   // Fonction pour charger les roomGroups depuis l'API
@@ -629,6 +640,14 @@ export default function Home() {
       console.log(`📊 ${batch.photosCount} photos sauvegardées en DB`);
       console.log(`⚡ ${batch.jobsEnqueued} jobs d'analyse enqueued`);
       
+      // 📊 Track envoi devis
+      track('quote_submitted', {
+        projectId: project.id,
+        batchId: batch.batchId,
+        photosCount: batch.photosCount,
+        roomCount: roomGroups.length
+      });
+      
       // Succès
       alert(`✅ Demande de devis envoyée avec succès !\n\n${batch.photosCount} photos sauvegardées et en cours d'analyse.\n\nNous vous contacterons dans les plus brefs délais pour finaliser votre devis personnalisé.`);
       
@@ -870,6 +889,14 @@ export default function Home() {
             } : photo
           )
         }));
+
+        // 📊 Track photo uploadée
+        track('photo_uploaded', {
+          photoId: result.photo_id,
+          roomType: result.roomType,
+          confidence: result.confidence,
+          duration_ms: totalPhotoTime
+        });
 
         // 🎯 SUPPRIMÉ : Plus de détection de doublons nécessaire
         // L'analyse par pièce élimine automatiquement les doublons
