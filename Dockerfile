@@ -70,6 +70,6 @@ EXPOSE 3001
 ENV PORT 3001
 ENV HOSTNAME "0.0.0.0"
 
-# Script de démarrage : initialise DB, credentials Google, puis lance l'app
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss --skip-generate || true; node scripts/init-google-credentials.js || true; node server.js"]
+# Script de démarrage : applique migrations, initialise credentials Google, puis lance l'app
+CMD ["sh", "-c", "npx prisma migrate deploy || echo 'Migration warning (normal if no pending migrations)'; node scripts/init-google-credentials.js || true; node server.js"]
 
