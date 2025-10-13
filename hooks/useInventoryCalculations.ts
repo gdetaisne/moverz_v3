@@ -92,5 +92,5 @@ export function useInventoryCalculations(photos: PhotoData[]): InventoryCalculat
       categoriesCount: categories.size,
       itemsByCategory
     };
-  }, [photos]);
+  }, [photos.length, photos.map(p => `${p.id}-${p.status}-${p.analysis?.items?.length || 0}`).join(',')]);
 }

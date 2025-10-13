@@ -7,11 +7,12 @@ import { resolvePhotoSrc } from '@/lib/imageUrl';
 
 // Composant image unifié basé sur le système qui fonctionnait
 function UnifiedImage({ photo, className }: { photo: PhotoData; className: string }) {
-  // Logique simple et directe comme PhotoCard et PhotoThumbnail
+  // ✅ URLs BLOB STABLES : Utiliser la fonction stable
   const getImageSrc = () => {
-    // 1. Si nouveau upload (file object), utiliser blob URL
+    // 1. Si nouveau upload (file object), utiliser blob URL stable
     if (photo.file) {
-      return URL.createObjectURL(photo.file);
+      const { getStableBlobUrl } = require('@/lib/photoTransforms');
+      return getStableBlobUrl(photo.file);
     }
     
     // 2. Sinon, résoudre via resolvePhotoSrc (gère url, filePath, photoId)
@@ -388,22 +389,9 @@ export function RoomValidationStepV2({
             const updatedPhotos = await response.json();
             console.log('🔄 Photos rechargées depuis la DB:', updatedPhotos.length);
             
-            // Transformer les photos de la DB vers le format attendu par l'interface
-            const transformedPhotos = updatedPhotos.map((photo: any) => ({
-              id: photo.id,
-              photoId: photo.id,
-              file: null, // Pas de file object pour les photos de la DB
-              fileUrl: photo.url.startsWith('http') ? photo.url : `http://localhost:3001${photo.url}`,
-              analysis: photo.analysis,
-              status: 'completed' as const,
-              error: undefined,
-              selectedItems: new Set(),
-              progress: 100,
-              roomName: photo.roomType,
-              roomConfidence: 0.9,
-              roomType: photo.roomType,
-              userId: userId
-            }));
+            // ✅ TRANSFORMATION UNIFIÉE : Utiliser la fonction stable
+            const { transformPhotos } = await import('@/lib/photoTransforms');
+            const transformedPhotos = transformPhotos(updatedPhotos, userId);
             
             // Debug: vérifier les analyses
             const photosWithAnalysis = transformedPhotos.filter(p => p.analysis && p.analysis.items && p.analysis.items.length > 0);

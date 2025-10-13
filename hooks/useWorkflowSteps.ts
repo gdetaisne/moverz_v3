@@ -70,5 +70,5 @@ export function useWorkflowSteps(
         disabled: !isStep4Completed
       }
     ];
-  }, [currentStep, photos, quoteFormData, roomGroups]);
+  }, [currentStep, photos.length, photos.some(p => p.analysis?.items?.length > 0), !!quoteFormData, roomGroups.length]);
 }

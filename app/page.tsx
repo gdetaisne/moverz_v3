@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import BackOffice from "@ui/BackOffice";
 import WorkflowSteps from "@ui/WorkflowSteps";
@@ -24,25 +24,14 @@ import { calculatePackagedVolume } from "@core/packaging";
 import { userSession } from "@core/auth-client";
 import { createUserStorage, StorageCleanup } from "@core/user-storage";
 import { track, trackStep } from "@/lib/analytics";
+import { PhotoClient, PhotoStatus, mapPhotoDBToClient } from "@/types/photo";
+import { transformPhoto, createStableRoomGroups } from "@/lib/photoTransforms";
 // 🎯 SUPPRIMÉ : Plus de détection de doublons avec la nouvelle logique par pièce
 
 interface RoomData {
   id: string;
   name: string;
-  photos: {
-    file: File;
-    fileUrl?: string; // URL du fichier uploadé
-    analysis?: any;
-    status: 'uploaded' | 'processing' | 'completed' | 'error';
-    error?: string;
-    selectedItems: Set<number>; // Indices des objets sélectionnés (toujours défini)
-    photoId?: string; // ID unique pour le traitement asynchrone
-    progress?: number; // Pourcentage de progression (0-100)
-    roomName?: string; // Nom de la pièce pour cette photo spécifique
-    roomType?: string; // Type de pièce détecté par l'IA
-    roomConfidence?: number; // Confiance de la détection de pièce
-    userId?: string; // ID de l'utilisateur propriétaire
-  }[];
+  photos: PhotoClient[]; // ✅ Utilise le type cohérent
 }
 
 
@@ -74,6 +63,8 @@ export default function Home() {
   const [hasShownContinuationModal, setHasShownContinuationModal] = useState(false);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // ✅ DEBUG RETIRÉ : Plus de re-renders constants
 
   // Initialisation du système d'authentification
   useEffect(() => {
@@ -170,7 +161,8 @@ export default function Home() {
   }, [currentUserId]); // Retirer currentStep pour éviter la boucle
 
   // Fonction pour recharger les photos depuis la base de données
-  const handlePhotosUpdated = useCallback((updatedPhotos: any[]) => {
+  // ✅ FONCTION STABILISÉE : Plus de dépendance currentUserId
+  const handlePhotosUpdated = useCallback(async (updatedPhotos: any[]) => {
     console.log('🔄 [handlePhotosUpdated] Mise à jour des photos:', updatedPhotos.length);
     
     // Vérifier que les photos ont des analyses
@@ -182,23 +174,8 @@ export default function Home() {
       photos: updatedPhotos
     }));
     
-    // Recalculer les groupes de pièces à partir des photos mises à jour
-    const newRoomGroups = updatedPhotos.reduce((groups: any[], photo) => {
-      const roomType = photo.roomType || photo.roomName || 'unknown';
-      let group = groups.find(g => g.roomType === roomType);
-      
-      if (!group) {
-        group = {
-          id: `room-${roomType}`,
-          roomType,
-          photos: []
-        };
-        groups.push(group);
-      }
-      
-      group.photos.push(photo);
-      return groups;
-    }, []);
+    // ✅ ROOMGROUPS STABLES : Utiliser la fonction stable
+    const newRoomGroups = createStableRoomGroups(updatedPhotos);
     
     console.log('🔄 Groupes de pièces recalculés:', newRoomGroups.length);
     newRoomGroups.forEach(group => {
@@ -207,7 +184,7 @@ export default function Home() {
     });
     
     setRoomGroups(newRoomGroups);
-  }, [currentUserId]);
+  }, []); // ✅ PLUS DE DÉPENDANCE currentUserId !
 
   // Fonction de test pour recharger les photos manuellement
   const handleTestReloadPhotos = useCallback(async () => {
@@ -397,7 +374,7 @@ export default function Home() {
       // Convertir les photos en base64
       const photosWithBase64 = await Promise.all(
         currentRoom.photos
-          .filter(photo => photo.status === 'completed' && photo.analysis?.items)
+          .filter(photo => photo.status === 'DONE' && photo.analysis?.items)
           .map(async (photo) => {
             const photoData = photo.fileUrl ? await convertImageToBase64(photo.fileUrl) : '';
             return {
@@ -700,6 +677,7 @@ export default function Home() {
   };
 
   // Persistance automatique des données (nouveau système)
+  // ✅ AUTO-SAUVEGARDE OPTIMISÉE : Seulement quand nécessaire
   useEffect(() => {
     if (!userStorage) return;
     
@@ -714,13 +692,8 @@ export default function Home() {
       userStorage.saveInventoryData(dataToSave);
     };
 
-    // Sauvegarder toutes les 5 secondes
-    const interval = setInterval(saveData, 5000);
-    
-    // Sauvegarder immédiatement
+    // ✅ Sauvegarder seulement une fois au changement
     saveData();
-
-    return () => clearInterval(interval);
   }, [currentRoom, currentStep, quoteFormData, inventoryValidated, userStorage]);
 
   // 🚫 DÉSACTIVÉ: Auto-sauvegarde automatique en DB (causait des boucles)
@@ -772,13 +745,22 @@ export default function Home() {
     setIsEmbedded(checkIfEmbedded());
   }, []);
 
-  // Mettre à jour l'heure toutes les secondes (côté client uniquement)
+  // ✅ SOLUTION DÉFINITIVE : Timer sans re-renders
+  const timeRef = useRef<Date | null>(null);
+  
   useEffect(() => {
-    // Initialiser l'heure côté client
-    setCurrentTime(new Date());
+    // Initialiser l'heure côté client une seule fois
+    timeRef.current = new Date();
+    setCurrentTime(timeRef.current);
     
+    // Timer qui ne met à jour l'état que quand l'heure change vraiment
     const timer = setInterval(() => {
-      setCurrentTime(new Date());
+      const newTime = new Date();
+      // 🔧 OPTIMISATION CRITIQUE : Ne mettre à jour que si l'heure a changé
+      if (!timeRef.current || newTime.getSeconds() !== timeRef.current.getSeconds()) {
+        timeRef.current = newTime;
+        setCurrentTime(newTime);
+      }
     }, 1000);
 
     return () => clearInterval(timer);
@@ -814,7 +796,7 @@ export default function Home() {
       // Vérifier si la photo est déjà en cours de traitement
       setCurrentRoom(prev => {
         const photo = prev.photos[photoIndex];
-        if (!photo || photo.status === 'processing' || photo.status === 'completed') {
+        if (!photo || photo.status === 'PROCESSING' || photo.status === 'DONE') {
           console.log(`Photo ${photoIndex} déjà traitée ou en cours, ignorée`);
           return prev;
         }
@@ -825,25 +807,15 @@ export default function Home() {
           photos: prev.photos.map((photo, idx) => 
             idx === photoIndex ? { 
               ...photo, 
-              status: 'processing',
+              status: 'PROCESSING',
               progress: 10
             } : photo
           )
         };
       });
 
-      // Simuler progression
-      const progressInterval = setInterval(() => {
-        setCurrentRoom(prev => ({
-          ...prev,
-          photos: prev.photos.map((photo, idx) => 
-            idx === photoIndex ? { 
-              ...photo, 
-              progress: Math.min((photo.progress || 10) + Math.random() * 15, 90)
-            } : photo
-          )
-        }));
-      }, 1000);
+      // ✅ PROGRESSION SIMPLIFIÉE : Pas de setInterval qui cause les re-renders
+      // La progression sera mise à jour directement par l'API
 
       const fd = new FormData();
       fd.append("file", file);
@@ -862,7 +834,7 @@ export default function Home() {
       const apiTime = Date.now() - apiStart;
       console.log(`🌐 [TIMING] API /photos/analyze: ${apiTime}ms - Photo ${photoIndex}`);
       
-      clearInterval(progressInterval);
+      // ✅ Plus besoin de clearInterval
 
       if (result) {
         // ✅ UN SEUL appel setCurrentRoom pour éviter d'écraser les propriétés
@@ -882,7 +854,7 @@ export default function Home() {
               roomType: result.roomType,
               roomConfidence: result.confidence,
               // Propriétés de completion
-              status: 'completed', 
+              status: 'DONE', 
               analysis: result,
               fileUrl: result.file_url,
               photoId: result.photo_id || photo.photoId,
@@ -911,7 +883,7 @@ export default function Home() {
         photos: prev.photos.map((photo, idx) => 
           idx === photoIndex ? { 
             ...photo, 
-            status: 'error', 
+            status: 'ERROR', 
             error: errorMsg,
             progress: 0
           } : photo
@@ -921,13 +893,13 @@ export default function Home() {
   };
 
   // Fonctions pour le drag & drop
-  const onDrop = (e: React.DragEvent) => {
+  const onDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
     
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
-      handleFiles(files);
+      await handleFiles(files);
     }
   };
 
@@ -941,16 +913,16 @@ export default function Home() {
     setIsDragOver(false);
   };
 
-  const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     console.log('🎯 onFileSelect appelée', e.target.files);
     const files = Array.from(e.target.files ?? []);
     if (files.length > 0) {
       console.log('📁 Fichiers sélectionnés:', files.length);
-      handleFiles(files);
+      await handleFiles(files);
     }
   };
 
-  const handleFiles = (files: File[]) => {
+  const handleFiles = async (files: File[]) => {
     console.log('🎯 handleFiles appelée avec', files.length, 'fichiers');
     
     // Vérifier la limite de 100 photos
@@ -962,18 +934,14 @@ export default function Home() {
     console.log('📸 Ajout des photos au state...');
     setLoading(true);
     
-    // Initialiser les photos avec statut 'uploaded' immédiatement
+    // ✅ TRANSFORMATION UNIFIÉE : Utiliser la fonction stable
     const newPhotos = files.map(file => {
       const photoId = generatePhotoId();
-      return {
+      return transformPhoto({
         file,
-        fileUrl: URL.createObjectURL(file), // Créer l'URL immédiatement
-        status: 'uploaded' as const,
-        selectedItems: new Set<number>(),
         photoId,
-        progress: 0,
-        userId: currentUserId
-      };
+        progress: 0
+      }, currentUserId);
     });
     
     setCurrentRoom(prev => ({
@@ -1021,7 +989,7 @@ export default function Home() {
       return {
         file,
         fileUrl: URL.createObjectURL(file), // Créer l'URL immédiatement
-        status: 'uploaded' as const,
+        status: 'PENDING' as PhotoStatus,
         selectedItems: new Set<number>(),
         photoId,
         progress: 0,
@@ -1064,9 +1032,11 @@ export default function Home() {
   // Utiliser le hook pour les étapes du workflow
   const workflowSteps = useWorkflowSteps(currentStep, currentRoom.photos, quoteFormData, roomGroups);
 
-  // Charger les photos ET roomGroups depuis l'API quand l'utilisateur est initialisé
+  // ✅ CHARGEMENT UNIQUE ET OPTIMISÉ : Plus de double chargement
   useEffect(() => {
     if (!currentUserId) return;
+    
+    // Chargement initial des données
     
     const loadInitialData = async () => {
       console.log('📥 Chargement initial des données pour:', currentUserId);
@@ -1081,34 +1051,24 @@ export default function Home() {
         if (photos && photos.length > 0) {
           console.log('✅ Photos chargées depuis DB:', photos.length);
           
-          // Transformer les photos de la DB au format attendu
-          const transformedPhotos = photos.map((photo: any) => ({
-            id: photo.id,
-            photoId: photo.id,
-            file: null,
-            fileUrl: photo.url, // URL déjà au bon format depuis la DB
-            analysis: photo.analysis,
-            status: 'completed' as const,
-            error: undefined,
-            selectedItems: new Set(),
-            progress: 100,
-            roomName: photo.roomType,
-            roomConfidence: 0.9,
-            roomType: photo.roomType,
-            userId: currentUserId
-          }));
+          // ✅ Transformer les photos de la DB avec le mapping sécurisé
+          const transformedPhotos = photos.map((photo: any) => 
+            mapPhotoDBToClient(photo, currentUserId)
+          );
           
           setCurrentRoom(prev => ({
             ...prev,
             photos: transformedPhotos
           }));
+          
+          // ✅ ROOMGROUPS STABLES : Utiliser la fonction stable
+          const newRoomGroups = createStableRoomGroups(transformedPhotos);
+          
+          setRoomGroups(newRoomGroups);
         }
       } catch (error) {
         console.error('❌ Erreur chargement photos:', error);
       }
-      
-      // Charger les roomGroups
-      loadRoomGroupsFromAPI();
     };
     
     loadInitialData();
@@ -1707,7 +1667,7 @@ export default function Home() {
                       </div>
                     ) : (
                               <div className="text-sm text-gray-500">
-                                {photo.status === 'processing' ? 'Analyse en cours...' : 'Aucun objet détecté'}
+                                {photo.status === 'PROCESSING' ? 'Analyse en cours...' : 'Aucun objet détecté'}
                       </div>
                     )}
                   </div>
@@ -1866,7 +1826,7 @@ export default function Home() {
                       />
                                 
                                 {/* Overlay de chargement */}
-                    {photo.status === 'processing' && (
+                    {photo.status === 'PROCESSING' && (
                                   <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                                     <div className="text-center text-white">
                                       <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
@@ -1876,7 +1836,7 @@ export default function Home() {
                     )}
                     
                                 {/* Overlay d'erreur */}
-                    {photo.status === 'error' && (
+                    {photo.status === 'ERROR' && (
                                   <div className="absolute inset-0 bg-red-500 bg-opacity-90 flex items-center justify-center">
                                     <div className="text-center text-white p-2">
                                       <svg className="w-6 h-6 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1893,22 +1853,22 @@ export default function Home() {
                                 {/* Statut */}
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center space-x-2">
-                                    {photo.status === 'uploaded' && (
+                                    {photo.status === 'PENDING' && (
                                       <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
                                     )}
-                                    {photo.status === 'processing' && (
+                                    {photo.status === 'PROCESSING' && (
                                       <div className="w-2 h-2 bg-brand-accent rounded-full animate-pulse"></div>
                                     )}
-                                    {photo.status === 'completed' && (
+                                    {photo.status === 'DONE' && (
                                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                                     )}
-                                    {photo.status === 'error' && (
+                                    {photo.status === 'ERROR' && (
                                       <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                                     )}
                                     <span className="text-xs font-medium text-gray-600">
-                                      {photo.status === 'uploaded' && 'En attente'}
-                                      {photo.status === 'processing' && 'Analyse...'}
-                                      {photo.status === 'completed' && (
+                                      {photo.status === 'PENDING' && 'En attente'}
+                                      {photo.status === 'PROCESSING' && 'Analyse...'}
+                                      {photo.status === 'DONE' && (
                                         photo.roomName || 
                                         (photo.roomType && photo.roomType !== 'autre' ? 
                                           (() => {
@@ -1933,7 +1893,7 @@ export default function Home() {
                                           })() 
                                         : 'Terminé')
                                       )}
-                                      {photo.status === 'error' && 'Erreur'}
+                                      {photo.status === 'ERROR' && 'Erreur'}
                                     </span>
                                   </div>
                                   
@@ -1950,7 +1910,7 @@ export default function Home() {
           </div>
 
                                 {/* Barre de progression */}
-                          {photo.status === 'processing' && (
+                          {photo.status === 'PROCESSING' && (
                                   <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
                               <div 
                                       className="h-full bg-gradient-to-r from-brand-accent to-brand-primary rounded-full transition-all duration-500" 
@@ -1960,7 +1920,7 @@ export default function Home() {
                           )}
                           
                                 {/* Bouton de retry pour les erreurs */}
-                                {photo.status === 'error' && (
+                                {photo.status === 'ERROR' && (
                             <button
                                     onClick={() => retryPhotoAnalysis(photoIndex)}
                                     className="w-full mt-2 px-3 py-1.5 bg-red-50 text-red-600 text-xs font-medium rounded-lg hover:bg-red-100 transition-colors"
@@ -3009,6 +2969,13 @@ export default function Home() {
                 >
                   🔧 Back-office
                 </button>
+                <a
+                  href="/analytics-hybrid"
+                  target="_blank"
+                  className="px-4 py-2 bg-green-500/80 text-white rounded-xl text-sm font-medium transition-all duration-200 hover:bg-green-500 border border-green-400/50"
+                >
+                  📊 Dashboard Hybride
+                </a>
               </div>
 
               {/* Infos techniques */}
