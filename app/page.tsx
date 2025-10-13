@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import BackOffice from "@ui/BackOffice";
 import WorkflowSteps from "@ui/WorkflowSteps";
 import QuoteForm from "@/components/QuoteForm";
 import DismountableToggle from "@ui/DismountableToggle";
@@ -45,7 +44,6 @@ export default function Home() {
     photos: []
   });
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'tests' | 'backoffice'>('tests');
   const [isEmbedded, setIsEmbedded] = useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
@@ -2870,8 +2868,8 @@ export default function Home() {
         </div>
       )}
 
-      {/* Étapes du workflow - seulement si pas en mode embed et onglet tests */}
-      {!isEmbedded && activeTab === 'tests' && (
+      {/* Étapes du workflow - seulement si pas en mode embed */}
+      {!isEmbedded && (
         <>
         <WorkflowSteps 
           currentStep={currentStep}
@@ -2929,9 +2927,9 @@ export default function Home() {
         </>
       )}
 
-      {/* Contenu selon l'onglet actif */}
+      {/* Interface de tests uniquement */}
       <div className={`${isEmbedded ? 'p-4' : 'p-6'} max-w-7xl mx-auto`}>
-        {isEmbedded ? renderTestsInterface() : (activeTab === 'tests' ? renderTestsInterface() : <BackOffice />)}
+        {renderTestsInterface()}
       </div>
 
       {/* Modal de continuation */}
@@ -2946,38 +2944,7 @@ export default function Home() {
       {!isEmbedded && (
         <footer className="bg-white/5 backdrop-blur-sm border-t border-white/10 py-4 mt-8">
           <div className="max-w-7xl mx-auto px-6">
-            <div className="flex items-center justify-between">
-              {/* Onglets Tests / Back-office */}
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => setActiveTab('tests')}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    activeTab === 'tests' 
-                      ? 'bg-brand-soft text-brand-primary shadow-lg' 
-                      : 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
-                  }`}
-                >
-                  🧪 Tests
-                </button>
-                <button
-                  onClick={() => setActiveTab('backoffice')}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    activeTab === 'backoffice' 
-                      ? 'bg-brand-soft text-brand-primary shadow-lg' 
-                      : 'bg-white/20 text-white border border-white/30 hover:bg-white/30'
-                  }`}
-                >
-                  🔧 Back-office
-                </button>
-                <a
-                  href="/analytics-hybrid"
-                  target="_blank"
-                  className="px-4 py-2 bg-green-500/80 text-white rounded-xl text-sm font-medium transition-all duration-200 hover:bg-green-500 border border-green-400/50"
-                >
-                  📊 Dashboard Hybride
-                </a>
-              </div>
-
+            <div className="flex items-center justify-center">
               {/* Infos techniques */}
               <div className="flex items-center space-x-4 text-xs text-white/50">
                 <span className="bg-white/5 px-2 py-1 rounded">
