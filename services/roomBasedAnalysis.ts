@@ -211,6 +211,37 @@ Détecte TOUS les objets MOBILES avec leur QUANTITÉ EXACTE.`;
 /**
  * Analyse toutes les photos d'une pièce avec Claude
  */
+/**
+ * Wrapper function pour la compatibilité avec l'engine AI
+ * Convertit la signature (roomType, photos) vers RoomAnalysisRequest
+ */
+export async function analyzeByRoom(
+  roomType: string, 
+  photos: Array<{ buffer: Buffer; url: string }>
+): Promise<{ roomType: string; items: any[]; confidence: number }> {
+  
+  // Convertir vers le format RoomAnalysisRequest
+  const request: RoomAnalysisRequest = {
+    roomType,
+    photos: photos.map((photo, index) => ({
+      id: `photo-${index}`,
+      url: photo.url,
+      filename: `photo-${index}.jpg`,
+      buffer: photo.buffer
+    }))
+  };
+
+  // Appeler la fonction principale
+  const result = await analyzeRoomPhotos(request);
+
+  // Convertir vers le format attendu par l'engine
+  return {
+    roomType: result.roomType,
+    items: result.items,
+    confidence: result.confidence
+  };
+}
+
 export async function analyzeRoomPhotos(request: RoomAnalysisRequest): Promise<RoomAnalysisResult> {
   const startTime = Date.now();
   
