@@ -16,7 +16,8 @@ export * from './pdf';
 export * from './logger';
 export * from './config/app';
 export * from './imageUrl';
-export * from './normalize';
+// Export normalize functions individually to avoid conflicts
+export { normalizeString } from './normalize';
 export * from './dismountable';
 export * from './roomTypeNormalizer';
 export * from './s3Client';

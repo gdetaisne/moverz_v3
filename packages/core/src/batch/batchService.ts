@@ -203,7 +203,7 @@ export async function computeBatchProgress(batchId: string, useCache = true): Pr
   // LOT 13: Vérifier le cache Redis d'abord
   if (useCache) {
     try {
-      const { getCachedProgress } = await import('../../../lib/redis');
+      const { getCachedProgress } = await import('../../../../lib/redis');
       const cached = await getCachedProgress(batchId);
       if (cached) {
         return cached;
@@ -299,7 +299,7 @@ export async function computeBatchProgress(batchId: string, useCache = true): Pr
   // LOT 13: Mettre en cache le résultat (TTL 10s)
   if (useCache) {
     try {
-      const { setCachedProgress } = await import('../../../lib/redis');
+      const { setCachedProgress } = await import('../../../../lib/redis');
       await setCachedProgress(batchId, result, 10);
     } catch (error: any) {
       console.warn(`⚠️  Cache write failed for batch ${batchId}:`, error.message);
