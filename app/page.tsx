@@ -129,7 +129,7 @@ export default function Home() {
     });
   }, []);
 
-  // Fonction pour charger les roomGroups depuis l'API
+  // Fonction pour charger les roomGroups depuis l'API - MÉMORISÉE
   const loadRoomGroupsFromAPI = useCallback(async () => {
     if (!currentUserId) {
       console.log('⏳ Attente de l\'initialisation de l\'utilisateur...');
@@ -143,23 +143,23 @@ export default function Home() {
       
       if (roomGroups) {
         console.log(`✅ RoomGroups chargés: ${roomGroups.length} pièces`);
-        setRoomGroups(roomGroups);
-        
-        // Note: Passage automatique désactivé pour permettre à l'utilisateur de contrôler la navigation
-        // if (roomGroups.length > 0 && currentStep === 1) {
-        //   console.log('🚀 Passage automatique à l\'étape 2 (Inventaire par Pièce)');
-        //   setCurrentStep(2);
-        // }
+        // ✅ MÉMORISATION : Ne mettre à jour que si les données ont changé
+        setRoomGroups(prevGroups => {
+          if (JSON.stringify(prevGroups) === JSON.stringify(roomGroups)) {
+            console.log('📊 RoomGroups identiques, pas de re-render');
+            return prevGroups;
+          }
+          return roomGroups;
+        });
       } else {
-        console.error('❌ Erreur lors du chargement des roomGroups:', response.statusText);
+        console.error('❌ Erreur lors du chargement des roomGroups');
       }
     } catch (error) {
       console.error('❌ Erreur lors du chargement des roomGroups:', error);
     }
-  }, [currentUserId]); // Retirer currentStep pour éviter la boucle
+  }, [currentUserId]);
 
-  // Fonction pour recharger les photos depuis la base de données
-  // ✅ FONCTION STABILISÉE : Plus de dépendance currentUserId
+  // Fonction pour recharger les photos depuis la base de données - MÉMORISÉE
   const handlePhotosUpdated = useCallback(async (updatedPhotos: any[]) => {
     console.log('🔄 [handlePhotosUpdated] Mise à jour des photos:', updatedPhotos.length);
     
@@ -167,10 +167,17 @@ export default function Home() {
     const photosWithAnalysis = updatedPhotos.filter(p => p.analysis && p.analysis.items && p.analysis.items.length > 0);
     console.log(`📊 Photos avec analyse: ${photosWithAnalysis.length}/${updatedPhotos.length}`);
     
-    setCurrentRoom(prev => ({
-      ...prev,
-      photos: updatedPhotos
-    }));
+    // ✅ MÉMORISATION : Ne mettre à jour que si les photos ont changé
+    setCurrentRoom(prev => {
+      if (JSON.stringify(prev.photos) === JSON.stringify(updatedPhotos)) {
+        console.log('📊 Photos identiques, pas de re-render');
+        return prev;
+      }
+      return {
+        ...prev,
+        photos: updatedPhotos
+      };
+    });
     
     // ✅ ROOMGROUPS STABLES : Utiliser la fonction stable
     const newRoomGroups = createStableRoomGroups(updatedPhotos);
@@ -181,7 +188,14 @@ export default function Home() {
       console.log(`  - ${group.roomType}: ${group.photos.length} photos, ${itemsCount} objets`);
     });
     
-    setRoomGroups(newRoomGroups);
+    // ✅ MÉMORISATION : Ne mettre à jour que si les roomGroups ont changé
+    setRoomGroups(prevGroups => {
+      if (JSON.stringify(prevGroups) === JSON.stringify(newRoomGroups)) {
+        console.log('📊 RoomGroups identiques, pas de re-render');
+        return prevGroups;
+      }
+      return newRoomGroups;
+    });
   }, []); // ✅ PLUS DE DÉPENDANCE currentUserId !
 
   // Fonction de test pour recharger les photos manuellement

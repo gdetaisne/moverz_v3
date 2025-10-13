@@ -5,10 +5,10 @@ import { RoomGroup, PhotoData, ROOM_TYPES } from '@core/roomValidation';
 import { classifyRoom } from '@ai/adapters/smartRoomClassificationService';
 import { resolvePhotoSrc } from '@/lib/imageUrl';
 
-// Composant image unifié basé sur le système qui fonctionnait
-function UnifiedImage({ photo, className }: { photo: PhotoData; className: string }) {
-  // ✅ URLs BLOB STABLES : Utiliser la fonction stable
-  const getImageSrc = () => {
+// Composant image unifié basé sur le système qui fonctionnait - MÉMORISÉ
+const UnifiedImage = React.memo(({ photo, className }: { photo: PhotoData; className: string }) => {
+  // ✅ URLs BLOB STABLES : Utiliser la fonction stable avec mémorisation
+  const imageSrc = React.useMemo(() => {
     // 1. Si nouveau upload (file object), utiliser blob URL stable
     if (photo.file) {
       const { getStableBlobUrl } = require('@/lib/photoTransforms');
@@ -21,7 +21,7 @@ function UnifiedImage({ photo, className }: { photo: PhotoData; className: strin
     
     // 3. Dernier recours : placeholder
     return '/placeholder-image.svg';
-  };
+  }, [photo.file, photo.url, photo.fileUrl, photo.filePath, photo.photoId, photo.id]);
 
   const handleError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const target = e.target as HTMLImageElement;
@@ -40,8 +40,6 @@ function UnifiedImage({ photo, className }: { photo: PhotoData; className: strin
     }
   };
 
-  const imageSrc = getImageSrc();
-  
   return (
     <img
       src={imageSrc}
@@ -53,7 +51,7 @@ function UnifiedImage({ photo, className }: { photo: PhotoData; className: strin
       }}
     />
   );
-}
+});
 
 interface RoomValidationStepV2Props {
   photos: PhotoData[];

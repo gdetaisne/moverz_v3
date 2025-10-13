@@ -46,10 +46,11 @@ type AnyPhoto = {
 export function resolvePhotoSrc(p: AnyPhoto): string | null {
   if (!p) return null;
 
-  // 1) Upload immédiat (blob)
+  // 1) Upload immédiat (blob) - utiliser cache stable
   if (typeof window !== "undefined" && p.file instanceof File) {
     try {
-      return URL.createObjectURL(p.file);
+      const { getStableBlobUrl } = require('../../lib/photoTransforms');
+      return getStableBlobUrl(p.file) || '';
     } catch {
       /* noop */
     }

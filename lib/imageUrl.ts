@@ -19,9 +19,10 @@ export function toAbsoluteApiUrl(path: string) {
 export function resolvePhotoSrc(photo: any): string {
   try {
     if (!photo) return '';
-    // 1) fresh upload (File/Blob provided by input)
+    // 1) fresh upload (File/Blob provided by input) - utiliser cache stable
     if (photo.file instanceof File || photo.file instanceof Blob) {
-      return URL.createObjectURL(photo.file);
+      const { getStableBlobUrl } = require('./photoTransforms');
+      return getStableBlobUrl(photo.file) || '';
     }
 
     // 2) explicit absolute URLs
