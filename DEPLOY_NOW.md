@@ -154,3 +154,4 @@ curl -sS "https://movers-test.gslv.cloud/inventaire-ia/api/rooms?userId=test-...
 **Prêt ?** Lancez l'Étape 1 ! 🚀
 
 
+

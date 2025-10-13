@@ -9,7 +9,7 @@
 export async function detectRoomType(imageBuffer: Buffer, context?: { userId?: string; batchId?: string; photoId?: string }): Promise<string> {
   try {
     // Import dynamique pour éviter les problèmes de path
-    const { classifyRoom } = await import('@services/roomClassifier');
+    const { classifyRoom } = await import('../../../services/roomClassifier');
     
     // Appeler la façade avec A/B testing
     const result = await classifyRoom(

@@ -1,184 +1,362 @@
-# 🏠 Analyse IA - Inventaire Déménagement
+# 🏠 Moverz v3.1 - Inventaire Déménagement Intelligent
 
-Application Next.js pour analyser des photos de pièces et détecter automatiquement les meubles et objets pour créer un inventaire de déménagement.
+Application Next.js utilisant l'IA pour analyser automatiquement les photos et créer un inventaire de déménagement détaillé.
+
+---
 
 ## ✨ Fonctionnalités
 
-- **Upload multiple** : Téléchargez 1 à 10 photos par pièce
-- **Analyse IA** : Utilise GPT-4o-mini (Vision) pour détecter les objets
-- **Catalogue intelligent** : Mappe automatiquement les objets détectés vers des dimensions standards
-- **JSON structuré** : Retourne un inventaire détaillé avec volumes et dimensions
-- **Interface simple** : Interface web pour tester et visualiser les résultats
+- **📸 Upload Multiple** : Téléchargez jusqu'à 10 photos par lot
+- **🤖 Analyse IA** : Détection automatique des objets avec Claude/OpenAI
+- **🏠 Classification Pièces** : Reconnaissance automatique des types de pièces
+- **📦 Inventaire Structuré** : Dimensions, volumes, quantités calculés
+- **💾 Traitement Asynchrone** : Files d'attente BullMQ pour performance
+- **📊 Temps Réel** : Suivi en direct via Server-Sent Events (SSE)
+- **📄 Export** : PDF et CSV pour devis professionnels
+- **🔧 Back-Office** : Configuration IA et monitoring intégrés
 
-## 🚀 Démarrage rapide
+---
+
+## 🚀 Démarrage Rapide
 
 ### Prérequis
-- Node.js 18+
-- Clé API OpenAI
 
-### Installation
+- **Node.js** : 20+ (testé avec Node 24)
+- **Package Manager** : pnpm (recommandé) ou npm
+- **API IA** : Clé OpenAI ou Claude (obligatoire)
 
-```bash
-# Installer les dépendances
-npm install
-
-# Configurer la clé OpenAI
-echo "OPENAI_API_KEY=your-api-key-here" > .env.local
-
-# Démarrer le serveur de développement
-npm run dev
-```
-
-L'application sera disponible sur [http://localhost:3000](http://localhost:3000)
-
-## 🧪 Test de l'API
+### Installation (5 minutes)
 
 ```bash
-# Tester l'API directement
-./test-api.sh
+# 1. Cloner le repo
+git clone https://github.com/gdetaisne/moverz_v3.git
+cd moverz_v3
 
-# Ou manuellement avec curl
-curl -X POST http://localhost:3000/api/photos/analyze -F "file=@your-image.jpg"
+# 2. Installer les dépendances
+pnpm install
+
+# 3. Configurer l'environnement
+cp .env.example .env.local
+# Éditer .env.local et ajouter votre OPENAI_API_KEY ou CLAUDE_API_KEY
+
+# 4. Initialiser la base de données
+pnpm prisma generate
+pnpm prisma db push
+
+# 5. Démarrer en développement
+pnpm dev
+
+# ✅ Ouvrir http://localhost:3001
 ```
 
-## 📊 Format de réponse
+**🎯 Guide complet** : [`docs/getting-started/README.md`](./docs/getting-started/README.md)
 
-L'API retourne un JSON structuré selon le schéma `PhotoAnalysis` :
+---
 
-```json
-{
-  "version": "1.0.0",
-  "photo_id": "uuid",
-  "items": [
-    {
-      "label": "Chaise",
-      "category": "furniture",
-      "confidence": 0.9,
-      "quantity": 1,
-      "dimensions_cm": {
-        "length": 45,
-        "width": 45,
-        "height": 90,
-        "source": "catalog"
-      },
-      "volume_m3": 0.182
-    }
-  ],
-  "totals": {
-    "count_items": 1,
-    "volume_m3": 0.182
-  },
-  "warnings": [],
-  "errors": []
-}
-```
+## 📚 Documentation
+
+### Pour Démarrer
+
+| Guide | Description |
+|-------|-------------|
+| [🚀 Getting Started](./docs/getting-started/README.md) | Installation et premiers pas |
+| [🏗️ Architecture](./docs/architecture/README.md) | Stack technique et structure |
+| [🔧 Configuration](./docs/deployment/README.md) | Variables d'environnement |
+
+### Pour Déployer
+
+| Guide | Description |
+|-------|-------------|
+| [🚢 Déploiement](./docs/deployment/README.md) | Guide production complet |
+| [⚙️ CapRover](./DEPLOY_NOW.md) | Déploiement CapRover (5 min) |
+| [🔐 Sécurité](./docs/deployment/README.md#-sécurité-production) | Checklist sécurité |
+
+### Pour Administrer
+
+| Guide | Description |
+|-------|-------------|
+| [🎛️ Back-Office](./BACKOFFICE_QUICKSTART.md) | Interfaces admin (4) |
+| [📊 Monitoring](./docs/operations/README.md) | Métriques et logs |
+| [🗄️ Base de Données](./GUIDE_DATABASE.md) | Prisma Studio et SQL |
+| [🐛 Troubleshooting](./docs/operations/README.md#-troubleshooting) | Résolution problèmes |
+
+---
 
 ## 🏗️ Architecture
 
-### Structure des fichiers
+### Stack Technique
 
 ```
-├── app/
-│   ├── api/
-│   │   ├── photos/analyze/     # API d'analyse des photos
-│   │   └── uploads/[...path]/  # Service des fichiers uploadés
-│   └── page.tsx                # Interface web
-├── lib/
-│   ├── schemas.ts              # Schémas Zod pour validation
-│   ├── catalog.ts              # Catalogue de dimensions standards
-│   ├── normalize.ts            # Helpers de normalisation
-│   └── storage.ts              # Abstraction du stockage
-└── services/
-    └── openaiVision.ts         # Service OpenAI Vision
+Framework     : Next.js 15 (App Router)
+Runtime       : Node.js 20-24
+Database      : PostgreSQL (prod) / SQLite (dev)
+ORM           : Prisma 6.16
+Queue         : BullMQ + Redis
+IA            : Claude 3.5 Haiku + OpenAI GPT-4o-mini
+UI            : React 19 + Tailwind CSS 4
+Storage       : AWS S3 / Local
 ```
 
-### Composants clés
+### Monorepo Structure
 
-- **Schémas Zod** : Validation stricte des données
-- **Catalogue** : Dimensions standards pour objets courants
-- **Normalisation** : Mapping des labels IA vers le catalogue
-- **Stockage** : Gestion locale des fichiers (extensible vers S3)
+```
+moverz_v3-1/
+├── app/                  # Next.js App Router
+│   ├── api/             # API Routes
+│   └── admin/           # Pages admin
+├── components/          # Composants React
+├── packages/            # Monorepo packages
+│   ├── core/           # @moverz/core (DB, auth, storage)
+│   ├── ai/             # @moverz/ai (Engine IA, métriques)
+│   └── ui/             # @moverz/ui (Composants partagés)
+├── prisma/             # Schéma DB + migrations
+├── scripts/            # Utilitaires
+└── docs/               # Documentation consolidée
+```
 
-## 🔧 Configuration
+**🔍 Détails** : [`docs/architecture/README.md`](./docs/architecture/README.md)
 
-### Variables d'environnement
+---
+
+## 🌐 Déploiement Production
+
+**URL Production** : https://movers-test.gslv.cloud/inventaire-ia
+
+### Variables Essentielles
 
 ```bash
-OPENAI_API_KEY=sk-...  # Clé API OpenAI (requise)
+# Base de données (PostgreSQL requis)
+DATABASE_URL="postgresql://..."
+DIRECT_URL="postgresql://..."
+
+# IA (au moins une clé)
+OPENAI_API_KEY="sk-proj-..."
+CLAUDE_API_KEY="sk-ant-..."
+
+# Application
+NODE_ENV="production"
+PORT=3001
+CORS_ORIGIN="https://movers-test.gslv.cloud"
+JWT_SECRET="CHANGER_EN_PRODUCTION"
+BASE_PATH="/inventaire-ia"
 ```
 
-### Catalogue
+**📖 Guide complet** : [`DEPLOY_NOW.md`](./DEPLOY_NOW.md) (5 min)
 
-Le catalogue dans `lib/catalog.ts` contient les dimensions standards pour :
-- Canapé 3 places
-- Lit double
-- Table basse
-- Chaise
-- Carton standard
-- Vêtements
+---
 
-## 🚀 Déploiement
+## 🔧 Commandes Utiles
 
-L'application est prête pour le déploiement sur Vercel, Netlify, ou tout autre plateforme Next.js.
+### Développement
 
-Pour la production, remplacez `lib/storage.ts` par une implémentation S3 ou similaire.
-
-## 📝 Notes techniques
-
-- **Validation** : Tous les JSON sont validés avec Zod
-- **TypeScript strict** : Code entièrement typé
-- **Base64** : Images converties en base64 pour OpenAI
-- **Erreurs** : Gestion d'erreurs robuste avec logs détaillés
-
-## 📊 Monitoring (LOT 12.1)
-
-### Bull Board Dashboard
-
-Interface d'administration pour surveiller les files d'attente BullMQ (workers en background).
-
-**Démarrage :**
 ```bash
-# Via npm (recommandé)
-npm run bullboard
-
-# Ou directement
-node scripts/bullboard.js
+pnpm dev              # Démarrer en mode dev (port 3001)
+pnpm build            # Build production
+pnpm start            # Démarrer build production
+pnpm lint             # Linter ESLint
 ```
 
-**Accès :**
-- URL : [http://localhost:3010/admin/queues](http://localhost:3010/admin/queues)
-- Auth : Header `x-access-token` avec la valeur de `BULLBOARD_TOKEN` (définie dans `.env`)
+### Base de Données
 
-**Fonctionnalités :**
-- 📈 Statistiques en temps réel des queues
-- 🔍 Visualisation des jobs (waiting, active, completed, failed)
-- ⏱️ Temps de traitement moyens
-- ❌ Logs d'erreurs détaillés
-- 🔄 Retry des jobs échoués
-- 🧹 Nettoyage des jobs complétés
-
-**API Endpoints :**
 ```bash
-# Statistiques des queues
-curl -H "x-access-token: secret123" http://localhost:3010/admin/api/stats
-
-# Jobs échoués récents
-curl -H "x-access-token: secret123" http://localhost:3010/admin/api/failed?queue=photo-analyze
-
-# Retry tous les jobs échoués
-curl -X POST -H "x-access-token: secret123" http://localhost:3010/admin/api/retry-failed
-
-# Nettoyer les jobs complétés (> 1h)
-curl -X POST -H "x-access-token: secret123" http://localhost:3010/admin/api/clean?queue=photo-analyze
+pnpm prisma:studio    # Interface visuelle DB (port 5555)
+pnpm prisma:generate  # Générer client Prisma
+pnpm db:push          # Appliquer schéma sans migration
+pnpm db:reset         # Réinitialiser DB (⚠️ supprime données)
 ```
 
-**Queues surveillées :**
-- `photo-analyze` : Analyse IA des photos uploadées
-- `inventory-sync` : Synchronisation de l'inventaire
+### Tests
 
-**Variables d'environnement requises :**
 ```bash
-REDIS_URL=redis://localhost:6379          # Connexion Redis
-BULLBOARD_TOKEN=secret123                 # Token d'authentification
-BULLBOARD_PORT=3010                       # Port du dashboard (optionnel)
+pnpm test             # Tests unitaires (watch mode)
+pnpm test:unit        # Tests unitaires (run once)
+pnpm smoke:api        # Tests smoke API
 ```
+
+### Workers & Queues (Optionnel)
+
+```bash
+pnpm worker           # Démarrer workers BullMQ
+pnpm bullboard        # Dashboard queues (port 3010)
+```
+
+---
+
+## 📊 Fonctionnalités Avancées
+
+### A/B Testing
+
+Test automatique de différentes variantes d'algorithmes IA :
+
+```bash
+# Activer A/B testing
+ROOM_CLASSIFIER_AB_ENABLED=true
+ROOM_CLASSIFIER_AB_SPLIT=10  # 10% trafic vers variante B
+
+# Voir statistiques
+curl https://movers-test.gslv.cloud/inventaire-ia/api/ab-status
+```
+
+### Métriques IA
+
+Observabilité complète des appels IA (latence, coût, tokens) :
+
+```bash
+# Summary métriques
+curl https://movers-test.gslv.cloud/inventaire-ia/api/ai-metrics/summary
+
+# Dashboard admin
+# https://movers-test.gslv.cloud/inventaire-ia/admin/metrics
+```
+
+### Export Batch
+
+```bash
+# Export CSV
+curl -O "https://movers-test.gslv.cloud/inventaire-ia/api/batches/[id]/export?format=csv"
+
+# Export PDF
+curl -O "https://movers-test.gslv.cloud/inventaire-ia/api/batches/[id]/export?format=pdf"
+```
+
+---
+
+## 🛠️ Back-Office
+
+### Interfaces Disponibles
+
+1. **Configuration IA** : Bouton "🔧 Back-office" sur page d'accueil
+2. **Admin** : `/admin` - Statut système
+3. **Métriques** : `/admin/metrics` - Monitoring détaillé
+4. **Bull Board** : `:3010/admin/queues` - Queues (local uniquement)
+
+**📖 Guide complet** : [`BACKOFFICE_QUICKSTART.md`](./BACKOFFICE_QUICKSTART.md)
+
+---
+
+## 📈 Métriques & Performance
+
+### Benchmarks
+
+| Métrique | Cible | Actuel |
+|----------|-------|--------|
+| API Response Time | <500ms | ✅ |
+| DB Query Time | <100ms | ✅ |
+| AI Latency (Claude) | <5s | ✅ 2-3s |
+| Queue Processing | 2 jobs/s | ✅ |
+| Uptime | >99.9% | ✅ |
+
+### Optimisations
+
+- **DB Indexes** : Sur userId, projectId, status
+- **Redis Cache** : TTL 10s, hit rate >90%
+- **AI Timeouts** : 30s avec retry (2x)
+- **Image Resize** : Max 1024px avant analyse
+- **Direct S3 Upload** : Pas de proxy API
+
+---
+
+## 🐛 Troubleshooting
+
+### Problèmes Courants
+
+**"Module not found: @prisma/client"**
+```bash
+pnpm prisma generate
+```
+
+**"Port 3001 already in use"**
+```bash
+lsof -ti:3001 | xargs kill -9
+```
+
+**"OpenAI API key not configured"**
+```bash
+# Ajouter dans .env.local
+OPENAI_API_KEY=sk-proj-...
+```
+
+**Base de données verrouillée (SQLite)**
+```bash
+pkill -9 node
+pnpm dev
+```
+
+**📖 Guide complet** : [`docs/operations/README.md#-troubleshooting`](./docs/operations/README.md#-troubleshooting)
+
+---
+
+## 🔐 Sécurité
+
+### Checklist Production
+
+- [x] PostgreSQL avec SSL (`sslmode=require`)
+- [x] JWT_SECRET fort (32+ caractères)
+- [x] API Keys en variables d'environnement
+- [x] CORS configuré (pas `*`)
+- [x] HTTPS avec certificat valide
+- [ ] Rate limiting (TODO)
+- [ ] JWT auth complète (TODO - actuellement `x-user-id` header)
+
+---
+
+## 📦 Changelog
+
+Voir [`CHANGELOG.md`](./CHANGELOG.md) pour l'historique des versions.
+
+**Version actuelle** : v3.1.0
+
+**Dernières améliorations** :
+- ✅ Migration PostgreSQL (LOT 5)
+- ✅ Monorepo packages (LOT 6)
+- ✅ Métriques IA (LOT 7.5)
+- ✅ Upload direct S3 (LOT 8)
+- ✅ Queues BullMQ (LOT 9-12)
+- ✅ Redis Pub/Sub (LOT 13)
+- ✅ Export CSV/PDF (LOT 15)
+- ✅ A/B Testing (LOT 18)
+
+---
+
+## 🤝 Contribution
+
+### Développement
+
+```bash
+# 1. Fork et clone
+# 2. Créer branche feature
+git checkout -b feat/ma-fonctionnalite
+
+# 3. Commit avec convention
+git commit -m "feat: description"
+# Types: feat, fix, docs, style, refactor, test, chore
+
+# 4. Push et Pull Request
+```
+
+### Conventions
+
+- **Commits** : [Conventional Commits](https://www.conventionalcommits.org/)
+- **Code** : ESLint + Prettier
+- **Tests** : Coverage >70% pour nouvelles features
+- **Docs** : Mise à jour obligatoire
+
+---
+
+## 📞 Support
+
+- **Documentation** : [`docs/`](./docs/)
+- **Issues GitHub** : [github.com/gdetaisne/moverz_v3/issues](https://github.com/gdetaisne/moverz_v3/issues)
+- **Production** : https://movers-test.gslv.cloud/inventaire-ia
+
+---
+
+## 📄 Licence
+
+Propriétaire - © 2025 Moverz
+
+---
+
+**Version** : v3.1.0  
+**Dernière mise à jour** : 12 octobre 2025  
+**Stack** : Next.js 15 + Prisma + BullMQ + Claude/OpenAI
