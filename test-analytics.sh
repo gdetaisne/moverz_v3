@@ -25,3 +25,4 @@ echo ""
 # Arrêter le serveur
 kill $SERVER_PID 2>/dev/null
 
+

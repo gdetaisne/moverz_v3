@@ -92,6 +92,7 @@ export default function Home() {
         console.log(`🔐 Session initialisée: ${userId}`);
         
         // 📊 Track ouverture app
+        console.log(`📊 Tracking app_opened with userId: ${userId}`);
         track('app_opened', { userId });
         
         // Charger les données sauvegardées pour cet utilisateur
@@ -206,7 +207,7 @@ export default function Home() {
     });
     
     setRoomGroups(newRoomGroups);
-  }, []);
+  }, [currentUserId]);
 
   // Fonction de test pour recharger les photos manuellement
   const handleTestReloadPhotos = useCallback(async () => {

@@ -53,3 +53,4 @@ Ligne 2829: bg-green-600 → peut rester ou passer à brand-accent
 3. ⚠️  Évaluer le bouton vert étape 5 (peut rester ou harmoniser)
 4. ✅ Vérifier tous les boutons sur fond blanc ont du texte foncé visible
 
+

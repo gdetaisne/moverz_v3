@@ -34,3 +34,4 @@ export default function PostHogProvider() {
   return null; // Pas de UI
 }
 
+

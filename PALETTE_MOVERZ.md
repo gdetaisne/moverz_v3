@@ -213,3 +213,4 @@ Pour appliquer ces couleurs à d'autres composants:
 **Date**: 11 octobre 2025  
 **Version**: 1.0
 
+

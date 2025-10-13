@@ -7,6 +7,7 @@
  */
 
 import { prisma } from '@core/db';
+import { userSession } from '@core/auth-client';
 
 // Types d'événements trackés
 export type AnalyticsEventType =
@@ -58,7 +59,8 @@ export function track(
 
     // 2. Backup DB via API (fire & forget)
     if (typeof window !== 'undefined') {
-      const userId = localStorage.getItem('moverz_user_id');
+      // Utiliser le même système d'auth que l'app (cookies)
+      const userId = userSession.getCurrentUserId();
       if (userId) {
         fetch('/api/analytics/track', {
           method: 'POST',
@@ -112,4 +114,5 @@ export function trackDuration(eventType: AnalyticsEventType) {
 export function trackStep(step: number, metadata?: AnalyticsMetadata): void {
   track('step_reached', { step, ...metadata });
 }
+
 

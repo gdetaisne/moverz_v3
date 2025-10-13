@@ -358,3 +358,4 @@ RUN npx prisma generate  # ← Doit être présent
 **Date** : 12 octobre 2025  
 **Version** : 1.0
 
+
