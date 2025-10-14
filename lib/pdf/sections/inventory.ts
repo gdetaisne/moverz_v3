@@ -100,7 +100,7 @@ function addRoomInventorySection(
     .fontSize(FONTS.sizes.h3)
     .fillColor(COLORS.primary)
     .font('Helvetica-Bold')
-    .text(`${room.name} (${room.photos.length} photo${room.photos.length > 1 ? 's' : ''})`, margins.left, startY);
+    .text(`${room.name} (${room.photos.length} photos - NOUVEAU CODE)`, margins.left, startY);
   
   doc.moveDown(0.5);
   const photosY = doc.y;
