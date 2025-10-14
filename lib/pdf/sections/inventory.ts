@@ -25,8 +25,8 @@ export function addInventoryDetails(
       doc.addPage();
     }
     
-    // Titre de la pièce
-    addRoomTitle(doc, room.name, roomIndex + 1);
+    // Inventaire de la pièce avec photos
+    addRoomInventorySection(doc, room, room.photos.flatMap(p => p.items || []));
     
     // Calculer le total de la pièce
     let roomTotalVolume = 0;
