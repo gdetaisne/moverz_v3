@@ -61,9 +61,10 @@ export async function POST(req: NextRequest) {
 
     console.log(`✅ Analyse pièce "${roomType}" terminée:`, analysis.items?.length, "objets");
 
-    // ✅ Stocker l'analyse uniquement sur la première photo du groupe
-    // Cela évite la duplication des analyses en DB
+    // ✅ Stocker l'analyse sur la première photo + marquer les autres comme faisant partie du groupe
     const primaryPhotoId = photoIds[0];
+    
+    // Mettre à jour la photo primaire avec l'analyse complète
     await prisma.photo.update({
       where: { id: primaryPhotoId },
       data: {
@@ -75,6 +76,26 @@ export async function POST(req: NextRequest) {
         } as any
       }
     });
+    
+    // Mettre à jour les autres photos du groupe pour indiquer qu'elles font partie du groupe
+    if (photoIds.length > 1) {
+      const secondaryPhotoIds = photoIds.slice(1);
+      await Promise.all(
+        secondaryPhotoIds.map(photoId =>
+          prisma.photo.update({
+            where: { id: photoId },
+            data: {
+              analysis: {
+                _groupPhotoIds: photoIds,
+                _primaryPhotoId: primaryPhotoId,
+                _analysisVersion: 1
+              } as any
+            }
+          })
+        )
+      );
+      console.log(`✅ ${secondaryPhotoIds.length} photos secondaires marquées comme faisant partie du groupe`);
+    }
 
     return NextResponse.json({
       ...analysis,
