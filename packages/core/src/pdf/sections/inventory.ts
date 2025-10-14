@@ -20,8 +20,8 @@ export function addInventoryDetails(
   
   // Parcourir chaque pièce
   rooms.forEach((room, roomIndex) => {
-    // Vérifier si on a besoin d'une nouvelle page
-    if (doc.y > PDF_CONFIG.pageHeight - 200) {
+    // 🎯 NOUVELLE PAGE pour chaque pièce (sauf la première)
+    if (roomIndex > 0) {
       doc.addPage();
     }
     
@@ -37,8 +37,8 @@ export function addInventoryDetails(
     const allRoomItems = room.photos.flatMap(photo => photo.items || []);
     
     if (allRoomItems.length > 0) {
-      // Vérifier espace disponible
-      if (doc.y > PDF_CONFIG.pageHeight - 300) {
+      // Vérifier espace disponible (avec marge de sécurité)
+      if (doc.y > PDF_CONFIG.pageHeight - 400) {
         doc.addPage();
       }
       
@@ -50,7 +50,8 @@ export function addInventoryDetails(
     // Afficher le total de la pièce
     addRoomTotal(doc, roomTotalVolume, roomTotalCartons);
     
-    doc.moveDown(1.5);
+    // Espacement avant la prochaine pièce (sera sur nouvelle page)
+    doc.moveDown(1);
   });
 }
 
