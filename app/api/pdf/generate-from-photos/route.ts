@@ -178,6 +178,13 @@ export async function POST(req: NextRequest) {
         : items; // Par défaut, tout inclure
 
             // Inclure toutes les photos, même sans items, pour avoir une vue complète
+            console.log(`📸 Photo ${photo.filename}:`, {
+              hasPhotoData: !!photo.photoDataBase64,
+              photoDataLength: photo.photoDataBase64?.length || 0,
+              itemsCount: filteredItems.length,
+              roomType: roomType
+            });
+            
             roomsMap.get(roomType)!.photos.push({
               fileUrl: photo.url,
               photoData: photo.photoDataBase64,

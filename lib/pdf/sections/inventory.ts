@@ -107,10 +107,17 @@ function addRoomInventorySection(
   
   // Afficher TOUTES les photos de la pièce
   let currentY = photosY;
+  console.log(`🔍 Room ${room.name}: ${room.photos.length} photos`);
   if (room.photos.length > 0) {
     const photoSpacing = 10;
     
     room.photos.forEach((photo: any, index: number) => {
+      console.log(`  📸 Photo ${index + 1}:`, {
+        hasPhotoData: !!photo.photoData,
+        photoDataType: typeof photo.photoData,
+        photoDataStart: photo.photoData?.substring(0, 20),
+        itemsCount: photo.items?.length || 0
+      });
       // Vérifier si on a besoin d'une nouvelle page
       if (currentY > PDF_CONFIG.pageHeight - photoHeight - 100) {
         doc.addPage();
