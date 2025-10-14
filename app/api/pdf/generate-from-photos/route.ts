@@ -177,22 +177,21 @@ export async function POST(req: NextRequest) {
         ? items.filter((_: any, idx: number) => selectedItems.includes(idx))
         : items; // Par défaut, tout inclure
 
-      if (filteredItems.length > 0) {
-        roomsMap.get(roomType)!.photos.push({
-          fileUrl: photo.url,
-          photoData: photo.photoDataBase64,
-          items: filteredItems.map((item: any) => ({
-            label: item.label,
-            category: item.category,
-            quantity: item.quantity || 1,
-            dimensions_cm: item.dimensions_cm,
-            volume_m3: item.volume_m3 || 0,
-            fragile: item.fragile || false,
-            dismountable: item.dismountable || false,
-            notes: item.notes
-          }))
-        });
-      }
+            // Inclure toutes les photos, même sans items, pour avoir une vue complète
+            roomsMap.get(roomType)!.photos.push({
+              fileUrl: photo.url,
+              photoData: photo.photoDataBase64,
+              items: filteredItems.map((item: any) => ({
+                label: item.label,
+                category: item.category,
+                quantity: item.quantity || 1,
+                dimensions_cm: item.dimensions_cm,
+                volume_m3: item.volume_m3 || 0,
+                fragile: item.fragile || false,
+                dismountable: item.dismountable || false,
+                notes: item.notes
+              }))
+            });
     });
 
     const rooms = Array.from(roomsMap.values()).filter(room => room.photos.length > 0);
