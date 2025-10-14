@@ -61,9 +61,45 @@ export async function POST(req: NextRequest) {
 
     console.log('✅ Photos récupérées:', photos.length);
 
+    // 🔄 Gérer les analyses groupées : propager l'analyse de la photo primaire aux autres
+    const photosWithAnalysis = photos.map(photo => {
+      const analysis = photo.analysis as any;
+      
+      // Si la photo a déjà une analyse complète, la retourner telle quelle
+      if (analysis && analysis.items && analysis.items.length > 0) {
+        return photo;
+      }
+      
+      // Si la photo fait partie d'un groupe, chercher l'analyse du groupe
+      if (analysis && analysis._groupPhotoIds) {
+        const groupPhotoIds = analysis._groupPhotoIds as string[];
+        
+        // Trouver la photo avec l'analyse groupée (_isGroupAnalysis: true)
+        const primaryPhoto = photos.find(p => {
+          const pAnalysis = p.analysis as any;
+          return pAnalysis?._isGroupAnalysis === true && 
+                 groupPhotoIds.includes(p.id);
+        });
+        
+        // Si trouvée, utiliser son analyse
+        if (primaryPhoto && primaryPhoto.analysis) {
+          console.log(`🔄 Photo ${photo.id} utilise l'analyse groupée de ${primaryPhoto.id}`);
+          return {
+            ...photo,
+            analysis: primaryPhoto.analysis
+          };
+        }
+      }
+      
+      // Sinon, retourner la photo sans modification
+      return photo;
+    });
+
+    console.log('✅ Photos avec analyses:', photosWithAnalysis.filter(p => (p.analysis as any)?.items?.length > 0).length);
+
     // 2. Charger les images en base64 côté serveur
     const photosWithBase64 = await Promise.all(
-      photos.map(async (photo) => {
+      photosWithAnalysis.map(async (photo) => {
         let photoDataBase64 = '';
         
         try {
