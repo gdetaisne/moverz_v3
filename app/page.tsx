@@ -435,6 +435,7 @@ export default function Home() {
       );
 
       console.log('✅ Photos valides pour PDF:', validPhotos.length);
+      console.log('🔍 Photo IDs envoyés:', validPhotos.map(p => p.photoId));
 
       if (validPhotos.length === 0) {
         // Diagnostic plus détaillé
