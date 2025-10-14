@@ -233,7 +233,7 @@ export function RoomInventoryCard({
                       <div className="flex justify-center">
                         <button
                           onClick={() => toggleDetails(index)}
-                          className="w-8 h-8 rounded-full text-sm font-medium text-brand-accent hover:text-brand-primary hover:bg-brand-soft/20 transition-all flex items-center justify-center"
+                          className="w-8 h-8 rounded-full text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-all flex items-center justify-center border border-gray-200"
                           title={expandedItemIndex === index ? 'Masquer les détails' : 'Voir les détails'}
                         >
                           {expandedItemIndex === index ? '−' : 'ℹ️'}

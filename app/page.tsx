@@ -2927,7 +2927,7 @@ Solution:
                     disabled={
                       (currentStep === 1 && currentRoom.photos.length === 0) ||
                       (currentStep === 2 && roomGroups.length === 0) ||
-                      (currentStep === 3 && !currentRoom.photos.some(p => p.status === 'completed')) ||
+                      (currentStep === 3 && !currentRoom.photos.some(p => p.analysis && p.analysis.items && p.analysis.items.length > 0)) ||
                       (currentStep === 4 && !quoteFormData)
                     }
                     className="inline-flex items-center px-4 py-2 text-sm text-white/80 bg-white/10 border border-white/20 rounded-md hover:bg-white/20 hover:border-white/30 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
