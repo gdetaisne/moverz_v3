@@ -429,9 +429,9 @@ export default function Home() {
         });
       });
 
-      // Récupérer les photos avec items à exporter
+      // Récupérer toutes les photos de la pièce (avec et sans items)
       const validPhotos = currentRoom.photos.filter(
-        photo => photo.status === 'DONE' && photo.analysis?.items
+        photo => photo.status === 'DONE' || photo.status === 'PENDING'
       );
 
       console.log('✅ Photos valides pour PDF:', validPhotos.length);
