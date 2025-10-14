@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     const photos = await prisma.photo.findMany({
       where: {
         id: { in: body.photoIds },
-        status: 'DONE'
+        status: { in: ['DONE', 'PENDING'] } // Accepter PENDING si analyse présente
       },
       select: {
         id: true,
