@@ -105,50 +105,82 @@ function addRoomInventorySection(
   doc.moveDown(0.5);
   const photosY = doc.y;
   
-  // Afficher les photos en carrousel (première photo pour l'instant)
+  // Afficher les photos côte à côte (2 par ligne max)
+  let currentY = photosY;
+  console.log(`🔍 Room ${room.name}: ${room.photos.length} photos`);
   if (room.photos.length > 0) {
-    const firstPhoto = room.photos[0];
-    if (firstPhoto.photoData && typeof firstPhoto.photoData === 'string' && firstPhoto.photoData.startsWith('data:image')) {
-      try {
-        // Cadre pour la photo
-        doc
-          .roundedRect(margins.left, photosY, photoWidth, photoHeight, 4)
-          .strokeColor(COLORS.border)
-          .lineWidth(1.5)
-          .stroke();
+    const photosPerRow = 2;
+    const photoSpacing = 10;
+    const photoWidth = (contentWidth - photoSpacing) / photosPerRow;
+    const photoHeight = 150; // Plus petit pour gagner de l'espace
+    
+    // Grouper les photos par rangées
+    for (let i = 0; i < room.photos.length; i += photosPerRow) {
+      const rowPhotos = room.photos.slice(i, i + photosPerRow);
+      
+      // Vérifier si on a besoin d'une nouvelle page
+      if (currentY > PDF_CONFIG.pageHeight - photoHeight - 100) {
+        doc.addPage();
+        currentY = doc.y;
+      }
+      
+      // Afficher les photos de la rangée
+      rowPhotos.forEach((photo: any, colIndex: number) => {
+        const photoX = margins.left + colIndex * (photoWidth + photoSpacing);
+        const photoIndex = i + colIndex;
         
-        // Photo en base64
-        const base64Data = firstPhoto.photoData.includes(',') 
-          ? firstPhoto.photoData.split(',')[1] 
-          : firstPhoto.photoData;
-        const imageBuffer = Buffer.from(base64Data, 'base64');
-        
-        doc.image(imageBuffer, margins.left + 3, photosY + 3, {
-          width: photoWidth - 6,
-          height: photoHeight - 6,
-          fit: [photoWidth - 6, photoHeight - 6],
-          align: 'center',
-          valign: 'center',
+        console.log(`  📸 Photo ${photoIndex + 1}:`, {
+          hasPhotoData: !!photo.photoData,
+          photoDataType: typeof photo.photoData,
+          photoDataStart: photo.photoData?.substring(0, 20),
+          itemsCount: photo.items?.length || 0
         });
         
-        // Indicateur de carrousel si plusieurs photos
-        if (room.photos.length > 1) {
-          doc
-            .fontSize(10)
-            .fillColor(COLORS.text)
-            .font('Helvetica')
-            .text(`1/${room.photos.length}`, margins.left + photoWidth - 50, photosY + photoHeight - 20);
+        if (photo.photoData && typeof photo.photoData === 'string' && photo.photoData.startsWith('data:image')) {
+          try {
+            // Cadre pour la photo
+            doc
+              .roundedRect(photoX, currentY, photoWidth, photoHeight, 4)
+              .strokeColor(COLORS.border)
+              .lineWidth(1.5)
+              .stroke();
+            
+            // Photo en base64
+            const base64Data = photo.photoData.includes(',') 
+              ? photo.photoData.split(',')[1] 
+              : photo.photoData;
+            const imageBuffer = Buffer.from(base64Data, 'base64');
+            
+            doc.image(imageBuffer, photoX + 3, currentY + 3, {
+              width: photoWidth - 6,
+              height: photoHeight - 6,
+              fit: [photoWidth - 6, photoHeight - 6],
+              align: 'center',
+              valign: 'center',
+            });
+            
+            // Numéro de photo si plusieurs
+            if (room.photos.length > 1) {
+              doc
+                .fontSize(9)
+                .fillColor(COLORS.text)
+                .font('Helvetica')
+                .text(`${photoIndex + 1}/${room.photos.length}`, photoX + photoWidth - 40, currentY + photoHeight - 15);
+            }
+          } catch (error) {
+            console.error('Erreur lors de l\'ajout de la photo:', error);
+            addPhotoPlaceholder(doc, photoX, currentY, photoWidth, photoHeight);
+          }
+        } else {
+          addPhotoPlaceholder(doc, photoX, currentY, photoWidth, photoHeight);
         }
-      } catch (error) {
-        console.error('Erreur lors de l\'ajout de la photo:', error);
-        addPhotoPlaceholder(doc, margins.left, photosY, photoWidth, photoHeight);
-      }
-    } else {
-      addPhotoPlaceholder(doc, margins.left, photosY, photoWidth, photoHeight);
+      });
+      
+      currentY += photoHeight + photoSpacing;
     }
   }
   
-  doc.y = photosY + photoHeight + SPACING.md;
+  doc.y = currentY + SPACING.md;
   
   // Liste des objets de la pièce (regroupés)
   const stats = addItemsList(doc, allItems, margins.left, contentWidth);
@@ -283,9 +315,9 @@ function addItemsList(
     }
   });
   
-  // Afficher d'abord les gros meubles individuellement
+  // Afficher d'abord les gros meubles individuellement (une ligne par article)
   largeItems.forEach((item) => {
-    if (doc.y > PDF_CONFIG.pageHeight - 100) {
+    if (doc.y > PDF_CONFIG.pageHeight - 50) {
       doc.addPage();
       doc.y = PDF_CONFIG.margins.top;
     }
@@ -293,26 +325,18 @@ function addItemsList(
     const itemY = doc.y;
     
     // Cercle bleu
-    const circleRadius = 4;
+    const circleRadius = 3;
     doc
-      .circle(x + circleRadius, itemY + 5, circleRadius)
+      .circle(x + circleRadius, itemY + 4, circleRadius)
       .fillColor(COLORS.primary)
       .fill();
     
-    // Nom de l'objet avec quantité
+    // Construire la ligne complète de l'article
     const itemName = item.quantity > 1 
       ? `${item.quantity}x ${item.label}` 
       : item.label;
     
-    doc
-      .fontSize(FONTS.sizes.body)
-      .fillColor(COLORS.text.dark)
-      .font('Helvetica-Bold')
-      .text(itemName, x + 18, itemY, { width: width - 18 });
-    
-    doc.moveDown(0.2);
-    
-    // Détails
+    // Détails compacts
     const details = [];
     
     if (item.volume_m3 > 0) {
@@ -337,29 +361,24 @@ function addItemsList(
       details.push('DÉMONTABLE');
     }
     
-    if (details.length > 0) {
-      doc
-        .fontSize(FONTS.sizes.small)
-        .fillColor(COLORS.text.medium)
-        .font('Helvetica')
-        .text(details.join(' • '), x + 18, doc.y, { width: width - 18 });
-    }
+    // Note courte si disponible
+    const note = item.notes ? ` • ${item.notes}` : '';
     
-    if (item.notes) {
-      doc.moveDown(0.1);
-      doc
-        .fontSize(FONTS.sizes.small)
-        .fillColor(COLORS.text.light)
-        .font('Helvetica-Oblique')
-        .text(`Note: ${item.notes}`, x + 18, doc.y, { width: width - 18 });
-    }
+    // Tout sur une seule ligne
+    const fullLine = `${itemName} • ${details.join(' • ')}${note}`;
     
-    doc.moveDown(0.5);
+    doc
+      .fontSize(FONTS.sizes.small)
+      .fillColor(COLORS.text.dark)
+      .font('Helvetica')
+      .text(fullLine, x + 12, itemY, { width: width - 12 });
+    
+    doc.moveDown(0.3);
   });
   
-  // Afficher le résumé des petits objets en cartons
+  // Afficher le résumé des petits objets en cartons (une ligne compacte)
   if (smallItems.length > 0) {
-    if (doc.y > PDF_CONFIG.pageHeight - 100) {
+    if (doc.y > PDF_CONFIG.pageHeight - 30) {
       doc.addPage();
       doc.y = PDF_CONFIG.margins.top;
     }
@@ -367,9 +386,9 @@ function addItemsList(
     const itemY = doc.y;
     
     // Cercle bleu
-    const circleRadius = 4;
+    const circleRadius = 3;
     doc
-      .circle(x + circleRadius, itemY + 5, circleRadius)
+      .circle(x + circleRadius, itemY + 4, circleRadius)
       .fillColor(COLORS.secondary)
       .fill();
     
@@ -377,21 +396,16 @@ function addItemsList(
     const smallItemsVolume = smallItems.reduce((sum, item) => sum + (item.volume_m3 * (item.quantity || 1)), 0);
     const cartonsCount = Math.ceil(smallItemsVolume / CARTON_THRESHOLD);
     
-    doc
-      .fontSize(FONTS.sizes.body)
-      .fillColor(COLORS.text.dark)
-      .font('Helvetica-Bold')
-      .text(`Petits objets (${smallItems.length} articles)`, x + 18, itemY, { width: width - 18 });
-    
-    doc.moveDown(0.2);
+    // Tout sur une seule ligne
+    const summaryLine = `Petits objets (${smallItems.length} articles) • ${cartonsCount} carton${cartonsCount > 1 ? 's' : ''} standard${cartonsCount > 1 ? 's' : ''} (50×40×30cm) • ${smallItemsVolume.toFixed(2)}m³`;
     
     doc
       .fontSize(FONTS.sizes.small)
-      .fillColor(COLORS.text.medium)
+      .fillColor(COLORS.text.dark)
       .font('Helvetica')
-      .text(`${cartonsCount} carton${cartonsCount > 1 ? 's' : ''} standard${cartonsCount > 1 ? 's' : ''} (50×40×30cm) • ${smallItemsVolume.toFixed(2)}m³`, x + 18, doc.y, { width: width - 18 });
+      .text(summaryLine, x + 12, itemY, { width: width - 12 });
     
-    doc.moveDown(0.5);
+    doc.moveDown(0.3);
   }
   
   return { totalVolume, totalCartons };
