@@ -380,56 +380,55 @@ export default function Home() {
     try {
       setLoading(true);
       
-      // Détecter le nom réel de la pièce depuis les photos
-      const detectedRoomName = currentRoom.photos.find(photo => photo.roomName)?.roomName || 'Pièce';
-      
-      // Convertir les photos en base64
-      const photosWithBase64 = await Promise.all(
-        currentRoom.photos
-          .filter(photo => photo.status === 'DONE' && photo.analysis?.items)
-          .map(async (photo) => {
-            const photoData = photo.fileUrl ? await convertImageToBase64(photo.fileUrl) : '';
-            return {
-              ...photo,
-              photoDataBase64: photoData
-            };
-          })
+      // Récupérer les photos avec items à exporter
+      const validPhotos = currentRoom.photos.filter(
+        photo => photo.status === 'DONE' && photo.analysis?.items
       );
-      
-      // Préparer les données des pièces avec les items sélectionnés
-      const rooms = [{
-        id: currentRoom.id,
-        name: detectedRoomName,
-        photos: photosWithBase64
-          .map(photo => ({
-            fileUrl: photo.fileUrl,
-            photoData: photo.photoDataBase64, // Image en base64
-            items: photo.analysis.items
-              .map((item: any, idx: number) => {
-                if (isObjectSelected(photo.photoId || `photo-${currentRoom.photos.indexOf(photo)}`, idx)) {
-                  return {
-                    label: item.label,
-                    category: item.category,
-                    quantity: item.quantity || 1,
-                    dimensions_cm: item.dimensions_cm,
-                    volume_m3: item.volume_m3 || 0,
-                    fragile: item.fragile || false,
-                    dismountable: item.dismountable || false,
-                    notes: item.notes,
-                  };
-                }
-                return null;
-              })
-              .filter((item: any) => item !== null),
-          }))
-          .filter(photo => photo.items.length > 0),
-      }];
 
-      // Appeler l'API pour générer le PDF
+      if (validPhotos.length === 0) {
+        alert('Aucune photo analysée à exporter');
+        return;
+      }
+
+      // Préparer la map des items sélectionnés par photo
+      const selectedItemsMap: Record<string, number[]> = {};
+      
+      validPhotos.forEach((photo) => {
+        const photoKey = photo.photoId || `photo-${currentRoom.photos.indexOf(photo)}`;
+        const selectedIndices: number[] = [];
+        
+        photo.analysis?.items?.forEach((item: any, idx: number) => {
+          if (isObjectSelected(photoKey, idx)) {
+            selectedIndices.push(idx);
+          }
+        });
+        
+        // Si aucun item sélectionné, inclure tous les items
+        if (selectedIndices.length > 0 && photo.photoId) {
+          selectedItemsMap[photo.photoId] = selectedIndices;
+        }
+      });
+
+      // Extraire les IDs des photos (utiliser photoId de la DB si disponible)
+      const photoIds = validPhotos
+        .map(photo => photo.photoId)
+        .filter((id): id is string => !!id);
+
+      if (photoIds.length === 0) {
+        console.warn('⚠️  Aucun photoId trouvé, utilisation de l\'ancien endpoint');
+        // Fallback vers l'ancien système si pas de photoId
+        alert('Impossible de générer le PDF : photos non sauvegardées en DB');
+        return;
+      }
+
+      console.log('📄 Génération PDF pour', photoIds.length, 'photos');
+
+      // Appeler la nouvelle API qui charge les images côté serveur
       const { apiPost } = await import('@/lib/apiClient');
-      const pdfBlob = await apiPost<Blob>('/api/pdf/generate', {
+      const pdfBlob = await apiPost<Blob>('/api/pdf/generate-from-photos', {
         formData: quoteFormData,
-        rooms: rooms,
+        photoIds: photoIds,
+        selectedItemsMap: Object.keys(selectedItemsMap).length > 0 ? selectedItemsMap : undefined
       });
 
       // Télécharger le PDF
