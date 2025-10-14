@@ -2135,9 +2135,9 @@ Solution:
                     </div>
 
                     {/* Volume brut */}
-                    <div className="bg-gradient-to-br from-brand-soft/20 to-brand-soft/30 rounded-xl p-5 border border-brand-soft/50 shadow-md">
-                      <div className="text-sm text-brand-primary font-medium mb-1">Volume brut</div>
-                      <div className="text-3xl font-bold text-brand-primary">
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200 shadow-md">
+                      <div className="text-sm text-blue-700 font-medium mb-1">Volume brut</div>
+                      <div className="text-3xl font-bold text-blue-900">
                         {(() => {
                           let totalVolume = 0;
                           currentRoom.photos.forEach(photo => {
@@ -2152,7 +2152,7 @@ Solution:
                           return totalVolume.toFixed(1);
                         })()} m³
                       </div>
-                      <div className="text-xs text-brand-accent mt-1">avant emballage et démontage</div>
+                      <div className="text-xs text-blue-600 mt-1">avant emballage et démontage</div>
                     </div>
 
                     {/* Volume emballé */}
@@ -2230,8 +2230,8 @@ Solution:
                                       <div className="font-semibold text-gray-900">{cat}</div>
                                     </div>
                                     <div className="text-right">
-                                      <div className="text-lg font-bold text-brand-primary">{data.volumeEmballe.toFixed(2)} m³</div>
-                                      <div className="text-xs text-brand-primary">volume emballé</div>
+                                      <div className="text-lg font-bold text-gray-800">{data.volumeEmballe.toFixed(2)} m³</div>
+                                      <div className="text-xs text-gray-700">volume emballé</div>
                                     </div>
                                   </div>
                                   <div className="text-xs text-gray-600">
@@ -2368,16 +2368,16 @@ Solution:
                                 <div className="grid grid-cols-2 gap-4">
                                   {/* Colonne gauche : Meubles (non-fragiles) */}
                                   <div className="bg-brand-soft/10 rounded-lg p-3 border-2 border-brand-accent/40">
-                                    <h6 className="font-semibold text-brand-primary mb-2 flex flex-col gap-1">
+                                    <h6 className="font-semibold text-gray-800 mb-2 flex flex-col gap-1">
                                       <div className="flex items-center">
                                         <span className="text-base mr-1">🪑</span>
-                                        <span className="text-sm">Meubles standards</span>
+                                        <span className="text-sm text-gray-800">Meubles standards</span>
                                       </div>
-                                      <span className="text-xs font-normal text-brand-primary">
+                                      <span className="text-xs font-normal text-gray-700">
                                         {meublesData.count} objet{meublesData.count > 1 ? 's' : ''}
                                       </span>
                                     </h6>
-                                    <div className="text-[10px] text-gray-600 mb-2 italic px-1.5 py-1 bg-brand-soft/20 rounded leading-tight">
+                                    <div className="text-[10px] text-gray-700 mb-2 italic px-1.5 py-1 bg-gray-100 rounded leading-tight">
                                       💡 Cliquez → pour marquer fragile
                                     </div>
                                     <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -2425,7 +2425,7 @@ Solution:
                                         {fragilesData.count} objet{fragilesData.count > 1 ? 's' : ''}
                                       </span>
                                     </h6>
-                                    <div className="text-[10px] text-gray-600 mb-2 italic px-1.5 py-1 bg-orange-100 rounded leading-tight">
+                                    <div className="text-[10px] text-orange-700 mb-2 italic px-1.5 py-1 bg-orange-100 rounded leading-tight">
                                       💡 Cliquez ← pour retirer fragile
                                     </div>
                                     <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -2803,9 +2803,9 @@ Solution:
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* CTA 1 : Télécharger mon dossier */}
-                    <div className="bg-gradient-to-br from-brand-soft/20 to-brand-accent/30 rounded-2xl p-8 border-2 border-brand-accent/60 hover:border-brand-soft transition-all duration-200 shadow-lg hover:shadow-xl">
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-8 border-2 border-gray-200 hover:border-gray-300 transition-all duration-200 shadow-lg hover:shadow-xl">
                       <div className="text-center">
-                        <div className="w-16 h-16 mx-auto mb-4 bg-brand-accent rounded-2xl flex items-center justify-center shadow-lg">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
                           <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                           </svg>
@@ -2818,7 +2818,7 @@ Solution:
                           <button
                             onClick={handleDownloadPDF}
                             disabled={loading || !quoteFormData}
-                            className="w-full px-6 py-3 bg-brand-accent text-white font-semibold rounded-xl hover:bg-brand-accent hover:brightness-110 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {loading ? '⏳ Génération...' : '📄 PDF Complet'}
                           </button>
@@ -2827,7 +2827,7 @@ Solution:
                               // TODO: Implémenter l'export Excel
                               alert('Export Excel en cours de développement');
                             }}
-                            className="w-full px-6 py-3 bg-white text-brand-accent font-semibold rounded-xl hover:bg-gray-50 transition-colors border-2 border-brand-soft/30"
+                            className="w-full px-6 py-3 bg-white text-gray-800 font-semibold rounded-xl hover:bg-gray-50 transition-colors border-2 border-gray-300"
                           >
                             📊 Excel
                           </button>
@@ -2836,7 +2836,7 @@ Solution:
                               // TODO: Implémenter l'export CSV
                               alert('Export CSV en cours de développement');
                             }}
-                            className="w-full px-6 py-3 bg-white text-brand-accent font-semibold rounded-xl hover:bg-gray-50 transition-colors border-2 border-brand-soft/30"
+                            className="w-full px-6 py-3 bg-white text-gray-800 font-semibold rounded-xl hover:bg-gray-50 transition-colors border-2 border-gray-300"
                           >
                             📋 CSV
                           </button>
@@ -2891,11 +2891,11 @@ Solution:
                           <div className="mt-3 pt-3 border-t border-green-100">
                             <div className="flex items-start bg-green-50 rounded-lg p-2 -mx-1 mb-2">
                               <span className="font-bold text-green-600 mr-2">⏱️</span>
-                              <span className="font-semibold"><strong>3 à 5 jours</strong> en moyenne (max 7j)</span>
+                              <span className="font-semibold text-green-800"><strong>3 à 5 jours</strong> en moyenne (max 7j)</span>
                             </div>
-                            <div className="flex items-start bg-brand-soft/10 rounded-lg p-2 -mx-1">
-                              <span className="font-bold text-brand-accent mr-2">🛡️</span>
-                              <span className="font-semibold text-brand-primary"><strong>Zéro effort</strong> de votre côté !</span>
+                            <div className="flex items-start bg-blue-50 rounded-lg p-2 -mx-1">
+                              <span className="font-bold text-blue-600 mr-2">🛡️</span>
+                              <span className="font-semibold text-blue-800"><strong>Zéro effort</strong> de votre côté !</span>
                             </div>
                           </div>
                         </div>
@@ -2907,7 +2907,7 @@ Solution:
                         >
                           {isSubmittingQuote ? '⏳ Envoi en cours...' : '📨 Envoyer ma demande'}
                         </button>
-                        <p className="text-xs text-gray-500 mt-4">
+                        <p className="text-xs text-gray-700 mt-4">
                           ✓ Sans engagement • ✓ Réponse sous 24h • ✓ Déménageurs certifiés
                         </p>
                       </div>

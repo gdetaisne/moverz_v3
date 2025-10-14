@@ -583,7 +583,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
                         handleInputChange('departurePostalCode', code);
                         setShowSuggestions(prev => ({ ...prev, departure: false }));
                       }}
-                      className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm"
+                      className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm text-gray-900"
                     >
                       {code}
                     </button>
@@ -723,7 +723,7 @@ export default function QuoteForm({ onNext, onPrevious, initialData = {} }: Quot
                         handleInputChange('arrivalPostalCode', code);
                         setShowSuggestions(prev => ({ ...prev, arrival: false }));
                       }}
-                      className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm"
+                      className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm text-gray-900"
                     >
                       {code}
                     </button>
