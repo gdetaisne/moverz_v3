@@ -25,9 +25,6 @@ export function addInventoryDetails(
       doc.addPage();
     }
     
-    // Inventaire de la pièce avec photos
-    addRoomInventorySection(doc, room, room.photos.flatMap(p => p.items || []));
-    
     // Calculer le total de la pièce
     let roomTotalVolume = 0;
     let roomTotalCartons = 0;
