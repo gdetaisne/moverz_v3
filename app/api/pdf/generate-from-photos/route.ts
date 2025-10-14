@@ -103,9 +103,13 @@ export async function POST(req: NextRequest) {
         let photoDataBase64 = '';
         
         try {
-          // Essayer de charger l'image depuis le système de fichiers
-          if (photo.filePath) {
-            const fullPath = path.join(process.cwd(), photo.filePath);
+                // Essayer de charger l'image depuis le système de fichiers
+                if (photo.filePath) {
+                  // Si filePath est déjà absolu, l'utiliser tel quel
+                  // Sinon, le joindre avec process.cwd()
+                  const fullPath = path.isAbsolute(photo.filePath) 
+                    ? photo.filePath 
+                    : path.join(process.cwd(), photo.filePath);
             
             try {
               const imageBuffer = await fs.readFile(fullPath);
