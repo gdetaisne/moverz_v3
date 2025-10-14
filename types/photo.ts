@@ -49,18 +49,21 @@ export interface PhotoDB {
  * Fonction de mapping sécurisée DB → Client
  */
 export function mapPhotoDBToClient(photoDB: PhotoDB, userId: string): PhotoClient {
+  // Si la photo a un roomType, elle est considérée comme analysée pour la détection de pièce
+  const effectiveStatus = photoDB.roomType ? 'DONE' : photoDB.status;
+  
   return {
     id: photoDB.id,
     photoId: photoDB.id,
     file: null, // Les photos de la DB n'ont pas de File object
     fileUrl: photoDB.url,
     analysis: photoDB.analysis,
-    status: photoDB.status, // ✅ Utilise directement le statut DB
+    status: effectiveStatus, // ✅ Considère DONE si roomType présent
     error: photoDB.errorMessage,
     selectedItems: new Set<number>(),
-    progress: photoDB.status === 'DONE' ? 100 : 
-              photoDB.status === 'PROCESSING' ? 50 : 
-              photoDB.status === 'ERROR' ? 0 : 25,
+    progress: effectiveStatus === 'DONE' ? 100 : 
+              effectiveStatus === 'PROCESSING' ? 50 : 
+              effectiveStatus === 'ERROR' ? 0 : 25,
     roomName: photoDB.roomType,
     roomConfidence: 0.9, // Valeur par défaut
     roomType: photoDB.roomType,

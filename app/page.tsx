@@ -169,54 +169,32 @@ export default function Home() {
   }, [currentUserId, roomGroupsModified]);
 
 
-  // Fonction pour relancer l'analyse des photos
+  // Fonction simple pour recharger les photos depuis la DB
   const refreshPhotos = useCallback(async () => {
-    console.log('🔄 Relance de l\'analyse des photos...');
+    console.log('🔄 Rechargement des photos depuis la DB...');
+    
     try {
       const { apiFetch } = await import('@/lib/apiClient');
       
-      // Relancer l'analyse de toutes les photos
-      for (const photo of currentRoom.photos) {
-        try {
-          await apiFetch('/api/photos/enqueue', {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              'x-user-id': currentUserId 
-            },
-            body: JSON.stringify({
-              photoId: photo.id,
-              userId: currentUserId,
-              roomType: photo.roomType
-            })
-          });
-          console.log(`✅ Analyse relancée pour la photo ${photo.id}`);
-        } catch (error) {
-          console.error(`❌ Erreur pour la photo ${photo.id}:`, error);
-        }
+      // Recharger les photos depuis la base de données
+      const photos = await apiFetch('/api/photos', {
+        headers: { 'x-user-id': currentUserId }
+      });
+      
+      if (photos && Array.isArray(photos)) {
+        const mappedPhotos = photos.map((photo: any) => mapPhotoDBToClient(photo, currentUserId));
+        setCurrentRoom(prev => ({ ...prev, photos: mappedPhotos }));
+        console.log('✅ Photos rechargées:', mappedPhotos.length);
+        
+        // Log des statuts pour debug
+        mappedPhotos.forEach(photo => {
+          console.log(`📸 Photo ${photo.id}: status=${photo.status}, roomType=${photo.roomType}`);
+        });
       }
-      
-      // Recharger les photos après un délai
-      setTimeout(async () => {
-        try {
-          const photos = await apiFetch('/api/photos', {
-            headers: { 'x-user-id': currentUserId }
-          });
-          
-          if (photos && Array.isArray(photos)) {
-            const mappedPhotos = photos.map((photo: any) => mapPhotoDBToClient(photo, currentUserId));
-            setCurrentRoom(prev => ({ ...prev, photos: mappedPhotos }));
-            console.log('✅ Photos rechargées après analyse');
-          }
-        } catch (error) {
-          console.error('❌ Erreur lors du rechargement:', error);
-        }
-      }, 2000);
-      
     } catch (error) {
-      console.error('❌ Erreur lors de la relance:', error);
+      console.error('❌ Erreur lors du rechargement:', error);
     }
-  }, [currentUserId, currentRoom.photos]);
+  }, [currentUserId]);
 
   // Fonction pour recharger les photos depuis la base de données - MÉMORISÉE
   const handlePhotosUpdated = useCallback(async (updatedPhotos: any[]) => {
@@ -1330,31 +1308,6 @@ Solution:
     return null; // Plus de doublons avec l'analyse par pièce
   };
 
-  // Effet pour démarrer le polling si des photos sont en attente
-  useEffect(() => {
-    if (currentUserId && currentRoom.photos.length > 0) {
-      const hasUnanalyzedPhotos = currentRoom.photos.some(photo => 
-        photo.status !== 'DONE' || !photo.analysis || !photo.analysis.items || photo.analysis.items.length === 0
-      );
-      
-      if (hasUnanalyzedPhotos && !isPolling) {
-        console.log('📸 Photos en attente détectées, démarrage du polling...');
-        startPolling();
-      } else if (!hasUnanalyzedPhotos && isPolling) {
-        console.log('✅ Toutes les photos analysées, arrêt du polling...');
-        stopPolling();
-      }
-    }
-  }, [currentUserId, currentRoom.photos, isPolling, startPolling, stopPolling]);
-
-  // Nettoyage du polling au démontage du composant
-  useEffect(() => {
-    return () => {
-      if (pollingInterval) {
-        clearInterval(pollingInterval);
-      }
-    };
-  }, [pollingInterval]);
 
   const renderTestsInterface = () => (
     <>
@@ -1932,7 +1885,7 @@ Solution:
                           whileTap={{ scale: 0.95 }}
                           onClick={refreshPhotos}
                           className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 font-medium rounded-lg hover:bg-blue-200 transition-all duration-200"
-                          title="Relancer l'analyse des photos"
+                          title="Recharger les photos depuis la base de données"
                         >
                           <svg 
                             className="w-4 h-4 mr-2"
@@ -1942,7 +1895,7 @@ Solution:
                           >
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                           </svg>
-                          Relancer l'analyse
+                          Recharger
                         </motion.button>
                 <input 
                   type="file" 
@@ -1955,6 +1908,7 @@ Solution:
           </div>
 
                       {/* Indicateur de statut du polling */}
+
 
                       {/* Grille responsive */}
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
@@ -2095,12 +2049,30 @@ Solution:
                         <p className="text-sm text-brand-accent mb-4">
                           {currentRoom.photos.length}/100 photos chargées
                         </p>
-                            {/* Bouton supprimé - maintenant géré par le bouton en haut */}
+                            {/* Bouton supprimé - maintenant géré par le bouton en bas */}
                         </div>
                     </motion.div>
                       )}
                 </AnimatePresence>
                                     </div>
+                                  </div>
+                                  
+                                  {/* Boutons de navigation en bas */}
+                                  <div className="flex justify-between items-center px-6 py-4 bg-gray-50 border-t border-gray-200">
+                                    <div></div> {/* Espace vide à gauche */}
+                                    <button
+                                      onClick={() => {
+                                        const nextStep = currentStep + 1;
+                                        console.log('🎯 Bouton "Étape suivante" cliqué, passage à l\'étape', nextStep);
+                                        setCurrentStep(nextStep);
+                                      }}
+                                      className="inline-flex items-center px-6 py-3 text-sm font-medium text-white bg-blue-600 border border-blue-700 rounded-lg hover:bg-blue-700 hover:border-blue-800 transition-all duration-200 shadow-lg"
+                                    >
+                                      Étape suivante
+                                      <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                      </svg>
+                                    </button>
                                   </div>
                                   </div>
         )}
@@ -3022,10 +2994,11 @@ Solution:
                       setCurrentStep(nextStep);
                     }}
                     disabled={
-                      (currentStep === 1 && (currentRoom.photos.length === 0 || !currentRoom.photos.some(p => p.status === 'DONE' && p.roomType))) ||
-                      (currentStep === 2 && roomGroups.length === 0) ||
-                      (currentStep === 3 && !currentRoom.photos.some(p => p.analysis && p.analysis.items && p.analysis.items.length > 0)) ||
-                      (currentStep === 4 && !quoteFormData)
+                      currentStep === 1 ? false : // ✅ Étape 1 toujours activée
+                      currentStep === 2 ? roomGroups.length === 0 :
+                      currentStep === 3 ? !currentRoom.photos.some(p => p.analysis && p.analysis.items && p.analysis.items.length > 0) :
+                      currentStep === 4 ? !quoteFormData :
+                      false
                     }
                     className="inline-flex items-center px-4 py-2 text-sm text-white/80 bg-white/10 border border-white/20 rounded-md hover:bg-white/20 hover:border-white/30 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
