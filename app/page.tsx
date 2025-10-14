@@ -168,6 +168,56 @@ export default function Home() {
     }
   }, [currentUserId, roomGroupsModified]);
 
+
+  // Fonction pour relancer l'analyse des photos
+  const refreshPhotos = useCallback(async () => {
+    console.log('🔄 Relance de l\'analyse des photos...');
+    try {
+      const { apiFetch } = await import('@/lib/apiClient');
+      
+      // Relancer l'analyse de toutes les photos
+      for (const photo of currentRoom.photos) {
+        try {
+          await apiFetch('/api/photos/enqueue', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'x-user-id': currentUserId 
+            },
+            body: JSON.stringify({
+              photoId: photo.id,
+              userId: currentUserId,
+              roomType: photo.roomType
+            })
+          });
+          console.log(`✅ Analyse relancée pour la photo ${photo.id}`);
+        } catch (error) {
+          console.error(`❌ Erreur pour la photo ${photo.id}:`, error);
+        }
+      }
+      
+      // Recharger les photos après un délai
+      setTimeout(async () => {
+        try {
+          const photos = await apiFetch('/api/photos', {
+            headers: { 'x-user-id': currentUserId }
+          });
+          
+          if (photos && Array.isArray(photos)) {
+            const mappedPhotos = photos.map((photo: any) => mapPhotoDBToClient(photo, currentUserId));
+            setCurrentRoom(prev => ({ ...prev, photos: mappedPhotos }));
+            console.log('✅ Photos rechargées après analyse');
+          }
+        } catch (error) {
+          console.error('❌ Erreur lors du rechargement:', error);
+        }
+      }, 2000);
+      
+    } catch (error) {
+      console.error('❌ Erreur lors de la relance:', error);
+    }
+  }, [currentUserId, currentRoom.photos]);
+
   // Fonction pour recharger les photos depuis la base de données - MÉMORISÉE
   const handlePhotosUpdated = useCallback(async (updatedPhotos: any[]) => {
     console.log('🔄 [handlePhotosUpdated] Mise à jour des photos:', updatedPhotos.length);
@@ -1280,6 +1330,32 @@ Solution:
     return null; // Plus de doublons avec l'analyse par pièce
   };
 
+  // Effet pour démarrer le polling si des photos sont en attente
+  useEffect(() => {
+    if (currentUserId && currentRoom.photos.length > 0) {
+      const hasUnanalyzedPhotos = currentRoom.photos.some(photo => 
+        photo.status !== 'DONE' || !photo.analysis || !photo.analysis.items || photo.analysis.items.length === 0
+      );
+      
+      if (hasUnanalyzedPhotos && !isPolling) {
+        console.log('📸 Photos en attente détectées, démarrage du polling...');
+        startPolling();
+      } else if (!hasUnanalyzedPhotos && isPolling) {
+        console.log('✅ Toutes les photos analysées, arrêt du polling...');
+        stopPolling();
+      }
+    }
+  }, [currentUserId, currentRoom.photos, isPolling, startPolling, stopPolling]);
+
+  // Nettoyage du polling au démontage du composant
+  useEffect(() => {
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+    };
+  }, [pollingInterval]);
+
   const renderTestsInterface = () => (
     <>
 
@@ -1833,8 +1909,8 @@ Solution:
                       transition={{ duration: 0.4, ease: "easeOut" }}
                       className="space-y-6"
                     >
-                      {/* Bouton d'ajout compact */}
-              <div className="flex justify-center">
+                      {/* Boutons d'action */}
+              <div className="flex justify-center gap-3">
                         <motion.button
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
@@ -1849,6 +1925,25 @@ Solution:
                           </svg>
                           Ajouter des photos
                         </motion.button>
+                        
+                        {/* Bouton Actualiser */}
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={refreshPhotos}
+                          className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 font-medium rounded-lg hover:bg-blue-200 transition-all duration-200"
+                          title="Relancer l'analyse des photos"
+                        >
+                          <svg 
+                            className="w-4 h-4 mr-2"
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          Relancer l'analyse
+                        </motion.button>
                 <input 
                   type="file" 
                           ref={fileInputRef}
@@ -1858,6 +1953,8 @@ Solution:
                           className="hidden"
                         />
           </div>
+
+                      {/* Indicateur de statut du polling */}
 
                       {/* Grille responsive */}
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
@@ -2036,7 +2133,7 @@ Solution:
                   
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                     {/* Nombre de photos */}
-                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-5 border border-purple-200">
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-5 border border-purple-200 shadow-md">
                       <div className="text-sm text-purple-700 font-medium mb-1">Photos analysées</div>
                       <div className="text-3xl font-bold text-purple-900">
                         {currentRoom.photos.filter(p => p.status === 'completed').length}
@@ -2045,7 +2142,7 @@ Solution:
                     </div>
                     
                     {/* Nombre d'objets */}
-                    <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 border border-green-200">
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 border border-green-200 shadow-md">
                       <div className="text-sm text-green-700 font-medium mb-1">Objets détectés</div>
                       <div className="text-3xl font-bold text-green-900">
                         {(() => {
@@ -2066,7 +2163,7 @@ Solution:
                     </div>
 
                     {/* Volume brut */}
-                    <div className="bg-gradient-to-br from-brand-soft/10 to-brand-soft/20 rounded-xl p-5 border border-brand-soft/30">
+                    <div className="bg-gradient-to-br from-brand-soft/20 to-brand-soft/30 rounded-xl p-5 border border-brand-soft/50 shadow-md">
                       <div className="text-sm text-brand-primary font-medium mb-1">Volume brut</div>
                       <div className="text-3xl font-bold text-brand-primary">
                         {(() => {
@@ -2087,7 +2184,7 @@ Solution:
                     </div>
 
                     {/* Volume emballé */}
-                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-5 border border-orange-200">
+                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-5 border border-orange-200 shadow-md">
                       <div className="text-sm text-orange-700 font-medium mb-1">Volume emballé</div>
                       <div className="text-3xl font-bold text-orange-900">
                         {(() => {
@@ -2109,7 +2206,7 @@ Solution:
                   </div>
 
                   {/* Liste détaillée des objets par catégorie */}
-                  <div className="bg-gray-50 rounded-xl p-5">
+                  <div className="bg-gray-100 rounded-xl p-5 shadow-sm border border-gray-200">
                     <h5 className="font-semibold text-gray-900 mb-3 text-sm">📊 Répartition par catégorie</h5>
                     <div className="grid grid-cols-3 gap-4 text-sm mb-4">
                       {(() => {
@@ -2734,7 +2831,7 @@ Solution:
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* CTA 1 : Télécharger mon dossier */}
-                    <div className="bg-gradient-to-br from-brand-soft/10 to-brand-accent/20 rounded-2xl p-8 border-2 border-brand-accent/40 hover:border-brand-soft transition-all duration-200 hover:shadow-lg">
+                    <div className="bg-gradient-to-br from-brand-soft/20 to-brand-accent/30 rounded-2xl p-8 border-2 border-brand-accent/60 hover:border-brand-soft transition-all duration-200 shadow-lg hover:shadow-xl">
                       <div className="text-center">
                         <div className="w-16 h-16 mx-auto mb-4 bg-brand-accent rounded-2xl flex items-center justify-center shadow-lg">
                           <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2925,7 +3022,7 @@ Solution:
                       setCurrentStep(nextStep);
                     }}
                     disabled={
-                      (currentStep === 1 && currentRoom.photos.length === 0) ||
+                      (currentStep === 1 && (currentRoom.photos.length === 0 || !currentRoom.photos.some(p => p.status === 'DONE' && p.roomType))) ||
                       (currentStep === 2 && roomGroups.length === 0) ||
                       (currentStep === 3 && !currentRoom.photos.some(p => p.analysis && p.analysis.items && p.analysis.items.length > 0)) ||
                       (currentStep === 4 && !quoteFormData)
