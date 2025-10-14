@@ -50,6 +50,7 @@ export default function Home() {
   const [quoteFormData, setQuoteFormData] = useState<any>(null);
   const [inventoryValidated, setInventoryValidated] = useState(false);
   const [roomGroups, setRoomGroups] = useState<any[]>([]);
+  const [roomGroupsModified, setRoomGroupsModified] = useState(false); // Track si modifiés par l'utilisateur
   const [isSubmittingQuote, setIsSubmittingQuote] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isSmallObjectsExpanded, setIsSmallObjectsExpanded] = useState(false);
@@ -121,6 +122,8 @@ export default function Home() {
   const handleRoomValidationComplete = useCallback((validatedRoomGroups: any[]) => {
     console.log('🏠 Validation des pièces terminée:', validatedRoomGroups);
     setRoomGroups(validatedRoomGroups);
+    // Réinitialiser le flag de modification car on vient de valider les pièces
+    setRoomGroupsModified(false);
     setCurrentStep(3); // Passer à l'étape 3 (Valider l'inventaire)
     // 📊 Track validation pièces
     track('room_validation_completed', { 
@@ -133,6 +136,12 @@ export default function Home() {
   const loadRoomGroupsFromAPI = useCallback(async () => {
     if (!currentUserId) {
       console.log('⏳ Attente de l\'initialisation de l\'utilisateur...');
+      return;
+    }
+    
+    // ✅ NE PAS recharger si l'utilisateur a déjà modifié les roomGroups
+    if (roomGroupsModified) {
+      console.log('🔒 RoomGroups modifiés par l\'utilisateur, pas de rechargement API');
       return;
     }
     
@@ -157,7 +166,7 @@ export default function Home() {
     } catch (error) {
       console.error('❌ Erreur lors du chargement des roomGroups:', error);
     }
-  }, [currentUserId]);
+  }, [currentUserId, roomGroupsModified]);
 
   // Fonction pour recharger les photos depuis la base de données - MÉMORISÉE
   const handlePhotosUpdated = useCallback(async (updatedPhotos: any[]) => {
@@ -380,13 +389,46 @@ export default function Home() {
     try {
       setLoading(true);
       
+      // Debug: Analyser les photos disponibles
+      console.log('🔍 Debug PDF - Photos disponibles:', currentRoom.photos.length);
+      currentRoom.photos.forEach((photo, idx) => {
+        console.log(`  Photo ${idx}:`, {
+          status: photo.status,
+          hasAnalysis: !!photo.analysis,
+          hasItems: !!(photo.analysis?.items),
+          itemsCount: photo.analysis?.items?.length || 0,
+          photoId: photo.photoId
+        });
+      });
+
       // Récupérer les photos avec items à exporter
       const validPhotos = currentRoom.photos.filter(
         photo => photo.status === 'DONE' && photo.analysis?.items
       );
 
+      console.log('✅ Photos valides pour PDF:', validPhotos.length);
+
       if (validPhotos.length === 0) {
-        alert('Aucune photo analysée à exporter');
+        // Diagnostic plus détaillé
+        const totalPhotos = currentRoom.photos.length;
+        const donePhotos = currentRoom.photos.filter(p => p.status === 'DONE').length;
+        const photosWithAnalysis = currentRoom.photos.filter(p => p.analysis).length;
+        const photosWithItems = currentRoom.photos.filter(p => p.analysis?.items).length;
+
+        const message = `Aucune photo analysée à exporter.
+        
+Diagnostic:
+- Total photos: ${totalPhotos}
+- Photos terminées (DONE): ${donePhotos}
+- Photos avec analyse: ${photosWithAnalysis}
+- Photos avec items: ${photosWithItems}
+
+Solution:
+1. Vérifiez que les photos sont bien analysées (statut DONE)
+2. Si pas d'analyse, relancez l'upload/analyse
+3. Vérifiez les logs serveur pour erreurs IA`;
+
+        alert(message);
         return;
       }
 
@@ -1269,6 +1311,9 @@ export default function Home() {
                     ? { ...group, roomType: newRoomType }
                     : group
                 ));
+                // Marquer comme modifié par l'utilisateur
+                setRoomGroupsModified(true);
+                console.log('🔧 RoomGroups marqués comme modifiés par l\'utilisateur');
               }}
               onItemUpdate={(groupId, itemIndex, updates) => {
                 console.log('🔄 onItemUpdate appelé:', { groupId, itemIndex, updates });
@@ -1353,8 +1398,11 @@ export default function Home() {
                   console.log('✅ Groupe mis à jour');
                   return updatedGroup;
                 }));
+                // Marquer comme modifié par l'utilisateur
+                setRoomGroupsModified(true);
+                console.log('🔧 RoomGroups marqués comme modifiés par l\'utilisateur (items)');
               }}
-              onPrevious={() => setCurrentStep(1.5)}
+              onPrevious={() => setCurrentStep(2)}
               onNext={() => setCurrentStep(4)}
             />
           </div>
@@ -1960,50 +2008,6 @@ export default function Home() {
                                   </div>
         )}
 
-        {/* Navigation entre étapes - structure identique au bouton du haut */}
-        <div className="max-w-4xl mx-auto px-4 mt-8">
-          <div className="flex justify-between items-center">
-            {/* Bouton Précédent - à gauche */}
-            {currentStep > 1 ? (
-              <button
-                onClick={() => setCurrentStep(currentStep - 1)}
-                className="inline-flex items-center px-4 py-2 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 hover:border-gray-300 transition-all duration-200"
-              >
-                <svg className="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Précédent
-              </button>
-            ) : (
-              <div></div>
-            )}
-            
-            {/* Bouton Étape suivante - EXACTEMENT identique au bouton du haut */}
-            {currentStep < 5 ? (
-                            <button
-                onClick={() => {
-                  const nextStep = currentStep + 1;
-                  console.log('🎯 Bouton "Étape suivante" cliqué, passage à l\'étape', nextStep);
-                  setCurrentStep(nextStep);
-                }}
-                disabled={
-                  (currentStep === 1 && currentRoom.photos.length === 0) ||
-                  (currentStep === 2 && roomGroups.length === 0) ||
-                  (currentStep === 3 && !currentRoom.photos.some(p => p.status === 'completed')) ||
-                  (currentStep === 4 && !quoteFormData)
-                }
-                className="inline-flex items-center px-4 py-2 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:text-gray-400 disabled:bg-gray-50"
-              >
-                Étape suivante
-                <svg className="w-3 h-3 ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-                            </button>
-            ) : (
-              <div></div>
-                    )}
-                  </div>
-                </div>
 
         {/* Étape 5 - Envoyer un devis */}
         {currentStep === 5 && (
